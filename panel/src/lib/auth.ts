@@ -1,4 +1,4 @@
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { SignJWT, jwtVerify } from "jose"
 import bcrypt from "bcryptjs"
 
@@ -22,9 +22,20 @@ export async function createSession(userId: string): Promise<void> {
     .sign(getAuthSecret())
 
   const cookieStore = await cookies()
+  // `secure: NODE_ENV === "production"` KIRIKTI: panel şu an TLS'siz (çıplak
+  // IP, henüz sertifika yok) http:// üzerinden sunuluyor, ama production'da
+  // her zaman `Secure` işaretleniyordu — tarayıcı bu çerezi asla saklamıyordu
+  // (Secure çerez yalnızca HTTPS'te iletilir), bu yüzden giriş "başarılı"
+  // dönüyor ama oturum hiç oluşmuyordu (her sayfa yüklemesi middleware
+  // tarafından /login'e geri atılıyordu). Nginx zaten `X-Forwarded-Proto:
+  // $scheme` gönderiyor (bkz. install.sh) — gerçek bağlantının HTTPS olup
+  // olmadığını NODE_ENV'e göre TAHMİN ETMEK yerine bu başlıktan okuyoruz;
+  // panel'in önüne ileride gerçek bir TLS sertifikası eklenince bu otomatik
+  // olarak "secure: true"ya döner, elle bir şey değiştirmeye gerek kalmaz.
+  const isHttps = (await headers()).get("x-forwarded-proto") === "https"
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isHttps,
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_DURATION_SECONDS,
