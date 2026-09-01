@@ -220,7 +220,17 @@ RestartSec=3
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
-systemctl enable --now panel
+systemctl enable panel
+# KASITLI: `enable --now` DEĞİL. `--now` servis zaten çalışıyorsa hiçbir şey
+# yapmaz (yeniden başlatmaz) — bu yüzden install.sh'ı bir güncelleme almak
+# için tekrar çalıştırmak, yeni build diskte olsa bile ESKİ süreç canlı
+# kaldığı için hiçbir etki yaratmıyordu (gerçek bir olayda böyle bulundu:
+# git pull + build defalarca doğru şekilde yenilendi ama panel.service hiç
+# yeniden başlamadığı için değişiklikler asla devreye girmedi). `restart`
+# hem ilk kurulumda (servis henüz yoksa/durmuşsa normal başlatma gibi
+# davranır) hem de tekrar çalıştırmada (var olan süreci öldürüp yeni build'i
+# devreye sokar) doğru sonucu verir.
+systemctl restart panel
 sleep 1
 if systemctl is-active --quiet panel; then
   msg "panel.service çalışıyor."
