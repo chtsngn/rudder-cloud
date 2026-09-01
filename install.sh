@@ -77,19 +77,13 @@ chown -R "${PANEL_USER}:${PANEL_USER}" "${PANEL_DIR}"
 msg "Kod kopyalandı: ${PANEL_DIR}"
 
 # ------------------------------------------------------------
-# 3) Bağımlılıklar + build
+# 3) .env dosyası (npm install/build'dan ÖNCE — Prisma 7'nin
+#    prisma.config.ts'i artık `prisma generate` sırasında bile DATABASE_URL'i
+#    eagerly çözmeye çalışıyor, .env henüz yoksa postinstall (prisma generate)
+#    "Cannot resolve environment variable: DATABASE_URL" ile patlıyordu.
 # ------------------------------------------------------------
 hr
-info "3/8 — bağımlılıklar kuruluyor ve build alınıyor (biraz sürebilir)..."
-sudo -u "${PANEL_USER}" bash -c "cd '${PANEL_DIR}' && npm install"
-sudo -u "${PANEL_USER}" bash -c "cd '${PANEL_DIR}' && npm run build"
-msg "Build tamamlandı."
-
-# ------------------------------------------------------------
-# 4) .env dosyası
-# ------------------------------------------------------------
-hr
-info "4/8 — .env oluşturuluyor..."
+info "3/8 — .env oluşturuluyor..."
 DATABASE_URL=""
 if [[ -f "${DB_CREDS_FILE}" ]]; then
   # shellcheck disable=SC1090
@@ -120,6 +114,15 @@ EOF
   chmod 600 "${PANEL_DIR}/.env"
   msg ".env oluşturuldu."
 fi
+
+# ------------------------------------------------------------
+# 4) Bağımlılıklar + build
+# ------------------------------------------------------------
+hr
+info "4/8 — bağımlılıklar kuruluyor ve build alınıyor (biraz sürebilir)..."
+sudo -u "${PANEL_USER}" bash -c "cd '${PANEL_DIR}' && npm install"
+sudo -u "${PANEL_USER}" bash -c "cd '${PANEL_DIR}' && npm run build"
+msg "Build tamamlandı."
 
 # ------------------------------------------------------------
 # 5) DB migration (Prisma şeması eklenince aktif olacak)

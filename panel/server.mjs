@@ -28,6 +28,13 @@ import { createServer } from "node:http"
 import { homedir } from "node:os"
 import { parse } from "node:url"
 
+// Yalnızca PANEL_DIR/.env dosyasından okunmuş değerleri process.env'e
+// ekler, systemd'nin EnvironmentFile= ile zaten set ettiklerinin ÜZERİNE
+// yazmaz — üretimde gereksiz ama zararsız, yerel `npm run dev` (systemd
+// olmadan doğrudan `node server.mjs`) için gerekli.
+import "dotenv/config"
+
+import { PrismaPg } from "@prisma/adapter-pg"
 import { PrismaClient } from "@prisma/client"
 import { jwtVerify } from "jose"
 import next from "next"
@@ -45,8 +52,10 @@ const MAX_WS_PAYLOAD_BYTES = 1024 * 1024 // 1 MB — büyük bir yapıştırma i
 // `src/lib/prisma.ts`'teki dev-mode hot-reload singleton'ı bu dosyaya
 // uygulanmıyor (server.mjs zaten yalnızca process başlangıcında BİR KEZ
 // çalışıyor, HMR'a tabi değil) — bu yüzden burada ayrı, basit bir örnek
-// yeterli.
-const prisma = new PrismaClient()
+// yeterli. Prisma 7: bağlantı artık @prisma/adapter-pg üzerinden (bkz.
+// src/lib/prisma.ts'teki aynı gerekçe).
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
+const prisma = new PrismaClient({ adapter })
 
 function getAuthSecret() {
   const secret = process.env.AUTH_SECRET
