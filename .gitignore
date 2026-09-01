@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Claude cihaz köprüsü silme-izni kısıtı yüzünden biriken, silinmeyi
+# bekleyen geçici dosyalar (bkz. docs/ARCHITECTURE.md) — repo'nun parçası
+# değil.
+_to_delete/
+
+# Kök dizinde yanlışlıkla oluşabilecek ortam dosyaları (panel/.gitignore
+# panel/ altını zaten kapsıyor, bu yalnızca ek bir güvenlik ağı).
+.env
+.env.local
+
+# Editör/IDE
+.vscode/
+.idea/

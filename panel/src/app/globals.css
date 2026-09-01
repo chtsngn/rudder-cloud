@@ -1,0 +1,129 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.65rem;
+
+  --background: #0d0d0d;
+  --foreground: #ffffff;
+
+  --card: #17181a;
+  --card-foreground: #ffffff;
+
+  --popover: #17181a;
+  --popover-foreground: #ffffff;
+
+  --primary: oklch(0.70 0.19 290);
+  --primary-hover: oklch(0.76 0.19 290);
+  --primary-foreground: #ffffff;
+
+  --secondary: #1f2023;
+  --secondary-foreground: #ffffff;
+
+  --muted: #26282c;
+  --muted-foreground: #898781;
+
+  --accent: #1f2023;
+  --accent-foreground: #ffffff;
+
+  --destructive: #d03b3b;
+  --destructive-foreground: #ffffff;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.16);
+  --ring: oklch(0.70 0.19 290);
+
+  --success: #0ca30c;
+  --warning: #fab219;
+}
+
+/* Panel is dark-by-default with no light mode toggle yet: .dark mirrors :root. */
+.dark {
+  --background: #0d0d0d;
+  --foreground: #ffffff;
+
+  --card: #17181a;
+  --card-foreground: #ffffff;
+
+  --popover: #17181a;
+  --popover-foreground: #ffffff;
+
+  --primary: oklch(0.70 0.19 290);
+  --primary-hover: oklch(0.76 0.19 290);
+  --primary-foreground: #ffffff;
+
+  --secondary: #1f2023;
+  --secondary-foreground: #ffffff;
+
+  --muted: #26282c;
+  --muted-foreground: #898781;
+
+  --accent: #1f2023;
+  --accent-foreground: #ffffff;
+
+  --destructive: #d03b3b;
+  --destructive-foreground: #ffffff;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.16);
+  --ring: oklch(0.70 0.19 290);
+
+  --success: #0ca30c;
+  --warning: #fab219;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Reserved status colors: only for real state (Aktif/Çalışıyor/Durduruldu pills, CPU/RAM/Disk
+     meters). Never reused for branding or decoration. */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-sans, -apple-system, "Segoe UI", sans-serif);
+  --font-heading: var(--font-heading, -apple-system, "Segoe UI", sans-serif);
+  --font-mono: var(--font-mono, ui-monospace, monospace);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

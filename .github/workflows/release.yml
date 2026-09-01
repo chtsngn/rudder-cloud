@@ -1,0 +1,39 @@
+name: Release
+
+# `v` ile başlayan bir etiket push'landığında (örn. `git tag v1.0.0 && git
+# push --tags`) çalışır: bootstrap.sh'ı bu sürümle damgalar, SHA-256
+# özetini hesaplar ve ikisini de bir GitHub Release'e dosya olarak ekler.
+# Bu, README/dokümantasyonda hash'i elle güncellemeyi unutma riskini
+# ortadan kaldırır — özet her zaman yayınlanan dosyadan otomatik üretilir.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodu al
+        uses: actions/checkout@v4
+
+      - name: bootstrap.sh'ı bu sürümle damgala
+        run: |
+          sed "s/^BOOTSTRAP_VERSION=\"dev\"/BOOTSTRAP_VERSION=\"${GITHUB_REF_NAME}\"/" bootstrap.sh > bootstrap.sh.stamped
+          mv bootstrap.sh.stamped bootstrap.sh
+          chmod +x bootstrap.sh
+
+      - name: SHA-256 özetini hesapla
+        run: sha256sum bootstrap.sh > bootstrap.sh.sha256
+
+      - name: GitHub Release oluştur ve dosyaları ekle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            bootstrap.sh bootstrap.sh.sha256 \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes

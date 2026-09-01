@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SiteType {
+  WORDPRESS
+  PHP
+  NODEJS
+  STATIC
+  PYTHON
+  REVERSE_PROXY
+}
+
+enum SiteStatus {
+  ACTIVE
+  PROVISIONING
+  STOPPED
+  FAILED
+}
+
+// Bir sitenin uygulama sürecini kim ayakta tutuyor. SYSTEMD (varsayılan):
+// panelin kendi provision-site.sh'ının oluşturduğu systemd birimi. Diğerleri:
+// kullanıcı süreci kendi seçtiği araçla yönetiyor, panel yalnızca restart
+// tetikler/proxy eder — bkz. docs/ARCHITECTURE.md → Aşama B.
+enum ProcessManager {
+  SYSTEMD
+  DOCKER_COMPOSE
+  PM2
+  CUSTOM_SCRIPT
+}
+
+// Kullanıcı/rol/izin yönetimi (Aşama G). SUPER_ADMIN her şeye erişir (bkz.
+// src/lib/permissions.ts → isSuperAdmin). MEMBER yalnızca kendisine
+// `UserSiteAccess` ile açıkça verilmiş sitelere, verilmiş izinler ölçüsünde
+// erişir.
+enum UserRole {
+  SUPER_ADMIN
+  MEMBER
+}
+
+// `src/lib/permissions.ts`'teki hand-rolled `SitePermission` union'ıyla
+// BİREBİR aynı 6 değer — orada TS tarafında string literal olarak kalıyor
+// (Prisma enum'ı client component'lara sızmasın diye, bkz. site-adapter.ts
+// deseni), burada DB tarafında gerçek bir enum olarak saklanıyor
+// (`UserSiteAccess.permissions`).
+enum SitePermission {
+  VIEW
+  EDIT_FILES
+  RESTART
+  DELETE
+  MANAGE_BACKUPS
+  MANAGE_DEPLOY_KEYS
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  role         UserRole @default(SUPER_ADMIN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Aşama G — bir MEMBER'a hangi sitelerde hangi izinler verildiği
+  // (SUPER_ADMIN için bu tablo hiç kullanılmaz, her zaman tam erişim vardır).
+  siteAccess UserSiteAccess[]
+  // Kullanıcı silinse bile denetim kaydı KALIR (bkz. AuditLog.userId
+  // onDelete: SetNull + denormalize edilmiş `username` alanı).
+  auditLogs  AuditLog[]
+}
+
+model Site {
+  id         String     @id @default(cuid())
+  domain     String     @unique
+  type       SiteType
+  status     SiteStatus @default(PROVISIONING)
+  sslEnabled Boolean    @default(false)
+  config     Json
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  // Git dağıtımı (Aşama B) — hepsi opsiyonel, mevcut sitelerin çoğunda boş kalır.
+  repoUrl                 String?
+  gitBranch               String          @default("main")
+  autoPullEnabled         Boolean         @default(false)
+  autoPullIntervalSeconds Int             @default(15)
+  lastPullAt              DateTime?
+  lastPullOk              Boolean?
+  lastPullError           String?
+
+  // Proje restart (Aşama B) — yalnızca NODEJS/PYTHON/REVERSE_PROXY için anlamlı.
+  processManager       ProcessManager @default(SYSTEMD)
+  customRestartCommand String?
+
+  // Veritabanı yedekleme (Aşama D) — bkz. docs/ARCHITECTURE.md → Aşama D.
+  // Her sitenin TEK bir zamanlaması var (BackupSchedule gibi ayrı bir tablo
+  // yerine — Aşama B'deki autoPull* alanlarıyla aynı, kanıtlanmış desen).
+  backupEnabled         Boolean   @default(false)
+  backupIntervalSeconds Int       @default(86400)
+  backupRetentionCount  Int       @default(7)
+  backupUploadToS3      Boolean   @default(false)
+  s3ConfigId            String?
+  s3Config              S3Config? @relation(fields: [s3ConfigId], references: [id], onDelete: SetNull)
+  lastBackupAt          DateTime?
+  lastBackupOk          Boolean?
+  lastBackupError       String?
+
+  // GitHub deploy key / Actions key (Aşama E) — private key ASLA veritabanına
+  // yazılmaz, yalnızca `panel` kullanıcısının kendi ~/.ssh dizininde (0600)
+  // durur (bkz. src/lib/github-keys.ts). Buradaki alanlar yalnızca PUBLIC
+  // bilgiyi önbelleğe alır (arayüzde göstermek için disk her istekte
+  // okunmasın diye).
+  deployKeyName         String?
+  deployKeyPublicKey    String?
+  deployKeyFingerprint  String?
+  deployKeyCreatedAt    DateTime?
+
+  actionsKeyName         String?
+  actionsKeyPublicKey    String?
+  actionsKeyFingerprint  String?
+  actionsKeyCreatedAt    DateTime?
+
+  // Kullanıcı/rol/izin yönetimi (Aşama G) — bu siteye erişimi olan MEMBER'lar.
+  userAccess UserSiteAccess[]
+}
+
+// AWS S3 (ya da S3-uyumlu — MinIO, DigitalOcean Spaces vb.) bağlantı bilgileri.
+// `secretAccessKeyEnc` düz metin DEĞİL — AES-256-GCM ile `SETTINGS_ENCRYPTION_KEY`
+// kullanılarak şifrelenmiş saklanır (bkz. src/lib/crypto.ts). Panel genelinde
+// birden fazla config tanımlanabilir (örn. farklı bölgeler/hesaplar için).
+model S3Config {
+  id                 String   @id @default(cuid())
+  label              String   @default("Varsayılan")
+  bucket             String
+  region             String
+  endpoint           String?
+  accessKeyId        String
+  secretAccessKeyEnc String
+  pathPrefix         String   @default("")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  sites Site[]
+}
+
+// Bir MEMBER kullanıcısının BELİRLİ bir sitede sahip olduğu izinler.
+// SUPER_ADMIN için satır oluşturulmaz (gerek yok, her zaman tam erişimi var
+// — bkz. src/lib/permissions.ts → canManageSite). Kullanıcı veya site
+// silinince bu satır da otomatik silinir (her iki taraf da cascade).
+model UserSiteAccess {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  siteId      String
+  site        Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  permissions SitePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([userId, siteId])
+}
+
+// Hafif, salt-okunur denetim kaydı (bkz. docs/ARCHITECTURE.md → Aşama G).
+// `username` KASITLI denormalize edildi: kullanıcı daha sonra silinse bile
+// (userId → SetNull) geçmiş kayıtlar "kim yaptı" bilgisini kaybetmesin diye.
+// Ağır bir filtreleme/sayfalama şeması bilinçli olarak kapsam dışı
+// bırakıldı (basit, kronolojik bir liste yeterli görüldü).
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  username   String
+  action     String
+  targetType String?
+  targetId   String?
+  detail     String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+}
