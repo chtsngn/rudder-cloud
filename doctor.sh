@@ -243,14 +243,28 @@ if [[ "${#MISSING[@]}" -gt 0 ]]; then
         ;;
       php-fpm)
         info "PHP-FPM kuruluyor (${PHP_MISSING_VERSIONS[*]})..."
-        if ! apt-cache show php8.3-fpm >/dev/null 2>&1; then
-          info "PHP 8.3 varsayılan apt deposunda yok, ondrej/php PPA ekleniyor..."
+        apt_update_once
+        # NOT (düzeltme): eskiden yalnızca php8.3-fpm'in varsayılan depoda olup
+        # olmadığına bakılıyordu — Ubuntu 24.04'te 8.3 varsayılan depoda VAR ama
+        # 8.2 YOK, bu yüzden PPA hiç eklenmiyor ve 8.2 kurulumu "paket bulunamadı"
+        # ile başarısız olup (set -euo pipefail yüzünden) TÜM kurulumu
+        # durduruyordu. Artık istenen HER sürüm ayrı ayrı kontrol ediliyor.
+        NEEDS_PPA=0
+        for pv in "${PHP_MISSING_VERSIONS[@]}"; do
+          apt-cache show "php${pv}-fpm" >/dev/null 2>&1 || { NEEDS_PPA=1; break; }
+        done
+        if [[ "${NEEDS_PPA}" -eq 1 ]]; then
+          info "İstenen PHP sürüm(ler)i varsayılan apt deposunda yok, ondrej/php PPA ekleniyor..."
           DEBIAN_FRONTEND=noninteractive apt-get install -y software-properties-common
           add-apt-repository -y ppa:ondrej/php
           PKG_UPDATE_DONE=0
           apt_update_once
         fi
         for pv in "${PHP_MISSING_VERSIONS[@]}"; do
+          if ! apt-cache show "php${pv}-fpm" >/dev/null 2>&1; then
+            warn "php${pv}-fpm apt deposunda (PPA eklendikten sonra bile) bulunamadı — atlanıyor, kurulum durdurulmuyor."
+            continue
+          fi
           info "php${pv}-fpm kuruluyor..."
           DEBIAN_FRONTEND=noninteractive apt-get install -y \
             "php${pv}-fpm" "php${pv}-mysql" "php${pv}-curl" "php${pv}-gd" \
