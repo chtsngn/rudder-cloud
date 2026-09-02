@@ -21,22 +21,14 @@
 
 - [x] **Branch Kurulumu:** \1.1.0\ dalı oluşturuldu ve geçiş yapıldı.
 - [x] **Yerel Çalışma Ortamı:** PostgreSQL Docker konteyneri ve Next.js dev sunucusu ayağa kaldırıldı.
-- [x] **Siteler Yönetim Sayfası (\/sites\) ve Yeni Site Sihirbazı (\/sites/new\) Yenilendi:**
-  - Özel \/sites\ sayfası oluşturuldu: Arama, tür filtresi, durum filtresi ve özet sayaçları.
-  - \SiteCard\ bileşeni zenginleştirildi; framework rozetleri, Nginx durumu ve kontrol butonları eklendi.
-  - \/sites/new\ sihirbazı altın rozetli adım göstergesi ve bordo/altın butonlarla yenilendi.
-- [x] **Site Detay & Yönetim Sayfası (\/sites/[id]\) Tablı Elit Tasarıma Dönüştürüldü:**
-  - 5 Özel Sekmeli mimari kuruldu: *Genel Bakış & Ayarlar*, *Git & Otomatik Dağıtım*, *Yedekler & S3*, *Erişim Yetkileri*, *Servis Logları*.
-- [x] **Navigasyon Erişimi Güçlendirildi:**
-  - Sol bordo menüye \Siteler\ linki eklendi.
-  - Anasayfadaki "Siteleriniz" başlığına \Tüm Siteleri Yönet →\ bağlantısı yerleştirildi.
-- [x] **Sunucu Terminali (\/terminal\) Lüks Kaptan Köşkü Konsoluna Dönüştürüldü:**
-  - Üst Başlık: \Cinzel\ bordo başlık + altın/kehribar çerçeveli güvenlik uyarı bandı (\oot/sudo\ bilgilendirmesi).
-  - Terminal Pencere Kasası (Workstation Frame): macOS tarzı 3'lü trafik ışığı butonları, \oot@rudder-cloud:~ (bash)\ etiketi, anlık bağlantı durum rozeti (Online/Offline/Connecting).
-  - Konsol Kontrol Araçları: Canlı yazı boyutu büyütme/küçültme (\ZoomIn/ZoomOut\), konsolu temizleme (\Eraser\), hızlı yeniden bağlanma (\RotateCw\) ve tam ekran modu (\Fullscreen Toggle\).
-  - Hızlı Komutlar Çubuğu: Tek tıkla çalıştırılabilen hazır komut çipleri (\htop\, \docker ps\, \
-ginx -t\, \df -h\, \ree -m\, \uptime\, \journalctl\, \clear\).
-  - xterm Renk Paleti: Lüks obsidiyen koyu tema (\#0a0d14\), altın imleç (\#dfc9a0\) ve yüksek kontrastlı renkler.
+- [x] **Siteler Yönetim Sayfası (\/sites\) ve Yeni Site Sihirbazı (\/sites/new\) Yenilendi.**
+- [x] **Site Detay & Yönetim Sayfası (\/sites/[id]\) Tablı Elit Tasarıma Dönüştürüldü.**
+- [x] **Navigasyon Erişimi Güçlendirildi (Sidebar & Anasayfa Siteler Linki).**
+- [x] **Sunucu Terminali (\/terminal\) Lüks Kaptan Köşkü Konsoluna Dönüştürüldü.**
+- [x] **Terminal Akıllı Komut Sistemi (Spotlight Paleti, Özel Komut Ekleme, Komut Kitaplığı):**
+  - **Özel Komut Ekleme (\+ Komut Ekle\):** Kullanıcıların kendi özel script ve komutlarını (\label\, \cmd\, \desc\) ekleyebileceği, \localStorage\ ile tarayıcıda kalıcı olarak saklanan sistem.
+  - **Spotlight Komut Paleti (\Ctrl + K\ / \Cmd + K\):** Klavyeden hızlı komut arama, yukarı/aşağı oklarla gezinme, \Enter\ ile çalıştırma ve \Shift + Enter\ ile parametre düzenlemek üzere konsola yapıştırma.
+  - **Komut Kitaplığı (\📖 Komut Kitaplığı\):** Docker, Nginx, Ağ & Güvenlik, Sistem kategorilerine ayrılmış hazır reçeteler.
 - [x] **Test & Doğrulama:** TypeScript typecheck (\
 px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 
@@ -49,4 +41,4 @@ px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 | 2026-09-02 | \1.1.0\ dalı oluşturuldu, yerel ortam ayağa kaldırıldı | Git branch, Docker, .env | Başarılı (200 OK) |
 | 2026-09-02 | \/sites\ sayfası ve \/sites/new\ sihirbazı temaya uygun yenilendi | \sites/page.tsx\, \sites/new/page.tsx\, \site-card.tsx\ | Başarılı (TypeScript 0 hata, HTTP 200) |
 | 2026-09-02 | \/sites/[id]\ detay sayfası tablı mimariye geçirildi | \sites/[id]/page.tsx\ | Başarılı (TypeScript 0 hata) |
-| 2026-09-02 | \/terminal\ sayfası ve \	erminal-view.tsx\ lüks workstation konsoluna dönüştürüldü | \	erminal/page.tsx\, \	erminal-view.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | \/terminal\ sayfası ve akıllı komut sistemi (\Ctrl+K\, özel komutlar, kitaplık) kuruldu | \	erminal/page.tsx\, \	erminal-view.tsx\ | Başarılı (TypeScript 0 hata) |
