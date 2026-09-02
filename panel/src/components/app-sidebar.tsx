@@ -106,9 +106,10 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "sticky top-0 flex h-screen shrink-0 flex-col border-r border-white/[0.07] bg-[#121317]/95 backdrop-blur-md transition-[width] duration-150 z-30",
-        collapsed ? "w-16" : "w-64"
+        "sticky top-0 flex h-screen shrink-0 flex-col border-r border-white/[0.05] backdrop-blur-md transition-[width] duration-150 z-30",
+        collapsed ? "w-16" : "w-60"
       )}
+      style={{ background: "#16181e" }}
     >
       {/* Top Brand Logo */}
       <div className={cn("flex h-20 items-center px-5", collapsed ? "justify-center px-0" : "justify-start")}>
