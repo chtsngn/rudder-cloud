@@ -10,7 +10,6 @@ import {
   MemoryStick,
   Plus,
   Server,
-  Activity,
   CheckCircle2,
   RotateCw,
 } from "lucide-react"
@@ -50,10 +49,42 @@ function MetricCard({
   percentage: number
 }) {
   const safePct = Math.max(0, Math.min(100, Math.round(percentage)))
-  const isHigh = safePct >= 80
+  const isHigh = safePct >= 85
+  const isWarning = safePct >= 70 && safePct < 85
+
+  // Tam uyumlu renk paleti: Bar, Durum Noktası ve Metin %100 eşleşir
+  const statusConfig = isHigh
+    ? {
+        label: "Yüksek Yük",
+        dotColor: "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]",
+        textColor: "text-red-700 font-bold",
+        pctColor: "text-red-600 font-bold",
+        barGradient: "linear-gradient(90deg, #ef4444 0%, #b91c1c 100%)",
+        cardBorderHover: "hover:border-red-300",
+      }
+    : isWarning
+    ? {
+        label: "Orta Yük",
+        dotColor: "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]",
+        textColor: "text-amber-700 font-semibold",
+        pctColor: "text-amber-800 font-bold",
+        barGradient: "linear-gradient(90deg, #f59e0b 0%, #d97706 100%)",
+        cardBorderHover: "hover:border-amber-300",
+      }
+    : {
+        label: "Normal",
+        dotColor: "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]",
+        textColor: "text-emerald-700 font-medium",
+        pctColor: "text-slate-800 font-bold",
+        barGradient: "linear-gradient(90deg, #10b981 0%, #059669 100%)",
+        cardBorderHover: "hover:border-[#c8a87c]/70",
+      }
 
   return (
-    <div className="group relative rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all duration-300 hover:shadow-[0_8px_24px_rgba(200,168,124,0.12)] hover:border-[#c8a87c]/70 flex flex-col justify-between overflow-hidden">
+    <div className={cn(
+      "group relative rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all duration-300 hover:shadow-[0_8px_24px_rgba(200,168,124,0.12)] flex flex-col justify-between overflow-hidden",
+      statusConfig.cardBorderHover
+    )}>
       {/* Top Header: Title & Relevant Tech Icon */}
       <div>
         <div className="flex items-center justify-between gap-2 mb-3.5">
@@ -78,19 +109,14 @@ function MetricCard({
         </p>
       </div>
 
-      {/* Recessed Progress Gauge */}
+      {/* Recessed Progress Gauge (Birebir Noktayla Uyumlu Renk) */}
       <div>
         <div className="flex items-center justify-between text-xs font-semibold mb-2 font-mono">
-          <span className="flex items-center gap-1.5 text-slate-600">
-            <span
-              className={cn(
-                "size-2 rounded-full",
-                isHigh ? "bg-red-500 animate-pulse" : "bg-emerald-500"
-              )}
-            />
-            {isHigh ? "Yüksek Yük" : "Normal"}
+          <span className={cn("flex items-center gap-1.5", statusConfig.textColor)}>
+            <span className={cn("size-2 rounded-full", statusConfig.dotColor)} />
+            {statusConfig.label}
           </span>
-          <span className={cn("font-bold text-sm", isHigh ? "text-red-600" : "text-[#580619]")}>
+          <span className={cn("text-sm", statusConfig.pctColor)}>
             {safePct}%
           </span>
         </div>
@@ -98,13 +124,11 @@ function MetricCard({
         {/* Bar */}
         <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden border border-slate-200/80 p-[1.5px] shadow-inner">
           <div
-            className={cn(
-              "h-full rounded-full transition-all duration-700",
-              isHigh
-                ? "bg-gradient-to-r from-red-600 to-red-700 shadow-[0_0_8px_rgba(220,38,38,0.5)]"
-                : "bg-gradient-to-r from-[#580619] via-[#86102e] to-[#c8a87c]"
-            )}
-            style={{ width: `${safePct}%` }}
+            className="h-full rounded-full transition-all duration-700"
+            style={{
+              width: `${safePct}%`,
+              background: statusConfig.barGradient,
+            }}
           />
         </div>
       </div>
@@ -195,7 +219,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ═══ 2. ÜST 4 TELEMETRİ KARTI ═══ */}
+      {/* ═══ 2. ÜST 4 TELEMETRİ KARTI (RENK UYUMLU GÖSTERGELER) ═══ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* CPU Card */}
         {stats === null ? (
