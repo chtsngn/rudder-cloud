@@ -26,10 +26,11 @@
 - [x] **Navigasyon Erişimi Güçlendirildi (Sidebar & Anasayfa Siteler Linki).**
 - [x] **Sunucu Terminali (\/terminal\) Lüks Kaptan Köşkü Konsoluna Dönüştürüldü.**
 - [x] **Terminal Akıllı Komut Sistemi (Spotlight Paleti, Özel Komut Ekleme, Komut Kitaplığı).**
-- [x] **Sistem Ayarları (\/settings\) Sayfası Temaya Uygun Olarak Yenilendi:**
-  - **Üst Başlık:** \Cinzel\ bordo başlık, ayarlar ikonu ve açıklayıcı alt metin.
-  - **Panel Alan Adı ve SSL Kartı:** Bağlı alan adı durum rozeti (\Let's Encrypt HTTPS\), yeşil koruma kartı, DNS yönlendirme rehberliği, şık bordo/altın aksiyon butonları.
-  - **S3 Bulut Depolama Yapılandırmaları:** AWS S3, Cloudflare R2, MinIO uyumlu yapılandırma kartları, zengin boş durum (empty state) tasarımı ve modern düzenleme formu.
+- [x] **Sistem Ayarları (\/settings\) Sayfası Temaya Uygun Olarak Yenilendi.**
+- [x] **Kullanıcı Yönetimi (\/users\) Sayfası Lüks Tablo & Arama/Filtre Sistemiyle Yenilendi:**
+  - **Üst Başlık:** \Cinzel\ bordo başlık, kullanıcı sayacı ve \+ Yeni Kullanıcı Ekle\ butonu.
+  - **Arama & Rol Filtresi:** Kullanıcı adına göre anlık filtreleme ve \Tümü / Süper Admin / Üye\ sekmeleri.
+  - **Lüks Kullanıcı Tablosu:** Özel harf avatarları, \Siz\ durum rozeti, dinamik rol değiştirme seçicisi, formatlı kayıt tarihi, satır içi parola sıfırlama çekmecesi ve korumalı silme işlemleri.
 - [x] **Test & Doğrulama:** TypeScript typecheck (\
 px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 
@@ -44,3 +45,4 @@ px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 | 2026-09-02 | \/sites/[id]\ detay sayfası tablı mimariye geçirildi | \sites/[id]/page.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | \/terminal\ sayfası ve akıllı komut sistemi (\Ctrl+K\, özel komutlar, kitaplık) kuruldu | \	erminal/page.tsx\, \	erminal-view.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | \/settings\ sayfası (Alan Adı/SSL ve S3 Depolama) lüks tasarımla yenilendi | \settings/page.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | \/users\ sayfası lüks tablo, arama/filtre çubuğu ve avatar sistemiyle yenilendi | \users/page.tsx\ | Başarılı (TypeScript 0 hata) |
