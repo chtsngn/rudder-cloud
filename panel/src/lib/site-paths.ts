@@ -6,7 +6,13 @@
  *     provision-site.sh `cmd_create_vhost`), dolayısıyla git de oraya klonlanır.
  *   - NODEJS/PYTHON: systemd `WorkingDirectory` = `<workingDir>` (siteRoot'un
  *     kendisi, `/public` eki YOK — bkz. `cmd_create_service`).
- *   - REVERSE_PROXY: yerel dosya yok, git pull/restart bu tipte anlamsız.
+ *   - REVERSE_PROXY: provision-site.sh burada bir dizin/kullanıcı OLUŞTURMAZ,
+ *     ama panelin CloudPanel-tarzı asıl kullanım şekli tam olarak bu:
+ *     reverse-proxy site + git clone + manuel/PM2/Docker Compose ile ayağa
+ *     kaldırma + proxy hedefini o porta güncelleme (bkz. provision.ts
+ *     `updateUpstream`). Bu yüzden NODEJS/PYTHON ile aynı konvansiyonu
+ *     kullanır (siteRoot'un kendisi) — dizin git.ts tarafından ilk pull'da
+ *     `mkdir -p` ile oluşturulur.
  */
 import { defaultSiteRoot } from "@/lib/provision"
 
@@ -22,7 +28,7 @@ function cfgString(config: unknown, key: string): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined
 }
 
-/** Sitenin gerçek dosyalarının bulunduğu mutlak dizin, ya da REVERSE_PROXY için `null`. */
+/** Sitenin gerçek dosyalarının bulunduğu mutlak dizin, ya da tanınmayan bir site türü için `null`. */
 export function resolveSiteWorkdir(site: SiteLike): string | null {
   switch (site.type) {
     case "STATIC":
@@ -32,7 +38,8 @@ export function resolveSiteWorkdir(site: SiteLike): string | null {
       return `${siteRoot}/public`
     }
     case "NODEJS":
-    case "PYTHON": {
+    case "PYTHON":
+    case "REVERSE_PROXY": {
       return cfgString(site.config, "workingDir") ?? defaultSiteRoot(site.domain)
     }
     default:

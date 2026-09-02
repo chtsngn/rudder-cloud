@@ -6,7 +6,7 @@
  * gibi kısa aralıklar için önemsiz bir fark yaratır).
  *
  * Her TICK_MS'de bir: `autoPullEnabled = true` olan ve git-pull desteklenen
- * (NODEJS/PYTHON) siteleri DB'den okur, her biri için kendi
+ * (NODEJS/PYTHON/REVERSE_PROXY) siteleri DB'den okur, her biri için kendi
  * `autoPullIntervalSeconds` süresi dolmuşsa `gitPullOrClone` çalıştırır;
  * HEAD değiştiyse `restartSite` de tetiklenir. Aynı site için bir pull hâlâ
  * sürüyorsa (yavaş repo/ağ) bir sonraki tick o siteyi atlar — üst üste

@@ -365,6 +365,33 @@ NGINX
 }
 
 # ------------------------------------------------------------
+# update-upstream (yalnızca REVERSE_PROXY)
+# ------------------------------------------------------------
+# create-vhost'un aksine dosyayı TAMAMEN YENİDEN YAZMAZ (`cat >`) — yalnızca
+# proxy_pass satırını değiştirir. Bunun sebebi: request-ssl `certbot --nginx`
+# çalıştırıyor ve bu, vhost dosyasına doğrudan bir 443/SSL server bloğu
+# ekliyor (bkz. cmd_request_ssl) — dosyayı yeniden yazmak o bloğu silip
+# siteyi HTTPS'siz bırakır. CloudPanel-tarzı akışta (git ile deploy edilen
+# uygulama hangi porttan ayağa kalkarsa proxy'yi oraya çekmek) bu komut SSL
+# aktifken de güvenle çağrılabilmeli.
+cmd_update_upstream() {
+  require_args 2 "$#" "update-upstream <domain> <upstream_url>"
+  local domain="$1" upstream="$2"
+  validate_domain "$domain"
+  [[ "$upstream" =~ ^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~%/-]*)?$ ]] \
+    || die "Geçersiz upstream adresi: $upstream"
+
+  local conf="/etc/nginx/sites-available/${domain}.conf"
+  [[ -f "$conf" ]] || die "Vhost bulunamadı: ${domain} (önce site oluşturulmalı)"
+  grep -q "proxy_pass " "$conf" || die "Bu vhost bir reverse-proxy yapılandırması değil: ${domain}"
+
+  sed -i "s#proxy_pass .*;#proxy_pass ${upstream};#g" "$conf"
+
+  nginx_test_and_reload
+  msg "Upstream güncellendi: ${domain} -> ${upstream}"
+}
+
+# ------------------------------------------------------------
 # remove-vhost
 # ------------------------------------------------------------
 cmd_remove_vhost() {
@@ -658,6 +685,7 @@ Kullanım: provision-site.sh <alt-komut> [argümanlar...]
 
 Alt komutlar:
   create-vhost <domain> <type> <www> ...        Nginx vhost yaz + reload
+  update-upstream <domain> <upstream_url>        REVERSE_PROXY hedef adresini güncelle
   remove-vhost <domain>                          Nginx vhost kaldır + reload
   request-ssl <domain> <email> [www]             certbot --nginx ile SSL al
   create-service <domain> <dir> <cmd> <port>     systemd birimi oluştur + başlat
@@ -678,6 +706,7 @@ shift || true
 
 case "$SUBCOMMAND" in
   create-vhost)    cmd_create_vhost "$@" ;;
+  update-upstream) cmd_update_upstream "$@" ;;
   remove-vhost)    require_args 1 "$#" "remove-vhost <domain>"; cmd_remove_vhost "$@" ;;
   request-ssl)     cmd_request_ssl "$@" ;;
   create-service)  cmd_create_service "$@" ;;

@@ -87,6 +87,11 @@ export default function SiteDetailPage() {
   const [gitPullError, setGitPullError] = useState<string | null>(null)
   const [gitPullMessage, setGitPullMessage] = useState<string | null>(null)
 
+  const [upstreamUrl, setUpstreamUrl] = useState("")
+  const [upstreamSaving, setUpstreamSaving] = useState(false)
+  const [upstreamSaveError, setUpstreamSaveError] = useState<string | null>(null)
+  const [upstreamSaveOk, setUpstreamSaveOk] = useState(false)
+
   useEffect(() => {
     let cancelled = false
 
@@ -108,10 +113,24 @@ export default function SiteDetailPage() {
             gitBranch: data.gitBranch || "main",
             autoPullEnabled: data.autoPullEnabled,
             autoPullIntervalSeconds: data.autoPullIntervalSeconds,
-            processManager: data.processManager,
+            // REVERSE_PROXY için panel hiçbir zaman systemd birimi
+            // oluşturmaz (bkz. provision-site.sh cmd_create_service —
+            // yalnızca NODEJS/PYTHON çağırır), dolayısıyla DB'deki
+            // varsayılan "SYSTEMD" değeri bu tip için hiç işlevsel olmamış
+            // demektir — kullanıcı gerçek bir seçim yapana kadar PM2'ye
+            // (CloudPanel-tarzı akışta en sık kullanılan yöntem) düşüyoruz.
+            processManager:
+              data.type === "REVERSE_PROXY" && data.processManager === "SYSTEMD"
+                ? "PM2"
+                : data.processManager,
             customRestartCommand: data.customRestartCommand ?? "",
           })
           setGitLastPull({ at: data.lastPullAt, ok: data.lastPullOk, error: data.lastPullError })
+          setUpstreamUrl(
+            data.config && typeof (data.config as Record<string, unknown>).upstreamUrl === "string"
+              ? ((data.config as Record<string, unknown>).upstreamUrl as string)
+              : ""
+          )
         }
       } catch {
         if (!cancelled) setNotFound(true)
@@ -272,6 +291,37 @@ export default function SiteDetailPage() {
     }
   }
 
+  async function handleUpstreamSave() {
+    if (!site) return
+    const trimmed = upstreamUrl.trim()
+    if (!trimmed) {
+      setUpstreamSaveError("Hedef adres boş olamaz.")
+      return
+    }
+    setUpstreamSaving(true)
+    setUpstreamSaveError(null)
+    setUpstreamSaveOk(false)
+    try {
+      const res = await fetch(`/api/sites/${site.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ upstreamUrl: trimmed }),
+      })
+      const data = (await res.json().catch(() => null)) as (ApiSite & { error?: string }) | null
+      if (!res.ok || !data) {
+        setUpstreamSaveError(data?.error ?? "Hedef adres güncellenemedi.")
+        return
+      }
+      setConfig((data.config ?? {}) as Record<string, unknown>)
+      setUpstreamUrl(trimmed)
+      setUpstreamSaveOk(true)
+    } catch {
+      setUpstreamSaveError("Sunucuya bağlanılamadı.")
+    } finally {
+      setUpstreamSaving(false)
+    }
+  }
+
   async function handleDelete() {
     if (!site) return
     if (!window.confirm(`${site.domain} silinsin mi? Bu işlem geri alınamaz.`)) return
@@ -338,6 +388,8 @@ export default function SiteDetailPage() {
   const typeInfo = SITE_TYPES.find((t) => t.type === site.type)!
   const isRunning = site.status === "running"
 
+  const isProxy = site.type === "proxy"
+
   const configRows = [
     { label: "Alan adı", value: site.domain },
     ...(isManaged
@@ -346,14 +398,24 @@ export default function SiteDetailPage() {
     ...(isManaged
       ? [{ label: "Başlatma komutu", value: String(config.startCommand ?? "-") }]
       : []),
-    {
-      label: "Site kök dizini",
-      value: String(config.siteRoot ?? `/var/www/${site.domain}`),
-    },
-    {
-      label: "Linux kullanıcısı",
-      value: String(config.linuxUser ?? site.domain.split(".")[0]),
-    },
+    // REVERSE_PROXY sitelerinin gerçek bir site kök dizini/linux kullanıcısı
+    // YOKTUR (provision-site.sh bunları bu tip için hiç oluşturmaz, doğrudan
+    // Nginx bir upstream'e proxy_pass yapar) -- bu yüzden diğer tiplerdeki
+    // gibi bir dizin/kullanıcı GÖSTERMEK yanıltıcı olurdu (var olmayan bir
+    // yol gösterip "Dosyalar" da gizli olunca kafa karıştırır). Onun yerine
+    // gerçek yapılandırma olan hedef adresi gösteriyoruz.
+    ...(isProxy
+      ? [{ label: "Hedef adres", value: String(config.upstreamUrl ?? "-") }]
+      : [
+          {
+            label: "Site kök dizini",
+            value: String(config.siteRoot ?? `/var/www/${site.domain}`),
+          },
+          {
+            label: "Linux kullanıcısı",
+            value: String(config.linuxUser ?? site.domain.split(".")[0]),
+          },
+        ]),
     {
       label: "SSL",
       value: !sslInfo || !sslInfo.sslEnabled
@@ -487,46 +549,98 @@ export default function SiteDetailPage() {
         </div>
       )}
 
-      {isManaged ? (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Card>
-              <CardContent className="pt-6">
-                <StatMeter label="CPU" value={site.cpu ?? 0} />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <StatMeter label="RAM" value={site.ram ?? 0} />
-              </CardContent>
-            </Card>
-          </div>
-
+      {isManaged && (
+        <div className="grid gap-4 sm:grid-cols-2">
           <Card>
-            <CardHeader>
-              <CardTitle>Yapılandırma</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="divide-y divide-border">
-                {configRows.map((item) => (
-                  <div
-                    key={item.label}
-                    className="flex items-center justify-between py-2.5 text-sm"
-                  >
-                    <dt className="text-muted-foreground">{item.label}</dt>
-                    <dd className="font-mono text-foreground">{item.value}</dd>
-                  </div>
-                ))}
-              </dl>
+            <CardContent className="pt-6">
+              <StatMeter label="CPU" value={site.cpu ?? 0} />
             </CardContent>
           </Card>
-
           <Card>
-            <CardHeader>
-              <CardTitle>Git &amp; Dağıtım</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid gap-4 sm:grid-cols-2">
+            <CardContent className="pt-6">
+              <StatMeter label="RAM" value={site.ram ?? 0} />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Yapılandırma</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <dl className="divide-y divide-border">
+            {configRows.map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center justify-between py-2.5 text-sm"
+              >
+                <dt className="text-muted-foreground">{item.label}</dt>
+                <dd className="font-mono text-foreground">{item.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </CardContent>
+      </Card>
+
+      {!isManaged && (
+        <Card>
+          <CardContent className="pt-6 text-sm text-muted-foreground">
+            Bu site türü doğrudan Nginx tarafından sunulur; panel tarafından
+            yönetilen bir süreç bulunmaz.
+            {isProxy &&
+              " Ters proxy sitelerinin sunucuda ayrı bir dosya kök dizini yoktur; git ile deploy ediyorsanız aşağıdaki \"Git & Dağıtım\" kartından uygulamanızı klonlayabilirsiniz — dosya yöneticisi yalnızca Statik/PHP/WordPress site türleri için gösterilir."}
+          </CardContent>
+        </Card>
+      )}
+
+      {(isManaged || isProxy) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Git &amp; Dağıtım</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {isProxy && (
+              <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+                Reverse-proxy sitelerde bu kart CloudPanel&apos;deki alışkanlığınızın karşılığıdır:
+                önce buradan repo&apos;yu klonlayın (gerekirse aşağıdaki GitHub bölümünden deploy
+                key oluşturup repo&apos;ya ekleyin), sunucuda Terminal üzerinden .env dosyanızı
+                düzenleyip uygulamayı ayağa kaldırın, sonra aşağıdaki &quot;Hedef adres&quot;
+                alanını uygulamanızın dinlediği porta güncelleyin.
+              </p>
+            )}
+            {isProxy && (
+              <div className="space-y-2 rounded-lg border border-border p-3">
+                <Label htmlFor="upstreamUrl">Hedef adres (proxy_pass)</Label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    id="upstreamUrl"
+                    placeholder="http://127.0.0.1:3000"
+                    value={upstreamUrl}
+                    onChange={(e) => setUpstreamUrl(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleUpstreamSave}
+                    disabled={upstreamSaving || !upstreamUrl.trim()}
+                    className="shrink-0"
+                  >
+                    {upstreamSaving && <Loader2 className="size-4 animate-spin" />}
+                    Güncelle
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Uygulamanız hangi porttan ayağa kalkarsa proxy&apos;yi oraya yönlendirin — SSL
+                  etkinse bile sertifikayı bozmadan uygulanır.
+                </p>
+                {upstreamSaveError && <p className="text-xs text-destructive">{upstreamSaveError}</p>}
+                {upstreamSaveOk && !upstreamSaveError && (
+                  <p className="text-xs text-success">Hedef adres güncellendi.</p>
+                )}
+              </div>
+            )}
+            <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="repoUrl">Repo adresi</Label>
                   <Input
@@ -596,11 +710,19 @@ export default function SiteDetailPage() {
                     }
                     className="border-input dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
                   >
-                    <option value="SYSTEMD">systemd (panel yönetiyor — varsayılan)</option>
+                    {!isProxy && (
+                      <option value="SYSTEMD">systemd (panel yönetiyor — varsayılan)</option>
+                    )}
                     <option value="DOCKER_COMPOSE">Docker Compose (docker compose restart)</option>
                     <option value="PM2">PM2 (pm2 restart)</option>
                     <option value="CUSTOM_SCRIPT">Özel script</option>
                   </select>
+                  {isProxy && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Ters proxy sitelerinde panel systemd birimi oluşturmaz — uygulamanızı PM2,
+                      Docker Compose veya kendi script&apos;inizle ayakta tutun.
+                    </p>
+                  )}
                 </div>
                 {gitForm.processManager === "CUSTOM_SCRIPT" && (
                   <div className="space-y-1.5">
@@ -665,65 +787,37 @@ export default function SiteDetailPage() {
               </dl>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Son Kayıtlar</CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => loadLogs()} disabled={logsLoading}>
-                  {logsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCw className="size-3.5" />}
-                  Yenile
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {logsError ? (
-                <p className="text-sm text-destructive">{logsError}</p>
-              ) : (
-                <pre className="max-h-64 overflow-auto rounded-lg bg-background p-4 font-mono text-xs text-muted-foreground">
-                  {logsLoading && !logs
-                    ? "Yükleniyor…"
-                    : logs.trim()
-                      ? logs
-                      : "Henüz kayıt yok."}
-                </pre>
-              )}
-            </CardContent>
-          </Card>
-        </>
-      ) : (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Yapılandırma</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="divide-y divide-border">
-                {configRows.map((item) => (
-                  <div
-                    key={item.label}
-                    className="flex items-center justify-between py-2.5 text-sm"
-                  >
-                    <dt className="text-muted-foreground">{item.label}</dt>
-                    <dd className="font-mono text-foreground">{item.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6 text-sm text-muted-foreground">
-              Bu site türü doğrudan Nginx tarafından sunulur; panel tarafından
-              yönetilen bir süreç bulunmaz.
-            </CardContent>
-          </Card>
-        </>
       )}
 
-      {site.type !== "proxy" && <SiteBackupCard siteId={site.id} />}
-      {site.type !== "proxy" && (
-        <SiteGithubKeysCard siteId={site.id} initialRepoUrl={gitForm.repoUrl} />
+      {isManaged && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Son Kayıtlar</CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => loadLogs()} disabled={logsLoading}>
+                {logsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCw className="size-3.5" />}
+                Yenile
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {logsError ? (
+              <p className="text-sm text-destructive">{logsError}</p>
+            ) : (
+              <pre className="max-h-64 overflow-auto rounded-lg bg-background p-4 font-mono text-xs text-muted-foreground">
+                {logsLoading && !logs
+                  ? "Yükleniyor…"
+                  : logs.trim()
+                    ? logs
+                    : "Henüz kayıt yok."}
+              </pre>
+            )}
+          </CardContent>
+        </Card>
       )}
+
+      <SiteBackupCard siteId={site.id} />
+      <SiteGithubKeysCard siteId={site.id} initialRepoUrl={gitForm.repoUrl} />
       <SiteAccessCard siteId={site.id} />
     </div>
   )

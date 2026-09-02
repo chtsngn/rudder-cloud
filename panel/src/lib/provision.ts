@@ -296,6 +296,22 @@ export async function removeVhost(domain: string): Promise<void> {
   await runProvisionScript(["remove-vhost", domain])
 }
 
+/**
+ * Yalnızca REVERSE_PROXY sitelerde: vhost dosyasını YENİDEN OLUŞTURMADAN
+ * (bkz. provision-site.sh `cmd_update_upstream` — `create-vhost`'un aksine
+ * yalnızca `proxy_pass` satırını değiştirir, certbot'un eklediği SSL/443
+ * bloğunu korur) hedef adresi değiştirir. CloudPanel-tarzı akışta (git ile
+ * deploy edilen uygulama hangi porttan ayağa kalkarsa proxy'yi oraya
+ * çekmek) bunun için kullanılır.
+ */
+export async function updateUpstream(domain: string, upstreamUrl: string): Promise<void> {
+  requireDomain(domain)
+  if (!isValidUpstreamUrl(upstreamUrl)) {
+    throw new ProvisionError(`Geçersiz upstream adresi: ${upstreamUrl}`)
+  }
+  await runProvisionScript(["update-upstream", domain, upstreamUrl])
+}
+
 // ------------------------------------------------------------
 // SSL
 // ------------------------------------------------------------

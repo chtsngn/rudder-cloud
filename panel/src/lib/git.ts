@@ -3,11 +3,14 @@
  * hiçbir sudo/privileged script olmadan çalıştırır. Bu yüzden yalnızca
  * panelin zaten yazma izni olduğu dizinlerde çalışır: NODEJS/PYTHON tipleri
  * (systemd birimleri her zaman `User=panel` ile oluşturuluyor, bkz.
- * provision-site.sh `cmd_create_service`). STATIC/PHP/WORDPRESS tipleri
- * isteğe bağlı "dedicated linux user" desteklediği için (bkz.
- * `ensure_linux_user`) panelin o dizine yazma izni garanti değil — bu tipler
- * için git-pull kasıtlı olarak DESTEKLENMİYOR (bkz. docs/ARCHITECTURE.md →
- * Aşama B, "kapsam dışı bırakılanlar").
+ * provision-site.sh `cmd_create_service`) ve REVERSE_PROXY (dizin panel
+ * tarafından ilk pull'da oluşturulur, bkz. site-paths.ts — CloudPanel-tarzı
+ * "reverse-proxy + git clone + PM2/Docker Compose ile ayağa kaldır" akışı
+ * tam olarak bunu gerektiriyor). STATIC/PHP/WORDPRESS tipleri isteğe bağlı
+ * "dedicated linux user" desteklediği için (bkz. `ensure_linux_user`)
+ * panelin o dizine yazma izni garanti değil — bu tipler için git-pull
+ * kasıtlı olarak DESTEKLENMİYOR (bkz. docs/ARCHITECTURE.md → Aşama B,
+ * "kapsam dışı bırakılanlar").
  */
 import { execFile } from "node:child_process"
 import { mkdtemp, rm } from "node:fs/promises"
@@ -40,7 +43,7 @@ export class GitError extends Error {
   }
 }
 
-const GIT_PULL_TYPES = new Set(["NODEJS", "PYTHON"])
+const GIT_PULL_TYPES = new Set(["NODEJS", "PYTHON", "REVERSE_PROXY"])
 
 export function isGitPullSupported(siteType: string): boolean {
   return GIT_PULL_TYPES.has(siteType)

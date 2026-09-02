@@ -35,7 +35,10 @@ export async function POST(_request: Request, { params }: RouteParams) {
   }
   if (!isGitPullSupported(site.type)) {
     return NextResponse.json(
-      { error: "Bu site türü için git pull desteklenmiyor (yalnızca Node.js/Python)." },
+      {
+        error:
+          "Bu site türü için git pull desteklenmiyor (yalnızca Node.js/Python/Ters Proxy).",
+      },
       { status: 400 }
     )
   }

@@ -5,7 +5,14 @@ import { getSession } from "@/lib/auth"
 import { isValidGitBranch, isValidRepoUrl } from "@/lib/git"
 import { canManageSite, isSuperAdmin } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
-import { isValidAbsolutePath, removeService, removeVhost } from "@/lib/provision"
+import {
+  isValidAbsolutePath,
+  isValidUpstreamUrl,
+  ProvisionError,
+  removeService,
+  removeVhost,
+  updateUpstream,
+} from "@/lib/provision"
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -116,6 +123,40 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     } else {
       return NextResponse.json({ error: "Özel restart komutu geçerli bir mutlak yol olmalı." }, { status: 400 })
     }
+  }
+
+  /**
+   * Hedef adres (upstream) güncellemesi — yalnızca REVERSE_PROXY. CloudPanel-
+   * tarzı akışta git ile deploy edilen uygulama hangi porttan ayağa
+   * kalkarsa proxy'yi oraya çekmek için kullanılır. Nginx tarafı
+   * `updateUpstream` ile (SSL'i bozmadan, bkz. o fonksiyonun dokümantasyonu)
+   * güncellenir; başarılı olursa aynı değer `config.upstreamUrl`'e de
+   * yazılır ki `GET`/site detay sayfası doğru değeri göstersin.
+   */
+  if ("upstreamUrl" in input) {
+    if (site.type !== "REVERSE_PROXY") {
+      return NextResponse.json(
+        { error: "Hedef adres yalnızca ters proxy siteleri için değiştirilebilir." },
+        { status: 400 }
+      )
+    }
+    const value = input.upstreamUrl
+    if (typeof value !== "string" || !isValidUpstreamUrl(value)) {
+      return NextResponse.json({ error: "Geçersiz hedef adres." }, { status: 400 })
+    }
+    try {
+      await updateUpstream(site.domain, value)
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error:
+            error instanceof ProvisionError ? error.message : "Hedef adres güncellenemedi.",
+        },
+        { status: 500 }
+      )
+    }
+    const currentConfig = (site.config ?? {}) as Record<string, unknown>
+    data.config = { ...currentConfig, upstreamUrl: value }
   }
 
   if (Object.keys(data).length === 0) {

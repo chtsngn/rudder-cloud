@@ -74,7 +74,8 @@ export type DbProcessManager = "SYSTEMD" | "DOCKER_COMPOSE" | "PM2" | "CUSTOM_SC
 /** Shape returned by `GET /api/sites` and `GET /api/sites/[id]`. Includes the
  * Aşama B (git pull + restart) fields — present on every site row (with
  * defaults) even though they're only meaningful for managed (NODEJS/PYTHON)
- * types. */
+ * types and REVERSE_PROXY (CloudPanel-tarzı "git clone + PM2/Docker
+ * Compose ile ayağa kaldır" akışı). */
 export interface ApiSite {
   id: string
   domain: string
