@@ -10,39 +10,40 @@ interface RudderLogoProps {
 }
 
 export function RudderLogo({ size = "md", iconOnly = false, href = "/", className }: RudderLogoProps) {
-  const px = { sm: 30, md: 40, lg: 60 }[size]
-  const textCls = {
-    sm: "text-[15px] tracking-[0.22em]",
-    md: "text-[18px] tracking-[0.22em]",
-    lg: "text-[28px] tracking-[0.25em]",
+  const iconPx = { sm: 28, md: 38, lg: 54 }[size]
+  const textStyles = {
+    sm: "text-sm tracking-[0.25em]",
+    md: "text-lg tracking-[0.25em]",
+    lg: "text-2xl tracking-[0.3em]",
   }[size]
 
   const inner = (
-    <div className={cn("flex items-center gap-2.5", iconOnly && "justify-center", className)}>
+    <div className={cn("flex items-center gap-3 select-none", iconOnly && "justify-center", className)}>
       <Image
-        src="/rudder-helm-logo.png"
-        alt="Rudder helm"
-        width={px}
-        height={px}
-        className="shrink-0 object-contain"
+        src="/rudder-helm-transparent.png"
+        alt="Rudder Dümen Sembolü"
+        width={iconPx}
+        height={iconPx}
+        className="shrink-0 object-contain drop-shadow-[0_2px_10px_rgba(0,0,0,0.35)]"
         priority
       />
       {!iconOnly && (
         <span
-          className={cn("font-heading font-bold select-none", textCls)}
+          className={cn("font-heading font-bold uppercase", textStyles)}
           style={{
-            color: "#b8956a",
-            textShadow: "0 1px 4px rgba(184,149,106,0.15)",
+            color: "#c8a87c",
+            letterSpacing: "0.22em",
+            textShadow: "0 1px 2px rgba(0,0,0,0.4)",
           }}
         >
-          RUDDER
+          rudder
         </span>
       )}
     </div>
   )
 
   return href ? (
-    <Link href={href} className="outline-none focus-visible:ring-1 focus-visible:ring-[#b8956a]/40 rounded">
+    <Link href={href} className="outline-none focus-visible:ring-2 focus-visible:ring-[#c8a87c]/50 rounded-md transition-opacity hover:opacity-95">
       {inner}
     </Link>
   ) : inner

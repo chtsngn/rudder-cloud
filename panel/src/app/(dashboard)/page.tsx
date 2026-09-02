@@ -2,10 +2,22 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Activity, Cpu, HardDrive, MemoryStick, Plus, Server } from "lucide-react"
+import Image from "next/image"
+import {
+  Activity,
+  Cpu,
+  HardDrive,
+  MemoryStick,
+  Plus,
+  Server,
+  Layers,
+} from "lucide-react"
+
+import { Button } from "@/components/ui/button"
 import { SiteCard } from "@/components/site-card"
 import type { Site } from "@/lib/mock-data"
 import { apiSiteToUiSite, type ApiSite } from "@/lib/site-adapter"
+import { cn } from "@/lib/utils"
 
 interface SystemStats {
   cpu: { usedPercent: number; cores: number; loadAvg: number[] }
@@ -14,62 +26,89 @@ interface SystemStats {
   host: { hostname: string; platform: string; uptimeSeconds: number; ip: string }
 }
 
-const POLL_MS = 5000
+const STATS_POLL_MS = 5000
 
-function uptime(s: number) {
-  return `${Math.floor(s / 86400)} gun ${Math.floor((s % 86400) / 3600)} saat`
+function formatUptime(seconds: number): string {
+  const days = Math.floor(seconds / 86400)
+  const hours = Math.floor((seconds % 86400) / 3600)
+  return `${days} gün ${hours} saat`
 }
 
-function MetricRow({
+function StatCard({
   icon: Icon,
-  label,
+  title,
   value,
+  subtext,
+  percentage,
+  colorScheme = "burgundy",
 }: {
   icon: any
-  label: string
-  value: number | undefined
+  title: string
+  value: string
+  subtext: string
+  percentage: number
+  colorScheme?: "burgundy" | "bronze"
 }) {
-  const v = Math.max(0, Math.min(100, Math.round(value ?? 0)))
-  const isHigh = v >= 80
-  const isMid = v >= 50 && v < 80
-
-  /* Bar rengi: bronz metalik → koyu bordo — neon YOK */
-  const fillStyle = isHigh
-    ? { background: "linear-gradient(90deg, #4a0a0a 0%, #8b1a1a 100%)" }
-    : isMid
-    ? { background: "linear-gradient(90deg, #3a2000 0%, #7a4a10 100%)" }
-    : { background: "linear-gradient(90deg, #2a1e0e 0%, #8a6a3a 100%)" }
-
-  const dotColor = isHigh ? "#8b1a1a" : isMid ? "#7a4a10" : "#5a7a3a"
+  const safePct = Math.max(0, Math.min(100, Math.round(percentage)))
+  const isHigh = safePct >= 80
 
   return (
-    <div className="flex items-center gap-4">
-      {/* Label */}
-      <div className="flex items-center gap-2 w-[72px] shrink-0">
-        <Icon className="size-3.5 shrink-0" style={{ color: "#4a3520" }} />
-        <span className="text-[12px] font-medium" style={{ color: "#7a6040" }}>{label}</span>
-      </div>
-
-      {/* Track */}
+    <div className="group relative rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 overflow-hidden flex flex-col justify-between">
+      {/* Top Nautical Accent Line */}
       <div
-        className="flex-1 h-[8px] rounded-sm overflow-hidden"
-        style={{ background: "#14100c" }}
-      >
-        <div
-          className="h-full rounded-sm transition-all duration-700"
-          style={{ width: `${v}%`, ...fillStyle }}
-        />
+        className={cn(
+          "absolute top-0 left-0 right-0 h-[3px] transition-all",
+          colorScheme === "bronze"
+            ? "bg-gradient-to-r from-[#c8a87c] via-[#b8956a] to-[#c8a87c]"
+            : "bg-gradient-to-r from-[#2e0911] via-[#4a0e1c] to-[#2e0911]"
+        )}
+      />
+
+      {/* Header with Icon and Title */}
+      <div>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-sans">
+            {title}
+          </span>
+          <div className="size-8 rounded-lg bg-[#2e0911]/5 flex items-center justify-center text-[#2e0911] group-hover:bg-[#2e0911]/10 transition-colors">
+            <Icon className="size-4" />
+          </div>
+        </div>
+
+        {/* Main Stat Value */}
+        <div className="mb-1">
+          <span className="font-mono text-3xl font-bold tracking-tight text-slate-800">
+            {value}
+          </span>
+        </div>
+
+        {/* Subtext */}
+        <p className="text-xs font-medium text-slate-500 truncate mb-4">
+          {subtext}
+        </p>
       </div>
 
-      {/* Dot + pct */}
-      <div className="flex items-center gap-2 w-[52px] shrink-0 justify-end">
-        <span
-          className="size-[7px] rounded-full shrink-0"
-          style={{ background: dotColor }}
-        />
-        <span className="font-mono text-[12px] font-semibold" style={{ color: "#c9a870" }}>
-          {v}%
-        </span>
+      {/* Progress Meter Bar */}
+      <div>
+        <div className="flex items-center justify-between text-xs font-semibold text-slate-500 mb-1.5 font-mono">
+          <span>Kullanım</span>
+          <span className={cn(isHigh ? "text-red-600 font-bold" : "text-slate-700")}>
+            {safePct}%
+          </span>
+        </div>
+        <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden p-[1px] border border-slate-200/60">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-500",
+              isHigh
+                ? "bg-gradient-to-r from-red-600 to-red-700"
+                : colorScheme === "bronze"
+                ? "bg-gradient-to-r from-[#b8956a] to-[#c8a87c]"
+                : "bg-gradient-to-r from-[#4a0e1c] to-[#2e0911]"
+            )}
+            style={{ width: `${safePct}%` }}
+          />
+        </div>
       </div>
     </div>
   )
@@ -81,183 +120,214 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let cancelled = false
-    const load = async () => {
+
+    async function loadStats() {
       try {
-        const r = await fetch("/api/system/stats", { cache: "no-store" })
-        if (r.ok && !cancelled) setStats(await r.json())
-      } catch { /* ignore */ }
+        const res = await fetch("/api/system/stats", { cache: "no-store" })
+        if (!res.ok) return
+        const data = (await res.json()) as SystemStats
+        if (!cancelled) setStats(data)
+      } catch {
+        // ignore
+      }
     }
-    load()
-    const iv = setInterval(load, POLL_MS)
-    return () => { cancelled = true; clearInterval(iv) }
+
+    loadStats()
+    const interval = setInterval(loadStats, STATS_POLL_MS)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
   }, [])
 
   useEffect(() => {
     let cancelled = false
-    const load = async () => {
+
+    async function loadSites() {
       try {
-        const r = await fetch("/api/sites", { cache: "no-store" })
-        if (!r.ok) throw new Error("")
-        const data = (await r.json()) as ApiSite[]
+        const res = await fetch("/api/sites", { cache: "no-store" })
+        if (!res.ok) throw new Error("failed")
+        const data = (await res.json()) as ApiSite[]
         if (!cancelled) setSites(data.map(apiSiteToUiSite))
-      } catch { if (!cancelled) setSites([]) }
+      } catch {
+        if (!cancelled) setSites([])
+      }
     }
-    load()
-    return () => { cancelled = true }
+
+    loadSites()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
-  const loadPct = stats?.cpu.loadAvg?.[0]
-    ? Math.min(100, Math.round((stats.cpu.loadAvg[0] / (stats.cpu.cores || 1)) * 100))
-    : stats?.cpu.usedPercent ?? 0
-
-  const serverRows = [
-    { label: "Sunucu adi", value: stats?.host.hostname ?? "—" },
-    { label: "Isletim sistemi", value: stats?.host.platform ?? "—" },
-    { label: "Calisma suresi", value: stats ? uptime(stats.host.uptimeSeconds) : "—" },
-    { label: "IP adresi", value: stats?.host.ip ?? "—" },
+  const serverInfo = [
+    { label: "Sunucu Adı", value: stats?.host.hostname ?? "—" },
+    { label: "İşletim Sistemi", value: stats?.host.platform ?? "—" },
+    { label: "Çalışma Süresi", value: stats ? formatUptime(stats.host.uptimeSeconds) : "—" },
+    { label: "IP Adresi", value: stats?.host.ip ?? "—" },
   ]
 
-  /* Kart stili */
-  const card = {
-    background: "#1c1814",
-    border: "1px solid rgba(184,149,106,0.12)",
-    borderRadius: "8px",
-  } as React.CSSProperties
-
   return (
-    <div style={{ padding: "32px 36px", maxWidth: 1100 }}>
-      {/* Baslik */}
-      <div style={{ marginBottom: 28 }}>
-        <h1
-          className="font-heading"
-          style={{ fontSize: 22, fontWeight: 700, color: "#e8d5b0", letterSpacing: "0.05em", marginBottom: 4 }}
-        >
-          Anasayfa
-        </h1>
-        <p style={{ fontSize: 12, color: "#4a3820" }}>
-          Sunucunuzun genel durumu ve siteleriniz.
-        </p>
+    <div className="max-w-7xl mx-auto space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200/80">
+        <div>
+          <h1 className="font-heading text-2xl font-bold tracking-wide text-[#2e0911]">
+            Anasayfa
+          </h1>
+          <p className="text-xs text-slate-500 mt-1 font-sans">
+            Sunucunuzun genel durumu ve yönetilen siteleriniz.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button
+            asChild
+            className="bg-[#2e0911] hover:bg-[#4a0e1c] text-white font-semibold text-xs uppercase tracking-wider px-4 py-2 rounded-lg shadow-sm transition-all flex items-center gap-1.5 h-9"
+          >
+            <Link href="/sites/new">
+              <Plus className="size-4" />
+              YENİ SİTE EKLE
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {/* ─── METRIK + SUNUCU BILGISI KARTI ─── */}
-      <div style={{ ...card, padding: "24px 28px", marginBottom: 28 }}>
-        <div style={{ display: "flex", gap: 32, alignItems: "stretch" }}>
+      {/* 4 Balanced Top Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* CPU Card */}
+        {stats === null ? (
+          <div className="h-44 rounded-xl border border-slate-200 bg-white p-5 animate-pulse" />
+        ) : (
+          <StatCard
+            icon={Cpu}
+            title="CPU Kullanımı"
+            value={`${Math.round(stats.cpu.usedPercent)}%`}
+            subtext={`${stats.cpu.cores} Çekirdek • Yük: ${(stats.cpu.loadAvg[0] ?? 0).toFixed(2)}`}
+            percentage={stats.cpu.usedPercent}
+            colorScheme="burgundy"
+          />
+        )}
 
-          {/* Sol: 4 metrik bar */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
-            <MetricRow icon={Cpu} label="CPU" value={stats?.cpu.usedPercent} />
-            <MetricRow icon={MemoryStick} label="RAM" value={stats?.mem.usedPercent} />
-            <MetricRow icon={HardDrive} label="Disk" value={stats?.disk.usedPercent} />
-            <MetricRow icon={Activity} label="Yuk" value={loadPct} />
-          </div>
+        {/* RAM Card */}
+        {stats === null ? (
+          <div className="h-44 rounded-xl border border-slate-200 bg-white p-5 animate-pulse" />
+        ) : (
+          <StatCard
+            icon={MemoryStick}
+            title="RAM Kullanımı"
+            value={`${Math.round(stats.mem.usedPercent)}%`}
+            subtext={`${stats.mem.usedGB.toFixed(1)} GB / ${stats.mem.totalGB.toFixed(1)} GB`}
+            percentage={stats.mem.usedPercent}
+            colorScheme="bronze"
+          />
+        )}
 
-          {/* Dikey ayirici */}
-          <div style={{ width: 1, background: "rgba(184,149,106,0.1)", alignSelf: "stretch" }} />
+        {/* Disk Card */}
+        {stats === null ? (
+          <div className="h-44 rounded-xl border border-slate-200 bg-white p-5 animate-pulse" />
+        ) : (
+          <StatCard
+            icon={HardDrive}
+            title="Disk Kullanımı"
+            value={`${Math.round(stats.disk.usedPercent)}%`}
+            subtext={`${stats.disk.usedGB.toFixed(1)} GB / ${stats.disk.totalGB.toFixed(1)} GB`}
+            percentage={stats.disk.usedPercent}
+            colorScheme="burgundy"
+          />
+        )}
 
-          {/* Sag: Sunucu bilgisi */}
-          <div style={{ width: 220, flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-              <Server style={{ width: 13, height: 13, color: "#5a4020" }} />
-              <span
-                className="font-heading"
-                style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.15em", color: "#b8956a" }}
-              >
-                SUNUCU BILGISI
-              </span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {serverRows.map(row => (
-                <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                  <span style={{ fontSize: 11, color: "#4a3820", flexShrink: 0 }}>{row.label}</span>
-                  <span style={{ fontSize: 11, fontFamily: "JetBrains Mono, monospace", color: "#c9a870", textAlign: "right", wordBreak: "break-all" }}>
-                    {row.value}
-                  </span>
+        {/* Sunucu Bilgisi Card */}
+        {stats === null ? (
+          <div className="h-44 rounded-xl border border-slate-200 bg-white p-5 animate-pulse" />
+        ) : (
+          <div className="relative rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 overflow-hidden flex flex-col justify-between">
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#c8a87c] via-[#2e0911] to-[#c8a87c]" />
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-sans">
+                  Sunucu Bilgisi
+                </span>
+                <div className="size-8 rounded-lg bg-[#2e0911]/5 flex items-center justify-center text-[#2e0911]">
+                  <Server className="size-4" />
                 </div>
-              ))}
+              </div>
+
+              <div className="space-y-2 text-xs">
+                {serverInfo.map((info) => (
+                  <div key={info.label} className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500 text-[11px] shrink-0 font-medium">
+                      {info.label}:
+                    </span>
+                    <span className="font-mono text-slate-800 text-[11px] font-semibold truncate text-right">
+                      {info.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* ─── SITELERINIZ ─── */}
-      <div>
-        {/* Baslik satiri */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <h2
-            className="font-heading"
-            style={{ fontSize: 17, fontWeight: 600, color: "#e8d5b0", letterSpacing: "0.04em" }}
-          >
-            Siteleriniz
-          </h2>
-          <Link
-            href="/sites/new"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              height: 32,
-              padding: "0 14px",
-              borderRadius: 6,
-              border: "1px solid rgba(184,149,106,0.22)",
-              background: "rgba(184,149,106,0.05)",
-              color: "#b8956a",
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              textDecoration: "none",
-            }}
-          >
-            <Plus style={{ width: 12, height: 12 }} />
-            YENI
-          </Link>
+      {/* Siteleriniz Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <h2 className="font-heading text-lg font-bold text-[#2e0911] tracking-wide">
+              Siteleriniz
+            </h2>
+            {sites !== null && (
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                {sites.length}
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Icerik */}
+        {/* Sites Container */}
         {sites === null ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-            {[0, 1, 2].map(i => (
-              <div key={i} style={{ ...card, height: 110, opacity: 0.5 }} />
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="h-32 animate-pulse rounded-xl border border-slate-200 bg-white"
+              />
             ))}
           </div>
         ) : sites.length === 0 ? (
-          <div
-            style={{
-              ...card,
-              minHeight: 180,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 16,
-            }}
-          >
-            <p style={{ fontSize: 13, color: "#3a2a1a" }}>
-              Henuz bir site eklenmedi.
+          <div className="rounded-2xl border border-slate-200 bg-white p-12 shadow-sm flex flex-col items-center justify-center text-center">
+            {/* Helm Watermark / Emblem Icon */}
+            <div className="size-16 rounded-2xl bg-[#2e0911]/5 border border-[#2e0911]/10 flex items-center justify-center p-3 mb-4 shadow-inner">
+              <Image
+                src="/rudder-helm-transparent.png"
+                alt="Rudder Helm"
+                width={40}
+                height={40}
+                className="object-contain"
+              />
+            </div>
+
+            <h3 className="font-heading text-lg font-bold text-slate-800 mb-1">
+              Henüz bir site eklenmedi.
+            </h3>
+            <p className="text-xs text-slate-500 max-w-md mb-6 font-sans">
+              Sunucunuzda yeni bir WordPress, Node.js, Python veya statik web sitesi yayına alarak self-hosting deneyiminizi başlatın.
             </p>
-            <Link
-              href="/sites/new"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                height: 36,
-                padding: "0 20px",
-                borderRadius: 6,
-                background: "#4a0a14",
-                border: "1px solid rgba(184,149,106,0.18)",
-                color: "#e8d5b0",
-                fontSize: 12,
-                fontWeight: 700,
-                textDecoration: "none",
-              }}
+
+            <Button
+              asChild
+              className="bg-[#2e0911] hover:bg-[#4a0e1c] text-white font-semibold text-xs tracking-wider px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 h-10 hover:scale-[1.02]"
             >
-              <Plus style={{ width: 13, height: 13 }} />
-              Ilk sitenizi ekleyin
-            </Link>
+              <Link href="/sites/new">
+                <Plus className="size-4" />
+                İlk sitenizi ekleyin
+              </Link>
+            </Button>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
-            {sites.map(site => (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {sites.map((site) => (
               <SiteCard key={site.id} site={site} />
             ))}
           </div>
