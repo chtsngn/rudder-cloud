@@ -22,17 +22,21 @@
 - [x] **Branch Kurulumu:** \1.1.0\ dalı oluşturuldu ve geçiş yapıldı.
 - [x] **Yerel Çalışma Ortamı:** PostgreSQL Docker konteyneri ve Next.js dev sunucusu ayağa kaldırıldı.
 - [x] **Siteler Yönetim Sayfası (\/sites\) ve Yeni Site Sihirbazı (\/sites/new\) Yenilendi:**
-  - Özel \/sites\ sayfası oluşturuldu: Arama, tür filtresi (WordPress, Node.js, Python, PHP, Ters Proxy, Statik), durum filtresi ve durum özet kartları (Çalışan, Durdurulan, Hatalı) eklendi.
-  - \SiteCard\ bileşeni zenginleştirildi; framework ikon rozetleri, Nginx durumu, canlı durum göstergesi ve yönetim kontrolleriyle donatıldı.
-  - \/sites/new\ sihirbazı yeni temamıza uygun altın rozetli adım göstergesi, zengin kart seçimleri ve elit bordo/altın butonlarla baştan aşağı yenilendi.
+  - Özel \/sites\ sayfası oluşturuldu: Arama, tür filtresi, durum filtresi ve özet sayaçları.
+  - \SiteCard\ bileşeni zenginleştirildi; framework rozetleri, Nginx durumu ve kontrol butonları eklendi.
+  - \/sites/new\ sihirbazı altın rozetli adım göstergesi ve bordo/altın butonlarla yenilendi.
 - [x] **Site Detay & Yönetim Sayfası (\/sites/[id]\) Tablı Elit Tasarıma Dönüştürüldü:**
-  - Tek uzun ve yorucu sayfa yerine **5 Özel Sekmeli (Tabs)** mimari kuruldu:
-    1. **Genel Bakış & Ayarlar (Overview):** CPU & RAM Telemetrisi, Hızlı Ters Proxy Upstream URL Güncelleme, Yapılandırma Metadata Tablosu.
-    2. **Git & Otomatik Dağıtım (Git):** Repo/Branch ayarları, Otomatik Pull aralığı, Process Manager ve GitHub Deploy/Actions anahtar yönetimi.
-    3. **Yedekler & S3 (Backups):** Otomatik veritabanı yedekleme ve AWS S3 entegrasyonu.
-    4. **Erişim Yetkileri (Access):** Site düzeyinde üye yetkilendirmeleri.
-    5. **Servis Logları (Logs):** Canlı systemd / stdout-stderr terminal akışı.
-  - Üst Kısım: Şık oval geri dönüş butonu, büyük marka domain başlığı, canlı durum rozeti (pulsing dot), hızlı siteyi aç bağlantısı, dosya yöneticisi ve servis başlatma/durdurma/yeniden başlatma kontrolleri ile donatıldı.
+  - 5 Özel Sekmeli mimari kuruldu: *Genel Bakış & Ayarlar*, *Git & Otomatik Dağıtım*, *Yedekler & S3*, *Erişim Yetkileri*, *Servis Logları*.
+- [x] **Navigasyon Erişimi Güçlendirildi:**
+  - Sol bordo menüye \Siteler\ linki eklendi.
+  - Anasayfadaki "Siteleriniz" başlığına \Tüm Siteleri Yönet →\ bağlantısı yerleştirildi.
+- [x] **Sunucu Terminali (\/terminal\) Lüks Kaptan Köşkü Konsoluna Dönüştürüldü:**
+  - Üst Başlık: \Cinzel\ bordo başlık + altın/kehribar çerçeveli güvenlik uyarı bandı (\oot/sudo\ bilgilendirmesi).
+  - Terminal Pencere Kasası (Workstation Frame): macOS tarzı 3'lü trafik ışığı butonları, \oot@rudder-cloud:~ (bash)\ etiketi, anlık bağlantı durum rozeti (Online/Offline/Connecting).
+  - Konsol Kontrol Araçları: Canlı yazı boyutu büyütme/küçültme (\ZoomIn/ZoomOut\), konsolu temizleme (\Eraser\), hızlı yeniden bağlanma (\RotateCw\) ve tam ekran modu (\Fullscreen Toggle\).
+  - Hızlı Komutlar Çubuğu: Tek tıkla çalıştırılabilen hazır komut çipleri (\htop\, \docker ps\, \
+ginx -t\, \df -h\, \ree -m\, \uptime\, \journalctl\, \clear\).
+  - xterm Renk Paleti: Lüks obsidiyen koyu tema (\#0a0d14\), altın imleç (\#dfc9a0\) ve yüksek kontrastlı renkler.
 - [x] **Test & Doğrulama:** TypeScript typecheck (\
 px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 
@@ -43,5 +47,6 @@ px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 | Tarih | İşlem / Değişiklik | Etkilenen Dosyalar | Doğrulama Durumu |
 |---|---|---|---|
 | 2026-09-02 | \1.1.0\ dalı oluşturuldu, yerel ortam ayağa kaldırıldı | Git branch, Docker, .env | Başarılı (200 OK) |
-| 2026-09-02 | \/sites\ sayfası oluşturuldu, \SiteCard\ ve \/sites/new\ sihirbazı temaya uygun yenilendi | \sites/page.tsx\, \sites/new/page.tsx\, \site-card.tsx\ | Başarılı (TypeScript 0 hata, HTTP 200) |
-| 2026-09-02 | \/sites/[id]\ detay sayfası tablı mimariye ve lüks denizci temasına geçirildi | \sites/[id]/page.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | \/sites\ sayfası ve \/sites/new\ sihirbazı temaya uygun yenilendi | \sites/page.tsx\, \sites/new/page.tsx\, \site-card.tsx\ | Başarılı (TypeScript 0 hata, HTTP 200) |
+| 2026-09-02 | \/sites/[id]\ detay sayfası tablı mimariye geçirildi | \sites/[id]/page.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | \/terminal\ sayfası ve \	erminal-view.tsx\ lüks workstation konsoluna dönüştürüldü | \	erminal/page.tsx\, \	erminal-view.tsx\ | Başarılı (TypeScript 0 hata) |

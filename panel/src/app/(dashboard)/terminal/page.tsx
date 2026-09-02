@@ -1,7 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { Terminal as TerminalIcon } from "lucide-react"
+import { ShieldAlert, Terminal as TerminalIcon, Sparkles } from "lucide-react"
 
 // xterm.js tarayıcı-özel API'ler kullanıyor (WebSocket, `document`) — Monaco
 // editörle (Aşama C) aynı desen: `ssr: false` ile yalnızca istemcide yüklenir.
@@ -10,8 +10,11 @@ const TerminalView = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[70vh] items-center justify-center rounded-lg border border-border text-sm text-muted-foreground">
-        Terminal yükleniyor...
+      <div className="flex h-[72vh] items-center justify-center rounded-2xl border border-slate-200 bg-slate-900 text-xs font-mono text-emerald-400 shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+          Terminal ortamı başlatılıyor...
+        </div>
       </div>
     ),
   }
@@ -19,21 +22,49 @@ const TerminalView = dynamic(
 
 export default function TerminalPage() {
   return (
-    <div className="flex h-full flex-col space-y-6">
-      <div>
-        <h1 className="flex items-center gap-2 font-heading text-2xl font-semibold text-foreground">
-          <TerminalIcon className="size-5" />
-          Sunucu Terminali
-        </h1>
-        <p className="text-sm text-destructive">
-          Bu kabuk <span className="font-semibold">root</span> yetkisiyle çalışır — burada
-          çalıştırılan her komut tüm sunucuyu etkileyebilir. Sekme kapatılır veya bağlantı koparsa
-          çalışan kabuk süreci sonlandırılır.
-        </p>
+    <div className="max-w-7xl mx-auto flex h-full flex-col space-y-6 pb-8">
+      {/* ═══ 1. ÜST BAŞLIK & GÜVENLİK UYARISI ═══ */}
+      <div className="space-y-4 pb-4 border-b border-slate-200/80">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="size-11 rounded-2xl bg-[#580619]/5 border border-[#c8a87c]/30 flex items-center justify-center text-[#580619] shadow-2xs">
+              <TerminalIcon className="size-5 text-[#580619]" />
+            </div>
+            <div>
+              <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619]">
+                Sunucu Terminali
+              </h1>
+              <p className="text-xs text-slate-500 font-sans mt-0.5">
+                Doğrudan Linux ana makinenize bağlı gerçek zamanlı Web PTY konsolu.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Güvenlik & Yetki Bilgilendirme Bandı */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/50 p-3.5 text-xs text-amber-900 shadow-2xs">
+          <div className="flex items-start gap-2.5">
+            <ShieldAlert className="size-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold">
+                Yüksek Yetkili Kabuk Oturumu (Root/Sudo Erişimi)
+              </p>
+              <p className="text-[11px] text-amber-700 mt-0.5 leading-relaxed font-sans">
+                Burada çalıştırılan komutlar sunucu dosya sistemini ve çalışan servisleri anında etkiler. Sekme kapatıldığında veya bağlantı koptuğunda oturum otomatik sonlandırılır.
+              </p>
+            </div>
+          </div>
+          <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-amber-200 font-mono text-[11px] font-bold text-amber-800 shadow-2xs">
+            /bin/bash • PTY
+          </span>
+        </div>
       </div>
-      <div className="h-[70vh]">
+
+      {/* ═══ 2. TERMİNAL PENCERESİ ═══ */}
+      <div className="h-[74vh] min-h-[500px]">
         <TerminalView />
       </div>
     </div>
   )
 }
+
