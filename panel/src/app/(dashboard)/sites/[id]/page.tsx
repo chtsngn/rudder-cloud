@@ -3,11 +3,36 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, FolderOpen, Loader2, Play, RotateCw, ShieldAlert, Square, Trash2 } from "lucide-react"
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Check,
+  CheckCircle2,
+  FolderOpen,
+  GitBranch,
+  KeyRound,
+  Layers,
+  Loader2,
+  Lock,
+  Play,
+  RotateCw,
+  Server,
+  Settings2,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  Square,
+  Terminal,
+  Trash2,
+  Users,
+  Database,
+  FileText,
+  Activity,
+  Globe,
+  Code2,
+} from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -15,26 +40,59 @@ import { SiteAccessCard } from "@/components/site-access-card"
 import { SiteBackupCard } from "@/components/site-backup-card"
 import { SiteGithubKeysCard } from "@/components/site-github-keys-card"
 import { StatMeter } from "@/components/stat-meter"
-import { SITE_TYPES, type Site } from "@/lib/mock-data"
+import { SITE_TYPES, type Site, type SiteType } from "@/lib/mock-data"
 import { apiSiteToUiSite, type ApiSite } from "@/lib/site-adapter"
+import { cn } from "@/lib/utils"
 
-const STATUS_LABEL: Record<Site["status"], string> = {
-  active: "Aktif",
-  running: "Çalışıyor",
-  stopped: "Durduruldu",
-  provisioning: "Kuruluyor",
-  error: "Hata",
-}
-
-const STATUS_BADGE_CLASS: Record<Site["status"], string> = {
-  active: "border-success/40 text-success",
-  running: "border-success/40 text-success",
-  stopped: "border-muted-foreground/40 text-muted-foreground",
-  provisioning: "border-warning/40 text-warning",
-  error: "border-destructive/40 text-destructive",
+const STATUS_CONFIG: Record<
+  Site["status"],
+  { label: string; dot: string; badge: string }
+> = {
+  active: {
+    label: "Aktif",
+    dot: "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]",
+    badge: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
+  },
+  running: {
+    label: "Çalışıyor",
+    dot: "bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]",
+    badge: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
+  },
+  stopped: {
+    label: "Durduruldu",
+    dot: "bg-slate-400",
+    badge: "bg-slate-100 text-slate-600 border-slate-200",
+  },
+  provisioning: {
+    label: "Kuruluyor",
+    dot: "bg-amber-500 animate-pulse",
+    badge: "bg-amber-50 text-amber-700 border-amber-200/80",
+  },
+  error: {
+    label: "Hata",
+    dot: "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]",
+    badge: "bg-red-50 text-red-700 border-red-200/80",
+  },
 }
 
 type ServiceAction = "start" | "stop" | "restart"
+type ActiveTab = "overview" | "git" | "backups" | "access" | "logs"
+
+function getTypeIcon(type: SiteType) {
+  switch (type) {
+    case "wordpress":
+    case "php":
+      return Globe
+    case "nodejs":
+      return Code2
+    case "python":
+      return Layers
+    case "proxy":
+      return Server
+    default:
+      return Globe
+  }
+}
 
 export default function SiteDetailPage() {
   const params = useParams<{ id: string }>()
@@ -52,6 +110,7 @@ export default function SiteDetailPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [activeTab, setActiveTab] = useState<ActiveTab>("overview")
 
   const [actionPending, setActionPending] = useState<ServiceAction | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -360,76 +419,69 @@ export default function SiteDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-        <Loader2 className="size-5 animate-spin" />
+      <div className="flex min-h-[40vh] items-center justify-center text-slate-400">
+        <Loader2 className="size-6 animate-spin text-[#580619]" />
       </div>
     )
   }
 
   if (notFound || !site) {
     return (
-      <div className="space-y-4">
+      <div className="mx-auto max-w-4xl space-y-6">
         <Link
-          href="/"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          href="/sites"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:text-[#580619] hover:border-[#c8a87c] shadow-xs transition-all"
         >
-          <ArrowLeft className="size-4" />
-          Anasayfaya dön
+          <ArrowLeft className="size-3.5" />
+          Siteler listesine dön
         </Link>
-        <Card>
-          <CardContent className="pt-6 text-sm text-muted-foreground">
-            Site bulunamadı.
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+          Site bulunamadı veya silinmiş olabilir.
+        </div>
       </div>
     )
   }
 
   const typeInfo = SITE_TYPES.find((t) => t.type === site.type)!
   const isRunning = site.status === "running"
-
   const isProxy = site.type === "proxy"
+  const status = STATUS_CONFIG[site.status] ?? STATUS_CONFIG.stopped
+  const TypeIcon = getTypeIcon(site.type)
 
   const configRows = [
-    { label: "Alan adı", value: site.domain },
+    { label: "Alan Adı (Domain)", value: site.domain },
     ...(isManaged
-      ? [{ label: "Port", value: String(config.port ?? "-") }]
+      ? [{ label: "Uygulama Portu", value: String(config.port ?? "-") }]
       : []),
     ...(isManaged
-      ? [{ label: "Başlatma komutu", value: String(config.startCommand ?? "-") }]
+      ? [{ label: "Başlatma Komutu", value: String(config.startCommand ?? "-") }]
       : []),
-    // REVERSE_PROXY sitelerinin gerçek bir site kök dizini/linux kullanıcısı
-    // YOKTUR (provision-site.sh bunları bu tip için hiç oluşturmaz, doğrudan
-    // Nginx bir upstream'e proxy_pass yapar) -- bu yüzden diğer tiplerdeki
-    // gibi bir dizin/kullanıcı GÖSTERMEK yanıltıcı olurdu (var olmayan bir
-    // yol gösterip "Dosyalar" da gizli olunca kafa karıştırır). Onun yerine
-    // gerçek yapılandırma olan hedef adresi gösteriyoruz.
     ...(isProxy
-      ? [{ label: "Hedef adres", value: String(config.upstreamUrl ?? "-") }]
+      ? [{ label: "Hedef Adres (Upstream)", value: String(config.upstreamUrl ?? "-") }]
       : [
           {
-            label: "Site kök dizini",
+            label: "Site Kök Dizini",
             value: String(config.siteRoot ?? `/var/www/${site.domain}`),
           },
           {
-            label: "Linux kullanıcısı",
+            label: "Linux Kullanıcısı",
             value: String(config.linuxUser ?? site.domain.split(".")[0]),
           },
         ]),
     {
-      label: "SSL",
+      label: "SSL Durumu",
       value: !sslInfo || !sslInfo.sslEnabled
         ? "Pasif"
         : sslInfo.sslStatus === "active"
           ? "Aktif (Let's Encrypt)"
           : sslInfo.sslStatus === "error"
-            ? "Hata — aşağıya bakın"
+            ? "Hata (Doğrulama Bekliyor)"
             : "Bekliyor",
     },
     ...(isManaged
       ? [
           {
-            label: "systemd birimi",
+            label: "systemd Servis Birimi",
             value: `site-${site.domain.replace(/\./g, "-")}.service`,
           },
         ]
@@ -437,235 +489,381 @@ export default function SiteDetailPage() {
   ]
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="max-w-7xl mx-auto space-y-7 pb-12">
+      {/* ═══ 1. ÜST GERİ DÖNÜŞ & BAŞLIK KONTROLLERİ ═══ */}
+      <div className="space-y-4 pb-5 border-b border-slate-200/80">
         <Link
-          href="/"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          href="/sites"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:text-[#580619] hover:border-[#c8a87c] shadow-xs transition-all"
         >
-          <ArrowLeft className="size-4" />
-          Anasayfaya dön
+          <ArrowLeft className="size-3.5 text-[#580619]" />
+          Siteler listesine dön
         </Link>
-      </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="flex size-11 items-center justify-center rounded-lg bg-muted font-mono text-xs font-semibold text-foreground">
-            {typeInfo.abbr}
-          </span>
-          <div>
-            <h1 className="font-mono text-xl font-semibold text-foreground">
-              {site.domain}
-            </h1>
-            <p className="text-sm text-muted-foreground">{typeInfo.label}</p>
-          </div>
-          <Badge variant="outline" className={STATUS_BADGE_CLASS[site.status]}>
-            {STATUS_LABEL[site.status]}
-          </Badge>
-        </div>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          {/* Site Başlığı & Rozetler */}
+          <div className="flex items-center gap-3.5">
+            <div className="size-12 rounded-2xl bg-[#580619]/5 border border-[#c8a87c]/30 flex items-center justify-center text-[#580619] font-mono text-xs font-black shadow-sm shrink-0">
+              <TypeIcon className="size-6" />
+            </div>
 
-        <div className="flex items-center gap-2">
-          {site.type !== "proxy" && (
-            <Button variant="outline" asChild>
-              <Link href={`/sites/${site.id}/files`}>
-                <FolderOpen className="size-4" />
-                Dosyalar
-              </Link>
-            </Button>
-          )}
-          {isManaged && (
-            <>
-              <Button
-                variant="outline"
-                disabled={isRunning || actionPending !== null}
-                onClick={() => handleServiceAction("start")}
-              >
-                {actionPending === "start" ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Play className="size-4" />
-                )}
-                Başlat
-              </Button>
-              <Button
-                variant="outline"
-                disabled={!isRunning || actionPending !== null}
-                onClick={() => handleServiceAction("stop")}
-              >
-                {actionPending === "stop" ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Square className="size-4" />
-                )}
-                Durdur
-              </Button>
-              <Button
-                variant="outline"
-                disabled={actionPending !== null}
-                onClick={() => handleServiceAction("restart")}
-              >
-                {actionPending === "restart" ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <RotateCw className="size-4" />
-                )}
-                Yeniden Başlat
-              </Button>
-            </>
-          )}
-          <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-            {deleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
-            Sil
-          </Button>
-        </div>
-      </div>
-
-      {actionError && (
-        <p className="text-sm text-destructive" role="alert">
-          {actionError}
-        </p>
-      )}
-
-      {sslInfo?.sslStatus === "error" && (
-        <div className="flex flex-col gap-3 rounded-lg border border-warning/40 bg-warning/5 p-3 text-sm sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-2 text-warning">
-            <ShieldAlert className="mt-0.5 size-4 shrink-0" />
             <div>
-              <p className="font-medium">SSL sertifikası alınamadı, site yine de yayında.</p>
-              {sslInfo.sslLastError && (
-                <p className="mt-1 text-xs text-muted-foreground">{sslInfo.sslLastError}</p>
-              )}
-              <p className="mt-1 text-xs text-muted-foreground">
-                Genelde alan adının DNS A kaydı bu sunucuya henüz yönlendirilmemiştir — DNS&apos;i
-                düzelttikten sonra tekrar deneyin.
+              <div className="flex items-center gap-2.5">
+                <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619]">
+                  {site.domain}
+                </h1>
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border shadow-2xs",
+                    status.badge
+                  )}
+                >
+                  <span className={cn("size-1.5 rounded-full", status.dot)} />
+                  {status.label}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5 font-sans flex items-center gap-2">
+                <span>{typeInfo.label} sitesi</span>
+                <span>•</span>
+                <span>{sslInfo?.sslEnabled ? "SSL Aktif" : "HTTP"}</span>
               </p>
-              {sslRetryError && <p className="mt-1 text-xs text-destructive">{sslRetryError}</p>}
             </div>
           </div>
-          <Button size="sm" variant="outline" disabled={sslRetrying} onClick={handleRetrySsl} className="shrink-0">
-            {sslRetrying && <Loader2 className="size-3.5 animate-spin" />}
-            Tekrar Dene
-          </Button>
-        </div>
-      )}
 
-      {isManaged && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Card>
-            <CardContent className="pt-6">
-              <StatMeter label="CPU" value={site.cpu ?? 0} />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <StatMeter label="RAM" value={site.ram ?? 0} />
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Yapılandırma</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="divide-y divide-border">
-            {configRows.map((item) => (
-              <div
-                key={item.label}
-                className="flex items-center justify-between py-2.5 text-sm"
+          {/* Aksiyon Butonları */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="h-9 px-3 rounded-xl border-slate-200 text-xs font-semibold text-slate-700 hover:text-[#580619] hover:border-[#c8a87c] shadow-2xs"
+            >
+              <a
+                href={`http://${site.domain}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5"
               >
-                <dt className="text-muted-foreground">{item.label}</dt>
-                <dd className="font-mono text-foreground">{item.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </CardContent>
-      </Card>
+                <Globe className="size-3.5" />
+                Siteyi Aç
+                <ArrowUpRight className="size-3 text-slate-400" />
+              </a>
+            </Button>
 
-      {!isManaged && (
-        <Card>
-          <CardContent className="pt-6 text-sm text-muted-foreground">
-            Bu site türü doğrudan Nginx tarafından sunulur; panel tarafından
-            yönetilen bir süreç bulunmaz.
-            {isProxy &&
-              " Ters proxy sitelerinin sunucuda ayrı bir dosya kök dizini yoktur; git ile deploy ediyorsanız aşağıdaki \"Git & Dağıtım\" kartından uygulamanızı klonlayabilirsiniz — dosya yöneticisi yalnızca Statik/PHP/WordPress site türleri için gösterilir."}
-          </CardContent>
-        </Card>
+            {site.type !== "proxy" && (
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="h-9 px-3 rounded-xl border-slate-200 text-xs font-semibold text-slate-700 hover:text-[#580619] hover:border-[#c8a87c] shadow-2xs"
+              >
+                <Link href={`/sites/${site.id}/files`} className="flex items-center gap-1.5">
+                  <FolderOpen className="size-3.5 text-[#580619]" />
+                  Dosyalar
+                </Link>
+              </Button>
+            )}
+
+            {isManaged && (
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={isRunning || actionPending !== null}
+                  onClick={() => handleServiceAction("start")}
+                  className="h-7 px-2.5 rounded-lg text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+                  title="Servisi Başlat"
+                >
+                  {actionPending === "start" ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : (
+                    <Play className="size-3 fill-emerald-600" />
+                  )}
+                  Başlat
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={!isRunning || actionPending !== null}
+                  onClick={() => handleServiceAction("stop")}
+                  className="h-7 px-2.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-200"
+                  title="Servisi Durdur"
+                >
+                  {actionPending === "stop" ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : (
+                    <Square className="size-3 fill-slate-500" />
+                  )}
+                  Durdur
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={actionPending !== null}
+                  onClick={() => handleServiceAction("restart")}
+                  className="h-7 px-2.5 rounded-lg text-xs font-semibold text-[#580619] hover:bg-[#580619]/10"
+                  title="Servisi Yeniden Başlat"
+                >
+                  {actionPending === "restart" ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : (
+                    <RotateCw className="size-3" />
+                  )}
+                  Yeniden Başlat
+                </Button>
+              </div>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="h-9 px-3 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 text-xs font-semibold shadow-2xs"
+            >
+              {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+              Sil
+            </Button>
+          </div>
+        </div>
+
+        {actionError && (
+          <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-700">
+            {actionError}
+          </div>
+        )}
+
+        {/* SSL Hata Uyarı Bandı */}
+        {sslInfo?.sslStatus === "error" && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4 text-xs text-amber-900 shadow-2xs">
+            <div className="flex items-start gap-3">
+              <ShieldAlert className="size-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">SSL sertifikası doğrulanamadı, site HTTP üzerinden yayında.</p>
+                <p className="text-[11px] text-amber-700 mt-0.5">
+                  {sslInfo.sslLastError || "DNS A kaydının sunucunuza yönlendiğinden emin olduktan sonra tekrar deneyin."}
+                </p>
+                {sslRetryError && <p className="text-[11px] text-red-600 mt-1">{sslRetryError}</p>}
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={sslRetrying}
+              onClick={handleRetrySsl}
+              className="shrink-0 h-8 rounded-xl border-amber-300 bg-white text-amber-900 hover:bg-amber-100 text-xs font-semibold"
+            >
+              {sslRetrying && <Loader2 className="size-3 animate-spin mr-1" />}
+              Tekrar Dene
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* ═══ 2. ŞIK TABLAR (SEKMELER) ═══ */}
+      <div className="flex items-center gap-1.5 border-b border-slate-200 pb-px overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveTab("overview")}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
+            activeTab === "overview"
+              ? "border-[#580619] text-[#580619]"
+              : "border-transparent text-slate-500 hover:text-slate-900"
+          )}
+        >
+          <Settings2 className="size-4 text-[#c8a87c]" />
+          Genel Bakış &amp; Ayarlar
+        </button>
+
+        {(isManaged || isProxy) && (
+          <button
+            type="button"
+            onClick={() => setActiveTab("git")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
+              activeTab === "git"
+                ? "border-[#580619] text-[#580619]"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            )}
+          >
+            <GitBranch className="size-4 text-[#c8a87c]" />
+            Git &amp; Otomatik Dağıtım
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("backups")}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
+            activeTab === "backups"
+              ? "border-[#580619] text-[#580619]"
+              : "border-transparent text-slate-500 hover:text-slate-900"
+          )}
+        >
+          <Database className="size-4 text-[#c8a87c]" />
+          Yedekler &amp; S3
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("access")}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
+            activeTab === "access"
+              ? "border-[#580619] text-[#580619]"
+              : "border-transparent text-slate-500 hover:text-slate-900"
+          )}
+        >
+          <Users className="size-4 text-[#c8a87c]" />
+          Erişim Yetkileri
+        </button>
+
+        {isManaged && (
+          <button
+            type="button"
+            onClick={() => setActiveTab("logs")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
+              activeTab === "logs"
+                ? "border-[#580619] text-[#580619]"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            )}
+          >
+            <Terminal className="size-4 text-[#c8a87c]" />
+            Servis Logları
+          </button>
+        )}
+      </div>
+
+      {/* ═══ 3. TAB İÇERİKLERİ ═══ */}
+
+      {/* ── TAB 1: GENEL BAKIŞ & AYARLAR ── */}
+      {activeTab === "overview" && (
+        <div className="space-y-6">
+          {isManaged && (
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs">
+                <StatMeter label="İşlemci Kullanımı (CPU)" value={site.cpu ?? 0} />
+              </div>
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs">
+                <StatMeter label="Bellek Kullanımı (RAM)" value={site.ram ?? 0} />
+              </div>
+            </div>
+          )}
+
+          {/* Ters Proxy Hızlı Hedef Adres Kutusu */}
+          {isProxy && (
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-4">
+              <div>
+                <h3 className="font-heading font-bold text-slate-900 text-sm">
+                  Hedef Adres (Reverse Proxy Pass)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Ters proxy trafiğinin yönlendirileceği yerel veya harici servis portunu güncelleyin.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                <Input
+                  id="upstreamUrl"
+                  placeholder="http://127.0.0.1:3000"
+                  value={upstreamUrl}
+                  onChange={(e) => setUpstreamUrl(e.target.value)}
+                  className="font-mono text-xs h-10 rounded-xl"
+                />
+                <Button
+                  type="button"
+                  onClick={handleUpstreamSave}
+                  disabled={upstreamSaving || !upstreamUrl.trim()}
+                  className="bg-[#580619] hover:bg-[#720a22] text-white h-10 px-5 rounded-xl text-xs font-semibold shrink-0"
+                >
+                  {upstreamSaving && <Loader2 className="size-3.5 animate-spin mr-1" />}
+                  Güncelle
+                </Button>
+              </div>
+
+              {upstreamSaveError && <p className="text-xs text-red-600 font-mono">{upstreamSaveError}</p>}
+              {upstreamSaveOk && !upstreamSaveError && (
+                <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+                  <Check className="size-3.5 stroke-[3]" />
+                  Hedef adres başarıyla güncellendi.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Yapılandırma Bilgileri Tablosu */}
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-4">
+            <h3 className="font-heading font-bold text-slate-900 text-sm">
+              Sunucu &amp; Yapılandırma Detayları
+            </h3>
+
+            <div className="divide-y divide-slate-100">
+              {configRows.map((item) => (
+                <div
+                  key={item.label}
+                  className="flex items-center justify-between py-3 text-xs"
+                >
+                  <span className="font-medium text-slate-500">{item.label}</span>
+                  <span className="font-mono font-bold text-slate-900 text-right">
+                    {item.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
-      {(isManaged || isProxy) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Git &amp; Dağıtım</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            {isProxy && (
-              <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                Reverse-proxy sitelerde bu kart CloudPanel&apos;deki alışkanlığınızın karşılığıdır:
-                önce buradan repo&apos;yu klonlayın (gerekirse aşağıdaki GitHub bölümünden deploy
-                key oluşturup repo&apos;ya ekleyin), sunucuda Terminal üzerinden .env dosyanızı
-                düzenleyip uygulamayı ayağa kaldırın, sonra aşağıdaki &quot;Hedef adres&quot;
-                alanını uygulamanızın dinlediği porta güncelleyin.
+      {/* ── TAB 2: GİT & OTOMATİK DAĞITIM ── */}
+      {activeTab === "git" && (isManaged || isProxy) && (
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-6 md:p-8 shadow-xs space-y-6">
+            <div className="border-b border-slate-100 pb-4">
+              <h3 className="font-heading font-bold text-slate-900 text-base">
+                Git Deposu ve Otomatik Dağıtım
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                GitHub veya özel git deponuzu bağlayarak otomatik pull ve yeniden başlatma yapılandırın.
               </p>
-            )}
-            {isProxy && (
-              <div className="space-y-2 rounded-lg border border-border p-3">
-                <Label htmlFor="upstreamUrl">Hedef adres (proxy_pass)</Label>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input
-                    id="upstreamUrl"
-                    placeholder="http://127.0.0.1:3000"
-                    value={upstreamUrl}
-                    onChange={(e) => setUpstreamUrl(e.target.value)}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleUpstreamSave}
-                    disabled={upstreamSaving || !upstreamUrl.trim()}
-                    className="shrink-0"
-                  >
-                    {upstreamSaving && <Loader2 className="size-4 animate-spin" />}
-                    Güncelle
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Uygulamanız hangi porttan ayağa kalkarsa proxy&apos;yi oraya yönlendirin — SSL
-                  etkinse bile sertifikayı bozmadan uygulanır.
-                </p>
-                {upstreamSaveError && <p className="text-xs text-destructive">{upstreamSaveError}</p>}
-                {upstreamSaveOk && !upstreamSaveError && (
-                  <p className="text-xs text-success">Hedef adres güncellendi.</p>
-                )}
-              </div>
-            )}
-            <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="repoUrl">Repo adresi</Label>
+            </div>
+
+            <div className="space-y-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="repoUrl" className="text-xs font-bold text-slate-700">
+                    Repo Adresi (SSH / HTTPS)
+                  </Label>
                   <Input
                     id="repoUrl"
                     placeholder="git@github.com:owner/repo.git"
+                    className="font-mono text-xs h-10 rounded-xl"
                     value={gitForm.repoUrl}
                     onChange={(e) => setGitForm((f) => ({ ...f, repoUrl: e.target.value }))}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="gitBranch">Branch</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="gitBranch" className="text-xs font-bold text-slate-700">
+                    Branch Adı
+                  </Label>
                   <Input
                     id="gitBranch"
+                    placeholder="main"
+                    className="font-mono text-xs h-10 rounded-xl"
                     value={gitForm.gitBranch}
                     onChange={(e) => setGitForm((f) => ({ ...f, gitBranch: e.target.value }))}
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                <div className="space-y-0.5 pr-4">
-                  <Label htmlFor="autoPull">Otomatik pull</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Etkinleştirilirse panel bu repoyu düzenli aralıklarla kontrol edip yeni commit
-                    varsa çeker ve projeyi yeniden başlatır.
+              {/* Otomatik Pull Switch */}
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4 bg-slate-50/50">
+                <div>
+                  <p className="text-xs font-bold text-slate-800">Otomatik Pull &amp; Restart</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Yeni commit tespit edildiğinde kod otomatik çekilir ve servis yeniden başlatılır.
                   </p>
                 </div>
                 <Switch
@@ -678,13 +876,16 @@ export default function SiteDetailPage() {
               </div>
 
               {gitForm.autoPullEnabled && (
-                <div className="space-y-1.5 sm:w-56">
-                  <Label htmlFor="autoPullInterval">Kontrol aralığı (saniye)</Label>
+                <div className="space-y-2 sm:w-64">
+                  <Label htmlFor="autoPullInterval" className="text-xs font-bold text-slate-700">
+                    Kontrol Aralığı (Saniye)
+                  </Label>
                   <Input
                     id="autoPullInterval"
                     type="number"
                     min={5}
                     max={86400}
+                    className="h-10 rounded-xl font-mono text-xs"
                     value={gitForm.autoPullIntervalSeconds}
                     onChange={(e) =>
                       setGitForm((f) => ({
@@ -696,129 +897,152 @@ export default function SiteDetailPage() {
                 </div>
               )}
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="processManager">Yeniden başlatma yöntemi</Label>
-                  <select
-                    id="processManager"
-                    value={gitForm.processManager}
-                    onChange={(e) =>
-                      setGitForm((f) => ({
-                        ...f,
-                        processManager: e.target.value as ApiSite["processManager"],
-                      }))
-                    }
-                    className="border-input dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                  >
-                    {!isProxy && (
-                      <option value="SYSTEMD">systemd (panel yönetiyor — varsayılan)</option>
-                    )}
-                    <option value="DOCKER_COMPOSE">Docker Compose (docker compose restart)</option>
-                    <option value="PM2">PM2 (pm2 restart)</option>
-                    <option value="CUSTOM_SCRIPT">Özel script</option>
-                  </select>
-                  {isProxy && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Ters proxy sitelerinde panel systemd birimi oluşturmaz — uygulamanızı PM2,
-                      Docker Compose veya kendi script&apos;inizle ayakta tutun.
-                    </p>
+              {/* Process Manager Seçimi */}
+              <div className="space-y-2">
+                <Label htmlFor="processManager" className="text-xs font-bold text-slate-700">
+                  Yeniden Başlatma Yöntemi (Process Manager)
+                </Label>
+                <select
+                  id="processManager"
+                  value={gitForm.processManager}
+                  onChange={(e) =>
+                    setGitForm((f) => ({
+                      ...f,
+                      processManager: e.target.value as ApiSite["processManager"],
+                    }))
+                  }
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#c8a87c]"
+                >
+                  {!isProxy && (
+                    <option value="SYSTEMD">systemd (panel yönetiyor — varsayılan)</option>
                   )}
-                </div>
-                {gitForm.processManager === "CUSTOM_SCRIPT" && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="customRestartCommand">Özel restart betiği (mutlak yol)</Label>
-                    <Input
-                      id="customRestartCommand"
-                      placeholder={`/var/www/${site.domain}/deploy/restart.sh`}
-                      value={gitForm.customRestartCommand}
-                      onChange={(e) =>
-                        setGitForm((f) => ({ ...f, customRestartCommand: e.target.value }))
-                      }
-                    />
-                  </div>
-                )}
+                  <option value="DOCKER_COMPOSE">Docker Compose (docker compose restart)</option>
+                  <option value="PM2">PM2 (pm2 restart)</option>
+                  <option value="CUSTOM_SCRIPT">Özel script betiği</option>
+                </select>
               </div>
 
-              {gitSaveError && <p className="text-sm text-destructive">{gitSaveError}</p>}
+              {gitForm.processManager === "CUSTOM_SCRIPT" && (
+                <div className="space-y-2">
+                  <Label htmlFor="customRestartCommand" className="text-xs font-bold text-slate-700">
+                    Özel Restart Betiği (Mutlak Yol)
+                  </Label>
+                  <Input
+                    id="customRestartCommand"
+                    placeholder={`/var/www/${site.domain}/deploy/restart.sh`}
+                    className="font-mono text-xs h-10 rounded-xl"
+                    value={gitForm.customRestartCommand}
+                    onChange={(e) =>
+                      setGitForm((f) => ({ ...f, customRestartCommand: e.target.value }))
+                    }
+                  />
+                </div>
+              )}
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Button onClick={handleGitSave} disabled={gitSaving}>
-                  {gitSaving && <Loader2 className="size-4 animate-spin" />}
-                  Kaydet
+              {gitSaveError && <p className="text-xs text-red-600">{gitSaveError}</p>}
+
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <Button
+                  onClick={handleGitSave}
+                  disabled={gitSaving}
+                  className="bg-[#580619] hover:bg-[#720a22] text-white h-10 px-6 rounded-xl text-xs font-semibold"
+                >
+                  {gitSaving && <Loader2 className="size-3.5 animate-spin mr-1" />}
+                  Ayarları Kaydet
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleGitPull}
                   disabled={gitPulling || !gitForm.repoUrl.trim()}
+                  className="h-10 px-5 rounded-xl border-slate-200 text-xs font-semibold"
                 >
                   {gitPulling ? (
-                    <Loader2 className="size-4 animate-spin" />
+                    <Loader2 className="size-3.5 animate-spin mr-1" />
                   ) : (
-                    <RotateCw className="size-4" />
+                    <RotateCw className="size-3.5 mr-1" />
                   )}
                   Şimdi Pull Et
                 </Button>
-                {gitSaveOk && <span className="text-xs text-success">Kaydedildi.</span>}
+                {gitSaveOk && <span className="text-xs text-emerald-600 font-semibold">Ayarlar kaydedildi.</span>}
               </div>
 
               {(gitPullMessage || gitPullError) && (
-                <p className={`text-sm ${gitPullError ? "text-destructive" : "text-success"}`}>
+                <div
+                  className={cn(
+                    "p-3 rounded-xl text-xs font-mono",
+                    gitPullError ? "bg-red-50 text-red-700 border border-red-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  )}
+                >
                   {gitPullError ?? gitPullMessage}
-                </p>
+                </div>
               )}
 
-              <dl className="divide-y divide-border border-t border-border pt-2">
-                <div className="flex items-center justify-between py-2 text-sm">
-                  <dt className="text-muted-foreground">Son pull</dt>
-                  <dd className="font-mono text-foreground">
-                    {gitLastPull.at
-                      ? new Date(gitLastPull.at).toLocaleString("tr-TR")
-                      : "Henüz yapılmadı"}
-                  </dd>
-                </div>
-                {gitLastPull.at && (
-                  <div className="flex items-center justify-between py-2 text-sm">
-                    <dt className="text-muted-foreground">Durum</dt>
-                    <dd className={gitLastPull.ok ? "text-success" : "text-destructive"}>
-                      {gitLastPull.ok ? "Başarılı" : (gitLastPull.error ?? "Başarısız")}
-                    </dd>
-                  </div>
-                )}
-              </dl>
-            </CardContent>
-          </Card>
-      )}
-
-      {isManaged && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Son Kayıtlar</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => loadLogs()} disabled={logsLoading}>
-                {logsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCw className="size-3.5" />}
-                Yenile
-              </Button>
+              {/* Son Pull Durumu */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span>Son Git Pull:</span>
+                <span className="font-mono font-bold text-slate-800">
+                  {gitLastPull.at ? new Date(gitLastPull.at).toLocaleString("tr-TR") : "Henüz yapılmadı"}
+                </span>
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            {logsError ? (
-              <p className="text-sm text-destructive">{logsError}</p>
-            ) : (
-              <pre className="max-h-64 overflow-auto rounded-lg bg-background p-4 font-mono text-xs text-muted-foreground">
-                {logsLoading && !logs
-                  ? "Yükleniyor…"
-                  : logs.trim()
-                    ? logs
-                    : "Henüz kayıt yok."}
-              </pre>
-            )}
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* GitHub Keys Bileşeni */}
+          <SiteGithubKeysCard siteId={site.id} initialRepoUrl={gitForm.repoUrl} />
+        </div>
       )}
 
-      <SiteBackupCard siteId={site.id} />
-      <SiteGithubKeysCard siteId={site.id} initialRepoUrl={gitForm.repoUrl} />
-      <SiteAccessCard siteId={site.id} />
+      {/* ── TAB 3: YEDEKLER & S3 ── */}
+      {activeTab === "backups" && (
+        <div className="space-y-6">
+          <SiteBackupCard siteId={site.id} />
+        </div>
+      )}
+
+      {/* ── TAB 4: ERİŞİM YETKİLERİ ── */}
+      {activeTab === "access" && (
+        <div className="space-y-6">
+          <SiteAccessCard siteId={site.id} />
+        </div>
+      )}
+
+      {/* ── TAB 5: SERVİS LOGLARI ── */}
+      {activeTab === "logs" && isManaged && (
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-6 md:p-8 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <h3 className="font-heading font-bold text-slate-900 text-base">
+                Canlı Servis Kayıtları (systemd Logs)
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Uygulamanızın standart çıktı (stdout / stderr) akışı.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadLogs()}
+              disabled={logsLoading}
+              className="h-8 px-3 rounded-xl text-xs font-semibold"
+            >
+              {logsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCw className="size-3.5" />}
+              Yenile
+            </Button>
+          </div>
+
+          {logsError ? (
+            <p className="text-xs text-red-600 font-mono">{logsError}</p>
+          ) : (
+            <pre className="max-h-96 overflow-auto rounded-xl bg-slate-900 p-4 font-mono text-xs text-emerald-400 leading-relaxed shadow-inner">
+              {logsLoading && !logs
+                ? "Kayıtlar yükleniyor..."
+                : logs.trim()
+                ? logs
+                : "Henüz bir kayıt bulunmuyor."}
+            </pre>
+          )}
+        </div>
+      )}
     </div>
   )
 }

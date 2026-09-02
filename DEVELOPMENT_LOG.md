@@ -14,15 +14,6 @@
 - **Tipografi:** Google Fonts \Cinzel\ (Başlıklar / Brand wordmark), \Plus Jakarta Sans\ (Arayüz / Gövde metinleri), \JetBrains Mono\ (Kod & Metrikler)
 - **Veritabanı & ORM:** PostgreSQL + Prisma 7 (@prisma/adapter-pg)
 - **Kimlik & Güvenlik:** JWT tabanlı oturum yönetimi (jose, bcryptjs, httpOnly cookie), RBAC (SUPER_ADMIN, MEMBER), AES-256-GCM şifreleme
-- **Sistem & Entegrasyon:**
-  - Site Yönetimi (WordPress, PHP, Node.js, Python, Static, Reverse Proxy)
-  - Otomatik Git Dağıtımı & Periyodik Pull
-  - Dosya Yöneticisi & Monaco Kod Editörü
-  - Otomatik & S3 Entegreli Veritabanı Yedekleme
-  - GitHub Deploy & Actions Anahtar Yönetimi
-  - Web Terminali (xterm.js + node-pty)
-  - Port Görüntüleyici (Docker + Yerel Portlar)
-  - Denetim Kaydı (Audit Log)
 
 ---
 
@@ -34,9 +25,16 @@
   - Özel \/sites\ sayfası oluşturuldu: Arama, tür filtresi (WordPress, Node.js, Python, PHP, Ters Proxy, Statik), durum filtresi ve durum özet kartları (Çalışan, Durdurulan, Hatalı) eklendi.
   - \SiteCard\ bileşeni zenginleştirildi; framework ikon rozetleri, Nginx durumu, canlı durum göstergesi ve yönetim kontrolleriyle donatıldı.
   - \/sites/new\ sihirbazı yeni temamıza uygun altın rozetli adım göstergesi, zengin kart seçimleri ve elit bordo/altın butonlarla baştan aşağı yenilendi.
-- [ ] **Özellik Eklemeleri & Çıkarmaları:** (Kullanıcı direktiflerine göre detaylandırılacak)
+- [x] **Site Detay & Yönetim Sayfası (\/sites/[id]\) Tablı Elit Tasarıma Dönüştürüldü:**
+  - Tek uzun ve yorucu sayfa yerine **5 Özel Sekmeli (Tabs)** mimari kuruldu:
+    1. **Genel Bakış & Ayarlar (Overview):** CPU & RAM Telemetrisi, Hızlı Ters Proxy Upstream URL Güncelleme, Yapılandırma Metadata Tablosu.
+    2. **Git & Otomatik Dağıtım (Git):** Repo/Branch ayarları, Otomatik Pull aralığı, Process Manager ve GitHub Deploy/Actions anahtar yönetimi.
+    3. **Yedekler & S3 (Backups):** Otomatik veritabanı yedekleme ve AWS S3 entegrasyonu.
+    4. **Erişim Yetkileri (Access):** Site düzeyinde üye yetkilendirmeleri.
+    5. **Servis Logları (Logs):** Canlı systemd / stdout-stderr terminal akışı.
+  - Üst Kısım: Şık oval geri dönüş butonu, büyük marka domain başlığı, canlı durum rozeti (pulsing dot), hızlı siteyi aç bağlantısı, dosya yöneticisi ve servis başlatma/durdurma/yeniden başlatma kontrolleri ile donatıldı.
 - [x] **Test & Doğrulama:** TypeScript typecheck (\
-px tsc --noEmit\), 7 ana route (200 OK) test edildi.
+px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 
 ---
 
@@ -46,3 +44,4 @@ px tsc --noEmit\), 7 ana route (200 OK) test edildi.
 |---|---|---|---|
 | 2026-09-02 | \1.1.0\ dalı oluşturuldu, yerel ortam ayağa kaldırıldı | Git branch, Docker, .env | Başarılı (200 OK) |
 | 2026-09-02 | \/sites\ sayfası oluşturuldu, \SiteCard\ ve \/sites/new\ sihirbazı temaya uygun yenilendi | \sites/page.tsx\, \sites/new/page.tsx\, \site-card.tsx\ | Başarılı (TypeScript 0 hata, HTTP 200) |
+| 2026-09-02 | \/sites/[id]\ detay sayfası tablı mimariye ve lüks denizci temasına geçirildi | \sites/[id]/page.tsx\ | Başarılı (TypeScript 0 hata) |
