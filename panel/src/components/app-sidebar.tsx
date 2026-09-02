@@ -106,22 +106,24 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "sticky top-0 flex h-screen shrink-0 flex-col border-r border-border bg-card transition-[width] duration-150",
+        "sticky top-0 flex h-screen shrink-0 flex-col border-r border-white/[0.07] bg-[#121317]/95 backdrop-blur-md transition-[width] duration-150 z-30",
         collapsed ? "w-16" : "w-64"
       )}
     >
-      <div className={cn("flex h-20 items-center px-4", collapsed ? "justify-center px-0" : "justify-start")}>
+      {/* Top Brand Logo */}
+      <div className={cn("flex h-20 items-center px-5", collapsed ? "justify-center px-0" : "justify-start")}>
         <RudderLogo
           size={collapsed ? "sm" : "md"}
           iconOnly={collapsed}
           href="/"
-          className={collapsed ? "justify-center" : "pl-1"}
+          className={collapsed ? "justify-center" : ""}
         />
       </div>
 
-      <Separator />
+      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
 
-      <nav className={cn("flex flex-1 flex-col gap-1 p-3", collapsed && "items-center px-2")}>
+      {/* Navigation Items */}
+      <nav className={cn("flex flex-1 flex-col gap-1.5 p-3 pt-4", collapsed && "items-center px-2")}>
         {navItems.map((item) => {
           const active =
             item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
@@ -132,82 +134,71 @@ export function AppSidebar() {
               href={item.href}
               title={collapsed ? item.label : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-md text-sm font-medium transition-colors",
-                collapsed ? "justify-center p-2.5" : "px-3 py-2",
+                "relative flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-150",
+                collapsed ? "justify-center p-2.5" : "px-3.5 py-2.5",
                 active
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  ? "bg-gradient-to-r from-red-950/50 via-red-900/20 to-transparent text-white border-l-2 border-red-500 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]"
+                  : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100"
               )}
             >
-              <Icon className="size-4 shrink-0" />
-              {!collapsed && item.label}
+              <Icon className={cn("size-4 shrink-0", active ? "text-red-400" : "text-zinc-400")} />
+              {!collapsed && <span>{item.label}</span>}
+              {active && !collapsed && (
+                <div className="absolute right-2 size-1.5 rounded-full bg-red-500 shadow-[0_0_6px_#ef4444]" />
+              )}
             </Link>
           )
         })}
       </nav>
 
-      <Separator />
-
+      {/* Collapse Toggle */}
       <button
         type="button"
         onClick={toggleCollapsed}
         title={collapsed ? "Menüyü genişlet" : "Menüyü daralt"}
         className={cn(
-          "flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
+          "flex items-center gap-2 px-4 py-2.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-white/[0.04] hover:text-zinc-300",
           collapsed && "justify-center px-0"
         )}
       >
         {collapsed ? <ChevronRight className="size-4 shrink-0" /> : <ChevronLeft className="size-4 shrink-0" />}
-        {!collapsed && "Daralt"}
+        {!collapsed && <span>Daralt</span>}
       </button>
 
-      <Separator />
+      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
 
-      <div className={cn("p-3", collapsed && "px-2")}>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className={cn(
-              "flex w-full items-center gap-3 rounded-md text-left outline-none hover:bg-accent",
-              collapsed ? "justify-center p-2" : "px-2 py-2"
-            )}
-          >
-            <Avatar className="size-8 shrink-0">
-              <AvatarFallback className="bg-secondary text-xs font-medium">
+      {/* Bottom User Profile Section */}
+      <div className={cn("p-3.5", collapsed && "px-2")}>
+        <div className={cn("flex items-center justify-between gap-3 rounded-xl bg-white/[0.02] border border-white/[0.05] p-2", collapsed && "justify-center p-1.5")}>
+          <div className="flex items-center gap-3 min-w-0">
+            <Avatar className="size-9 shrink-0 border-2 border-red-600/80 shadow-[0_0_10px_rgba(220,38,38,0.35)]">
+              <AvatarFallback className="bg-red-950 text-red-200 text-xs font-black">
                 {user ? initialsFor(user.username) : "?"}
               </AvatarFallback>
             </Avatar>
             {!collapsed && (
-              <>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {user?.username ?? "..."}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {user ? (ROLE_LABELS[user.role] ?? user.role) : ""}
-                  </p>
-                </div>
-                <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
-              </>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-white leading-tight">
+                  {user?.username ?? "..."}
+                </p>
+                <p className="truncate text-[11px] text-zinc-400 leading-tight">
+                  {user ? (ROLE_LABELS[user.role] ?? user.role) : ""}
+                </p>
+              </div>
             )}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            {user?.role === "SUPER_ADMIN" && (
-              <>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings">
-                    <Settings className="size-4" />
-                    Ayarlar
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-              </>
-            )}
-            <DropdownMenuItem onSelect={handleLogout}>
+          </div>
+
+          {!collapsed && (
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Çıkış Yap"
+              className="size-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-950/30 transition-colors"
+            >
               <LogOut className="size-4" />
-              Çıkış Yap
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </button>
+          )}
+        </div>
       </div>
     </aside>
   )

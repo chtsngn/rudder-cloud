@@ -7,72 +7,72 @@
 :root {
   --radius: 0.65rem;
 
-  --background: #0d0d0d;
-  --foreground: #ffffff;
+  --background: #0f1013;
+  --foreground: #f4f4f5;
 
-  --card: #17181a;
-  --card-foreground: #ffffff;
+  --card: #15161b;
+  --card-foreground: #f4f4f5;
 
-  --popover: #17181a;
-  --popover-foreground: #ffffff;
+  --popover: #15161b;
+  --popover-foreground: #f4f4f5;
 
-  --primary: oklch(0.70 0.19 290);
-  --primary-hover: oklch(0.76 0.19 290);
+  --primary: #e11d48;
+  --primary-hover: #f43f5e;
   --primary-foreground: #ffffff;
 
-  --secondary: #1f2023;
+  --secondary: #1d1f26;
   --secondary-foreground: #ffffff;
 
-  --muted: #26282c;
-  --muted-foreground: #898781;
+  --muted: #242630;
+  --muted-foreground: #9496a1;
 
-  --accent: #1f2023;
+  --accent: #1d1f26;
   --accent-foreground: #ffffff;
 
-  --destructive: #d03b3b;
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
 
   --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.16);
-  --ring: oklch(0.70 0.19 290);
+  --input: rgba(255, 255, 255, 0.14);
+  --ring: #e11d48;
 
-  --success: #0ca30c;
-  --warning: #fab219;
+  --success: #10b981;
+  --warning: #f59e0b;
 }
 
 /* Panel is dark-by-default with no light mode toggle yet: .dark mirrors :root. */
 .dark {
-  --background: #0d0d0d;
-  --foreground: #ffffff;
+  --background: #0f1013;
+  --foreground: #f4f4f5;
 
-  --card: #17181a;
-  --card-foreground: #ffffff;
+  --card: #15161b;
+  --card-foreground: #f4f4f5;
 
-  --popover: #17181a;
-  --popover-foreground: #ffffff;
+  --popover: #15161b;
+  --popover-foreground: #f4f4f5;
 
-  --primary: oklch(0.70 0.19 290);
-  --primary-hover: oklch(0.76 0.19 290);
+  --primary: #e11d48;
+  --primary-hover: #f43f5e;
   --primary-foreground: #ffffff;
 
-  --secondary: #1f2023;
+  --secondary: #1d1f26;
   --secondary-foreground: #ffffff;
 
-  --muted: #26282c;
-  --muted-foreground: #898781;
+  --muted: #242630;
+  --muted-foreground: #9496a1;
 
-  --accent: #1f2023;
+  --accent: #1d1f26;
   --accent-foreground: #ffffff;
 
-  --destructive: #d03b3b;
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
 
   --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.16);
-  --ring: oklch(0.70 0.19 290);
+  --input: rgba(255, 255, 255, 0.14);
+  --ring: #e11d48;
 
-  --success: #0ca30c;
-  --warning: #fab219;
+  --success: #10b981;
+  --warning: #f59e0b;
 }
 
 @theme inline {
@@ -105,8 +105,6 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Reserved status colors: only for real state (Aktif/Çalışıyor/Durduruldu pills, CPU/RAM/Disk
-     meters). Never reused for branding or decoration. */
   --color-success: var(--success);
   --color-warning: var(--warning);
 
@@ -126,5 +124,15 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: url('/circuit-pattern.svg');
+    background-repeat: repeat;
+    background-size: 800px 800px;
+    background-attachment: fixed;
   }
+}
+
+.bg-circuit-overlay {
+  background-image: url('/circuit-pattern.svg');
+  background-repeat: repeat;
+  background-size: 600px 600px;
 }
