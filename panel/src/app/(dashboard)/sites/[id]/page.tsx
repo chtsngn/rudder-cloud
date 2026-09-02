@@ -492,25 +492,25 @@ export default function SiteDetailPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-7 pb-12">
       {/* ═══ 1. ÜST GERİ DÖNÜŞ & BAŞLIK KONTROLLERİ ═══ */}
-      <div className="space-y-4 pb-5 border-b border-slate-200/80">
+      <div className="space-y-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
         <Link
           href="/sites"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:text-[#580619] hover:border-[#c8a87c] shadow-xs transition-all"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-[#580619] dark:hover:text-blue-400 hover:border-[#c8a87c] dark:hover:border-blue-500/50 shadow-xs transition-all"
         >
-          <ArrowLeft className="size-3.5 text-[#580619]" />
+          <ArrowLeft className="size-3.5 text-[#580619] dark:text-blue-400" />
           Siteler listesine dön
         </Link>
 
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           {/* Site Başlığı & Rozetler */}
           <div className="flex items-center gap-3.5">
-            <div className="size-12 rounded-2xl bg-[#580619]/5 border border-[#c8a87c]/30 flex items-center justify-center text-[#580619] font-mono text-xs font-black shadow-sm shrink-0">
+            <div className="size-12 rounded-2xl bg-[#580619]/5 dark:bg-blue-500/10 border border-[#c8a87c]/30 dark:border-blue-500/30 flex items-center justify-center text-[#580619] dark:text-blue-400 font-mono text-xs font-black shadow-sm shrink-0">
               <TypeIcon className="size-6" />
             </div>
 
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619]">
+                <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
                   {site.domain}
                 </h1>
                 <span
@@ -523,7 +523,7 @@ export default function SiteDetailPage() {
                   {status.label}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5 font-sans flex items-center gap-2">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans flex items-center gap-2">
                 <span>{typeInfo.label} sitesi</span>
                 <span>•</span>
                 <span>{sslInfo?.sslEnabled ? "SSL Aktif" : "HTTP"}</span>
@@ -537,7 +537,7 @@ export default function SiteDetailPage() {
               asChild
               variant="outline"
               size="sm"
-              className="h-9 px-3 rounded-xl border-slate-200 text-xs font-semibold text-slate-700 hover:text-[#580619] hover:border-[#c8a87c] shadow-2xs"
+              className="h-9 px-3 rounded-xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#580619] dark:hover:text-blue-400 hover:border-[#c8a87c] dark:hover:border-blue-500/50 shadow-2xs"
             >
               <a
                 href={`http://${site.domain}`}
@@ -547,7 +547,7 @@ export default function SiteDetailPage() {
               >
                 <Globe className="size-3.5" />
                 Siteyi Aç
-                <ArrowUpRight className="size-3 text-slate-400" />
+                <ArrowUpRight className="size-3 text-slate-400 dark:text-slate-500" />
               </a>
             </Button>
 
@@ -556,29 +556,29 @@ export default function SiteDetailPage() {
                 asChild
                 variant="outline"
                 size="sm"
-                className="h-9 px-3 rounded-xl border-slate-200 text-xs font-semibold text-slate-700 hover:text-[#580619] hover:border-[#c8a87c] shadow-2xs"
+                className="h-9 px-3 rounded-xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#580619] dark:hover:text-blue-400 hover:border-[#c8a87c] dark:hover:border-blue-500/50 shadow-2xs"
               >
                 <Link href={`/sites/${site.id}/files`} className="flex items-center gap-1.5">
-                  <FolderOpen className="size-3.5 text-[#580619]" />
+                  <FolderOpen className="size-3.5 text-[#580619] dark:text-blue-400" />
                   Dosyalar
                 </Link>
               </Button>
             )}
 
             {isManaged && (
-              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+              <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#090e1f] p-1 rounded-xl border border-slate-200/80 dark:border-[#16223f]">
                 <Button
                   size="sm"
                   variant="ghost"
                   disabled={isRunning || actionPending !== null}
                   onClick={() => handleServiceAction("start")}
-                  className="h-7 px-2.5 rounded-lg text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+                  className="h-7 px-2.5 rounded-lg text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                   title="Servisi Başlat"
                 >
                   {actionPending === "start" ? (
                     <Loader2 className="size-3 animate-spin" />
                   ) : (
-                    <Play className="size-3 fill-emerald-600" />
+                    <Play className="size-3 fill-emerald-600 dark:fill-emerald-400" />
                   )}
                   Başlat
                 </Button>
@@ -587,7 +587,7 @@ export default function SiteDetailPage() {
                   variant="ghost"
                   disabled={!isRunning || actionPending !== null}
                   onClick={() => handleServiceAction("stop")}
-                  className="h-7 px-2.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-200"
+                  className="h-7 px-2.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800"
                   title="Servisi Durdur"
                 >
                   {actionPending === "stop" ? (
@@ -602,7 +602,7 @@ export default function SiteDetailPage() {
                   variant="ghost"
                   disabled={actionPending !== null}
                   onClick={() => handleServiceAction("restart")}
-                  className="h-7 px-2.5 rounded-lg text-xs font-semibold text-[#580619] hover:bg-[#580619]/10"
+                  className="h-7 px-2.5 rounded-lg text-xs font-semibold text-[#580619] dark:text-blue-400 hover:bg-[#580619]/10 dark:hover:bg-blue-500/15"
                   title="Servisi Yeniden Başlat"
                 >
                   {actionPending === "restart" ? (
@@ -620,7 +620,7 @@ export default function SiteDetailPage() {
               size="sm"
               onClick={handleDelete}
               disabled={deleting}
-              className="h-9 px-3 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 text-xs font-semibold shadow-2xs"
+              className="h-9 px-3 rounded-xl border-red-200 dark:border-red-900/60 bg-white dark:bg-[#090e1f] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-300 text-xs font-semibold shadow-2xs"
             >
               {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
               Sil
@@ -629,22 +629,22 @@ export default function SiteDetailPage() {
         </div>
 
         {actionError && (
-          <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-700">
+          <div className="rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 p-3 text-xs text-red-700 dark:text-red-300">
             {actionError}
           </div>
         )}
 
         {/* SSL Hata Uyarı Bandı */}
         {sslInfo?.sslStatus === "error" && (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4 text-xs text-amber-900 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/30 p-4 text-xs text-amber-900 dark:text-amber-300 shadow-2xs">
             <div className="flex items-start gap-3">
-              <ShieldAlert className="size-5 text-amber-600 shrink-0 mt-0.5" />
+              <ShieldAlert className="size-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <div>
                 <p className="font-bold">SSL sertifikası doğrulanamadı, site HTTP üzerinden yayında.</p>
-                <p className="text-[11px] text-amber-700 mt-0.5">
+                <p className="text-[11px] text-amber-700 dark:text-amber-400/90 mt-0.5">
                   {sslInfo.sslLastError || "DNS A kaydının sunucunuza yönlendiğinden emin olduktan sonra tekrar deneyin."}
                 </p>
-                {sslRetryError && <p className="text-[11px] text-red-600 mt-1">{sslRetryError}</p>}
+                {sslRetryError && <p className="text-[11px] text-red-600 dark:text-red-400 mt-1">{sslRetryError}</p>}
               </div>
             </div>
             <Button
@@ -652,7 +652,7 @@ export default function SiteDetailPage() {
               variant="outline"
               disabled={sslRetrying}
               onClick={handleRetrySsl}
-              className="shrink-0 h-8 rounded-xl border-amber-300 bg-white text-amber-900 hover:bg-amber-100 text-xs font-semibold"
+              className="shrink-0 h-8 rounded-xl border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-900 text-amber-900 dark:text-amber-300 hover:bg-amber-100 text-xs font-semibold"
             >
               {sslRetrying && <Loader2 className="size-3 animate-spin mr-1" />}
               Tekrar Dene
@@ -662,18 +662,18 @@ export default function SiteDetailPage() {
       </div>
 
       {/* ═══ 2. ŞIK TABLAR (SEKMELER) ═══ */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200 pb-px overflow-x-auto">
+      <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-px overflow-x-auto">
         <button
           type="button"
           onClick={() => setActiveTab("overview")}
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
             activeTab === "overview"
-              ? "border-[#580619] text-[#580619]"
-              : "border-transparent text-slate-500 hover:text-slate-900"
+              ? "border-[#580619] dark:border-blue-500 text-[#580619] dark:text-blue-400"
+              : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
           )}
         >
-          <Settings2 className="size-4 text-[#c8a87c]" />
+          <Settings2 className="size-4 text-[#c8a87c] dark:text-blue-400" />
           Genel Bakış &amp; Ayarlar
         </button>
 
@@ -684,11 +684,11 @@ export default function SiteDetailPage() {
             className={cn(
               "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
               activeTab === "git"
-                ? "border-[#580619] text-[#580619]"
-                : "border-transparent text-slate-500 hover:text-slate-900"
+                ? "border-[#580619] dark:border-blue-500 text-[#580619] dark:text-blue-400"
+                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
             )}
           >
-            <GitBranch className="size-4 text-[#c8a87c]" />
+            <GitBranch className="size-4 text-[#c8a87c] dark:text-blue-400" />
             Git &amp; Otomatik Dağıtım
           </button>
         )}
@@ -699,11 +699,11 @@ export default function SiteDetailPage() {
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
             activeTab === "backups"
-              ? "border-[#580619] text-[#580619]"
-              : "border-transparent text-slate-500 hover:text-slate-900"
+              ? "border-[#580619] dark:border-blue-500 text-[#580619] dark:text-blue-400"
+              : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
           )}
         >
-          <Database className="size-4 text-[#c8a87c]" />
+          <Database className="size-4 text-[#c8a87c] dark:text-blue-400" />
           Yedekler &amp; S3
         </button>
 
@@ -713,11 +713,11 @@ export default function SiteDetailPage() {
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
             activeTab === "access"
-              ? "border-[#580619] text-[#580619]"
-              : "border-transparent text-slate-500 hover:text-slate-900"
+              ? "border-[#580619] dark:border-blue-500 text-[#580619] dark:text-blue-400"
+              : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
           )}
         >
-          <Users className="size-4 text-[#c8a87c]" />
+          <Users className="size-4 text-[#c8a87c] dark:text-blue-400" />
           Erişim Yetkileri
         </button>
 
@@ -728,11 +728,11 @@ export default function SiteDetailPage() {
             className={cn(
               "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
               activeTab === "logs"
-                ? "border-[#580619] text-[#580619]"
-                : "border-transparent text-slate-500 hover:text-slate-900"
+                ? "border-[#580619] dark:border-blue-500 text-[#580619] dark:text-blue-400"
+                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
             )}
           >
-            <Terminal className="size-4 text-[#c8a87c]" />
+            <Terminal className="size-4 text-[#c8a87c] dark:text-blue-400" />
             Servis Logları
           </button>
         )}
@@ -745,10 +745,10 @@ export default function SiteDetailPage() {
         <div className="space-y-6">
           {isManaged && (
             <div className="grid gap-5 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs">
+              <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-5 shadow-xs">
                 <StatMeter label="İşlemci Kullanımı (CPU)" value={site.cpu ?? 0} />
               </div>
-              <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs">
+              <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-5 shadow-xs">
                 <StatMeter label="Bellek Kullanımı (RAM)" value={site.ram ?? 0} />
               </div>
             </div>
@@ -756,12 +756,12 @@ export default function SiteDetailPage() {
 
           {/* Ters Proxy Hızlı Hedef Adres Kutusu */}
           {isProxy && (
-            <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-4">
+            <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 shadow-xs space-y-4">
               <div>
-                <h3 className="font-heading font-bold text-slate-900 text-sm">
+                <h3 className="font-heading font-bold text-slate-900 dark:text-slate-100 text-sm">
                   Hedef Adres (Reverse Proxy Pass)
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Ters proxy trafiğinin yönlendirileceği yerel veya harici servis portunu güncelleyin.
                 </p>
               </div>
@@ -772,22 +772,22 @@ export default function SiteDetailPage() {
                   placeholder="http://127.0.0.1:3000"
                   value={upstreamUrl}
                   onChange={(e) => setUpstreamUrl(e.target.value)}
-                  className="font-mono text-xs h-10 rounded-xl"
+                  className="font-mono text-xs h-10 rounded-xl bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
                 />
                 <Button
                   type="button"
                   onClick={handleUpstreamSave}
                   disabled={upstreamSaving || !upstreamUrl.trim()}
-                  className="bg-[#580619] hover:bg-[#720a22] text-white h-10 px-5 rounded-xl text-xs font-semibold shrink-0"
+                  className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white h-10 px-5 rounded-xl text-xs font-semibold shrink-0 cursor-pointer"
                 >
                   {upstreamSaving && <Loader2 className="size-3.5 animate-spin mr-1" />}
                   Güncelle
                 </Button>
               </div>
 
-              {upstreamSaveError && <p className="text-xs text-red-600 font-mono">{upstreamSaveError}</p>}
+              {upstreamSaveError && <p className="text-xs text-red-600 dark:text-red-400 font-mono">{upstreamSaveError}</p>}
               {upstreamSaveOk && !upstreamSaveError && (
-                <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
                   <Check className="size-3.5 stroke-[3]" />
                   Hedef adres başarıyla güncellendi.
                 </p>
@@ -796,19 +796,19 @@ export default function SiteDetailPage() {
           )}
 
           {/* Yapılandırma Bilgileri Tablosu */}
-          <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-4">
-            <h3 className="font-heading font-bold text-slate-900 text-sm">
+          <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 shadow-xs space-y-4">
+            <h3 className="font-heading font-bold text-slate-900 dark:text-slate-100 text-sm">
               Sunucu &amp; Yapılandırma Detayları
             </h3>
 
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {configRows.map((item) => (
                 <div
                   key={item.label}
                   className="flex items-center justify-between py-3 text-xs"
                 >
-                  <span className="font-medium text-slate-500">{item.label}</span>
-                  <span className="font-mono font-bold text-slate-900 text-right">
+                  <span className="font-medium text-slate-500 dark:text-slate-400">{item.label}</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-right">
                     {item.value}
                   </span>
                 </div>
@@ -821,12 +821,12 @@ export default function SiteDetailPage() {
       {/* ── TAB 2: GİT & OTOMATİK DAĞITIM ── */}
       {activeTab === "git" && (isManaged || isProxy) && (
         <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200/90 bg-white p-6 md:p-8 shadow-xs space-y-6">
-            <div className="border-b border-slate-100 pb-4">
-              <h3 className="font-heading font-bold text-slate-900 text-base">
+          <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 md:p-8 shadow-xs space-y-6">
+            <div className="border-b border-slate-100 dark:border-[#16223f] pb-4">
+              <h3 className="font-heading font-bold text-slate-900 dark:text-slate-100 text-base">
                 Git Deposu ve Otomatik Dağıtım
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 GitHub veya özel git deponuzu bağlayarak otomatik pull ve yeniden başlatma yapılandırın.
               </p>
             </div>
@@ -834,25 +834,25 @@ export default function SiteDetailPage() {
             <div className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="repoUrl" className="text-xs font-bold text-slate-700">
+                  <Label htmlFor="repoUrl" className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     Repo Adresi (SSH / HTTPS)
                   </Label>
                   <Input
                     id="repoUrl"
                     placeholder="git@github.com:owner/repo.git"
-                    className="font-mono text-xs h-10 rounded-xl"
+                    className="font-mono text-xs h-10 rounded-xl bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
                     value={gitForm.repoUrl}
                     onChange={(e) => setGitForm((f) => ({ ...f, repoUrl: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="gitBranch" className="text-xs font-bold text-slate-700">
+                  <Label htmlFor="gitBranch" className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     Branch Adı
                   </Label>
                   <Input
                     id="gitBranch"
                     placeholder="main"
-                    className="font-mono text-xs h-10 rounded-xl"
+                    className="font-mono text-xs h-10 rounded-xl bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
                     value={gitForm.gitBranch}
                     onChange={(e) => setGitForm((f) => ({ ...f, gitBranch: e.target.value }))}
                   />
@@ -860,10 +860,10 @@ export default function SiteDetailPage() {
               </div>
 
               {/* Otomatik Pull Switch */}
-              <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4 bg-slate-50/50">
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-[#16223f] p-4 bg-slate-50/50 dark:bg-[#060a17]">
                 <div>
-                  <p className="text-xs font-bold text-slate-800">Otomatik Pull &amp; Restart</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Otomatik Pull &amp; Restart</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                     Yeni commit tespit edildiğinde kod otomatik çekilir ve servis yeniden başlatılır.
                   </p>
                 </div>
@@ -878,7 +878,7 @@ export default function SiteDetailPage() {
 
               {gitForm.autoPullEnabled && (
                 <div className="space-y-2 sm:w-64">
-                  <Label htmlFor="autoPullInterval" className="text-xs font-bold text-slate-700">
+                  <Label htmlFor="autoPullInterval" className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     Kontrol Aralığı (Saniye)
                   </Label>
                   <Input
@@ -886,7 +886,7 @@ export default function SiteDetailPage() {
                     type="number"
                     min={5}
                     max={86400}
-                    className="h-10 rounded-xl font-mono text-xs"
+                    className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
                     value={gitForm.autoPullIntervalSeconds}
                     onChange={(e) =>
                       setGitForm((f) => ({
@@ -900,7 +900,7 @@ export default function SiteDetailPage() {
 
               {/* Process Manager Seçimi */}
               <div className="space-y-2">
-                <Label htmlFor="processManager" className="text-xs font-bold text-slate-700">
+                <Label htmlFor="processManager" className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   Yeniden Başlatma Yöntemi (Process Manager)
                 </Label>
                 <CustomSelect
@@ -925,13 +925,13 @@ export default function SiteDetailPage() {
 
               {gitForm.processManager === "CUSTOM_SCRIPT" && (
                 <div className="space-y-2">
-                  <Label htmlFor="customRestartCommand" className="text-xs font-bold text-slate-700">
+                  <Label htmlFor="customRestartCommand" className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     Özel Restart Betiği (Mutlak Yol)
                   </Label>
                   <Input
                     id="customRestartCommand"
                     placeholder={`/var/www/${site.domain}/deploy/restart.sh`}
-                    className="font-mono text-xs h-10 rounded-xl"
+                    className="font-mono text-xs h-10 rounded-xl bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
                     value={gitForm.customRestartCommand}
                     onChange={(e) =>
                       setGitForm((f) => ({ ...f, customRestartCommand: e.target.value }))
@@ -940,13 +940,13 @@ export default function SiteDetailPage() {
                 </div>
               )}
 
-              {gitSaveError && <p className="text-xs text-red-600">{gitSaveError}</p>}
+              {gitSaveError && <p className="text-xs text-red-600 dark:text-red-400">{gitSaveError}</p>}
 
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Button
                   onClick={handleGitSave}
                   disabled={gitSaving}
-                  className="bg-[#580619] hover:bg-[#720a22] text-white h-10 px-6 rounded-xl text-xs font-semibold"
+                  className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white h-10 px-6 rounded-xl text-xs font-semibold cursor-pointer"
                 >
                   {gitSaving && <Loader2 className="size-3.5 animate-spin mr-1" />}
                   Ayarları Kaydet
@@ -955,7 +955,7 @@ export default function SiteDetailPage() {
                   variant="outline"
                   onClick={handleGitPull}
                   disabled={gitPulling || !gitForm.repoUrl.trim()}
-                  className="h-10 px-5 rounded-xl border-slate-200 text-xs font-semibold"
+                  className="h-10 px-5 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer"
                 >
                   {gitPulling ? (
                     <Loader2 className="size-3.5 animate-spin mr-1" />
@@ -964,14 +964,14 @@ export default function SiteDetailPage() {
                   )}
                   Şimdi Pull Et
                 </Button>
-                {gitSaveOk && <span className="text-xs text-emerald-600 font-semibold">Ayarlar kaydedildi.</span>}
+                {gitSaveOk && <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Ayarlar kaydedildi.</span>}
               </div>
 
               {(gitPullMessage || gitPullError) && (
                 <div
                   className={cn(
                     "p-3 rounded-xl text-xs font-mono",
-                    gitPullError ? "bg-red-50 text-red-700 border border-red-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    gitPullError ? "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900" : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900"
                   )}
                 >
                   {gitPullError ?? gitPullMessage}
@@ -979,9 +979,9 @@ export default function SiteDetailPage() {
               )}
 
               {/* Son Pull Durumu */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                 <span>Son Git Pull:</span>
-                <span className="font-mono font-bold text-slate-800">
+                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
                   {gitLastPull.at ? new Date(gitLastPull.at).toLocaleString("tr-TR") : "Henüz yapılmadı"}
                 </span>
               </div>
@@ -1009,13 +1009,13 @@ export default function SiteDetailPage() {
 
       {/* ── TAB 5: SERVİS LOGLARI ── */}
       {activeTab === "logs" && isManaged && (
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-6 md:p-8 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 md:p-8 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#16223f] pb-4">
             <div>
-              <h3 className="font-heading font-bold text-slate-900 text-base">
+              <h3 className="font-heading font-bold text-slate-900 dark:text-slate-100 text-base">
                 Canlı Servis Kayıtları (systemd Logs)
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Uygulamanızın standart çıktı (stdout / stderr) akışı.
               </p>
             </div>
@@ -1024,7 +1024,7 @@ export default function SiteDetailPage() {
               size="sm"
               onClick={() => loadLogs()}
               disabled={logsLoading}
-              className="h-8 px-3 rounded-xl text-xs font-semibold"
+              className="h-8 px-3 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer"
             >
               {logsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCw className="size-3.5" />}
               Yenile
@@ -1032,9 +1032,9 @@ export default function SiteDetailPage() {
           </div>
 
           {logsError ? (
-            <p className="text-xs text-red-600 font-mono">{logsError}</p>
+            <p className="text-xs text-red-600 dark:text-red-400 font-mono">{logsError}</p>
           ) : (
-            <pre className="max-h-96 overflow-auto rounded-xl bg-slate-900 p-4 font-mono text-xs text-emerald-400 leading-relaxed shadow-inner">
+            <pre className="max-h-96 overflow-auto rounded-xl bg-slate-900 dark:bg-[#030610] p-4 font-mono text-xs text-emerald-400 leading-relaxed shadow-inner border border-slate-800 dark:border-[#16223f]">
               {logsLoading && !logs
                 ? "Kayıtlar yükleniyor..."
                 : logs.trim()

@@ -209,15 +209,15 @@ function UsersContent() {
       {/* ═══ 1. ÜST BAŞLIK & İSTATİSTİK ROZETLERİ ═══ */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
         <div className="flex items-center gap-3.5">
-          <div className="size-12 rounded-2xl bg-[#580619]/5 dark:bg-sky-500/10 border border-[#c8a87c]/30 dark:border-sky-500/30 flex items-center justify-center text-[#580619] dark:text-sky-400 shadow-2xs">
-            <UsersIcon className="size-6 text-[#580619] dark:text-sky-400" />
+          <div className="size-12 rounded-2xl bg-[#580619]/5 dark:bg-blue-500/10 border border-[#c8a87c]/30 dark:border-blue-500/30 flex items-center justify-center text-[#580619] dark:text-blue-400 shadow-2xs">
+            <UsersIcon className="size-6 text-[#580619] dark:text-blue-400" />
           </div>
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
                 Kullanıcı Yönetimi
               </h1>
-              <span className="rounded-full bg-[#580619]/10 dark:bg-sky-500/10 border border-[#580619]/20 dark:border-sky-500/30 px-2.5 py-0.5 text-xs font-bold text-[#580619] dark:text-sky-400 font-mono">
+              <span className="rounded-full bg-[#580619]/10 dark:bg-blue-500/10 border border-[#580619]/20 dark:border-blue-500/30 px-2.5 py-0.5 text-xs font-bold text-[#580619] dark:text-blue-400 font-mono">
                 {users.length}
               </span>
             </div>
@@ -230,7 +230,7 @@ function UsersContent() {
         {/* Eylem Butonu */}
         <Button
           onClick={() => setCreateOpen((v) => !v)}
-          className="bg-[#580619] dark:bg-sky-600 hover:bg-[#720a22] dark:hover:bg-sky-500 text-white font-semibold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-sky-400/40 hover:border-[#c8a87c] shrink-0 cursor-pointer active:scale-95"
+          className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white font-semibold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-blue-400/40 hover:border-[#c8a87c] dark:hover:border-blue-300 shrink-0 cursor-pointer active:scale-95"
         >
           <Plus className="size-4 text-[#dfc9a0] dark:text-white" />
           Yeni Kullanıcı Ekle
@@ -239,10 +239,10 @@ function UsersContent() {
 
       {/* ═══ 2. YENİ KULLANICI OLUŞTURMA KARTI ═══ */}
       {createOpen && (
-        <div className="rounded-2xl border border-[#c8a87c]/80 dark:border-sky-500/50 bg-white dark:bg-slate-900 p-6 shadow-md space-y-5 animate-in fade-in zoom-in-95 duration-150">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div className="rounded-2xl border border-[#c8a87c]/80 dark:border-blue-500/50 bg-white dark:bg-[#090e1f] p-6 shadow-md space-y-5 animate-in fade-in zoom-in-95 duration-150">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#16223f] pb-3">
             <div className="flex items-center gap-2">
-              <div className="size-8 rounded-xl bg-[#580619]/10 dark:bg-sky-500/10 text-[#580619] dark:text-sky-400 flex items-center justify-center">
+              <div className="size-8 rounded-xl bg-[#580619]/10 dark:bg-blue-500/10 text-[#580619] dark:text-blue-400 flex items-center justify-center">
                 <Plus className="size-4" />
               </div>
               <h3 className="font-heading font-bold text-base text-slate-900 dark:text-slate-100">
@@ -266,7 +266,7 @@ function UsersContent() {
                   value={createForm.username}
                   onChange={(e) => setCreateForm((f) => ({ ...f, username: e.target.value }))}
                   placeholder="ör. ahmet veya developer"
-                  className="h-10 rounded-xl text-xs bg-white dark:bg-slate-950 dark:border-slate-800"
+                  className="h-10 rounded-xl text-xs bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
                   required
                 />
               </div>
@@ -278,7 +278,7 @@ function UsersContent() {
                   value={createForm.password}
                   onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
                   placeholder="en az 8 karakter"
-                  className="h-10 rounded-xl text-xs font-mono bg-white dark:bg-slate-950 dark:border-slate-800"
+                  className="h-10 rounded-xl text-xs font-mono bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
                   required
                 />
               </div>
@@ -305,7 +305,7 @@ function UsersContent() {
               </p>
             )}
 
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-[#16223f]">
               <Button
                 type="button"
                 variant="outline"
@@ -317,7 +317,7 @@ function UsersContent() {
               <Button
                 type="submit"
                 disabled={creating}
-                className="bg-[#580619] dark:bg-sky-600 hover:bg-[#720a22] dark:hover:bg-sky-500 text-white h-9 px-5 rounded-xl text-xs font-semibold border border-[#c8a87c]/40 dark:border-sky-400/40 cursor-pointer"
+                className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white h-9 px-5 rounded-xl text-xs font-semibold border border-[#c8a87c]/40 dark:border-blue-400/40 cursor-pointer"
               >
                 {creating && <Loader2 className="size-3.5 animate-spin mr-1.5 text-[#dfc9a0] dark:text-white" />}
                 Kullanıcıyı Kaydet
@@ -328,14 +328,14 @@ function UsersContent() {
       )}
 
       {/* ═══ 3. ARAMA & FİLTRELEME ÇUBUĞU ═══ */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white dark:bg-[#090e1f] p-3.5 rounded-2xl border border-slate-200/90 dark:border-[#16223f] shadow-2xs">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Kullanıcı adına göre ara..."
-            className="pl-9 h-9.5 rounded-xl text-xs bg-slate-50/50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-950"
+            className="pl-9 h-9.5 rounded-xl text-xs bg-slate-50/50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-950"
           />
         </div>
 
@@ -350,7 +350,7 @@ function UsersContent() {
               className={cn(
                 "px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer",
                 roleFilter === "ALL"
-                  ? "bg-white dark:bg-slate-900 text-[#580619] dark:text-sky-400 shadow-2xs"
+                  ? "bg-white dark:bg-[#090e1f] text-[#580619] dark:text-blue-400 shadow-2xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
               )}
             >
@@ -362,7 +362,7 @@ function UsersContent() {
               className={cn(
                 "px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer",
                 roleFilter === "SUPER_ADMIN"
-                  ? "bg-white dark:bg-slate-900 text-[#580619] dark:text-sky-400 shadow-2xs"
+                  ? "bg-white dark:bg-[#090e1f] text-[#580619] dark:text-blue-400 shadow-2xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
               )}
             >
@@ -374,7 +374,7 @@ function UsersContent() {
               className={cn(
                 "px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer",
                 roleFilter === "MEMBER"
-                  ? "bg-white dark:bg-slate-900 text-[#580619] dark:text-sky-400 shadow-2xs"
+                  ? "bg-white dark:bg-[#090e1f] text-[#580619] dark:text-blue-400 shadow-2xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
               )}
             >
@@ -385,10 +385,10 @@ function UsersContent() {
       </div>
 
       {/* ═══ 4. LÜKS KULLANICI TABLOSU ═══ */}
-      <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
+      <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-            <Loader2 className="size-8 animate-spin text-[#580619] dark:text-sky-400 mb-2" />
+            <Loader2 className="size-8 animate-spin text-[#580619] dark:text-blue-400 mb-2" />
             <span className="text-xs font-medium">Kullanıcılar yükleniyor...</span>
           </div>
         ) : listError ? (
@@ -403,7 +403,7 @@ function UsersContent() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <tr className="border-b border-slate-100 dark:border-[#16223f] bg-slate-50/70 dark:bg-[#060a17] text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   <th className="py-3.5 px-5">Kullanıcı</th>
                   <th className="py-3.5 px-4">Rol &amp; Yetki</th>
                   <th className="py-3.5 px-4 hidden md:table-cell">Kayıt Tarihi</th>
@@ -421,7 +421,7 @@ function UsersContent() {
                       key={u.id}
                       className={cn(
                         "group transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/40",
-                        isMe && "bg-[#580619]/2 dark:bg-sky-500/5"
+                        isMe && "bg-[#580619]/2 dark:bg-blue-500/5"
                       )}
                     >
                       {/* Kullanıcı Bilgisi */}
@@ -432,7 +432,7 @@ function UsersContent() {
                             className={cn(
                               "size-9 rounded-xl flex items-center justify-center font-heading font-extrabold text-xs shadow-2xs shrink-0",
                               isSuper
-                                ? "bg-[#580619] dark:bg-sky-600 text-[#dfc9a0] dark:text-white border border-[#c8a87c]/40 dark:border-sky-400/40"
+                                ? "bg-[#580619] dark:bg-blue-600 text-[#dfc9a0] dark:text-white border border-[#c8a87c]/40 dark:border-blue-400/40"
                                 : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
                             )}
                           >
@@ -445,7 +445,7 @@ function UsersContent() {
                                 {u.username}
                               </span>
                               {isMe && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-[#580619]/10 dark:bg-sky-500/15 border border-[#580619]/20 dark:border-sky-500/30 px-2 py-0.5 text-[10px] font-extrabold text-[#580619] dark:text-sky-300">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[#580619]/10 dark:bg-blue-500/15 border border-[#580619]/20 dark:border-blue-500/30 px-2 py-0.5 text-[10px] font-extrabold text-[#580619] dark:text-blue-300">
                                   Siz
                                 </span>
                               )}
@@ -458,20 +458,20 @@ function UsersContent() {
 
                         {/* Parola Sıfırlama Çekmecesi */}
                         {resetOpenFor === u.id && (
-                          <div className="mt-3 flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 animate-in fade-in duration-100">
+                          <div className="mt-3 flex items-center gap-2 bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 animate-in fade-in duration-100">
                             <Input
                               type="password"
                               placeholder="Yeni parola (en az 8 karakter)"
                               value={resetPassword}
                               onChange={(e) => setResetPassword(e.target.value)}
-                              className="h-8 text-xs font-mono max-w-xs bg-white"
+                              className="h-8 text-xs font-mono max-w-xs bg-white dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100"
                               autoFocus
                             />
                             <Button
                               size="sm"
                               disabled={isBusy}
                               onClick={() => handleResetPassword(u.id)}
-                              className="bg-[#580619] hover:bg-[#720a22] text-white h-8 px-3 text-xs font-semibold cursor-pointer"
+                              className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white h-8 px-3 text-xs font-semibold cursor-pointer"
                             >
                               {isBusy ? <Loader2 className="size-3 animate-spin" /> : "Kaydet"}
                             </Button>
@@ -490,7 +490,7 @@ function UsersContent() {
                         )}
 
                         {rowError[u.id] && (
-                          <p className="mt-1 text-[11px] text-red-600 font-mono">
+                          <p className="mt-1 text-[11px] text-red-600 dark:text-red-400 font-mono">
                             {rowError[u.id]}
                           </p>
                         )}
@@ -513,15 +513,15 @@ function UsersContent() {
                             className={cn(
                               "font-bold min-w-[125px]",
                               isSuper
-                                ? "bg-[#580619]/10 text-[#580619] border-[#c8a87c]/50"
-                                : "bg-slate-100 text-slate-700 border-slate-200"
+                                ? "bg-[#580619]/10 dark:bg-blue-500/10 text-[#580619] dark:text-blue-400 border-[#c8a87c]/50 dark:border-blue-500/30"
+                                : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
                             )}
                           />
                         </div>
                       </td>
 
                       {/* Kayıt Tarihi */}
-                      <td className="py-4 px-4 hidden md:table-cell text-slate-500 font-sans">
+                      <td className="py-4 px-4 hidden md:table-cell text-slate-500 dark:text-slate-400 font-sans">
                         <div className="flex items-center gap-1.5 text-xs">
                           <Calendar className="size-3 text-slate-400" />
                           <span>{formatDate(u.createdAt)}</span>
@@ -543,11 +543,11 @@ function UsersContent() {
                             className={cn(
                               "h-8 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer",
                               resetOpenFor === u.id
-                                ? "border-[#c8a87c] bg-[#580619]/5 text-[#580619]"
-                                : "border-slate-200 text-slate-700 hover:border-[#c8a87c]"
+                                ? "border-[#c8a87c] dark:border-blue-500 bg-[#580619]/5 dark:bg-blue-500/10 text-[#580619] dark:text-blue-400"
+                                : "border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-[#c8a87c] dark:hover:border-blue-400 dark:hover:text-blue-400"
                             )}
                           >
-                            <KeyRound className="size-3 mr-1 text-[#c8a87c]" />
+                            <KeyRound className="size-3 mr-1 text-[#c8a87c] dark:text-blue-400" />
                             Parola Sıfırla
                           </Button>
 
@@ -558,7 +558,7 @@ function UsersContent() {
                             disabled={isBusy || isMe}
                             onClick={() => handleDelete(u)}
                             title={isMe ? "Kendi hesabınızı silemezsiniz" : "Kullanıcıyı Sil"}
-                            className="size-8 p-0 rounded-xl border-slate-200 text-slate-400 hover:border-red-300 hover:text-red-600 hover:bg-red-50 disabled:opacity-30 cursor-pointer"
+                            className="size-8 p-0 rounded-xl border-slate-200 dark:border-slate-700 text-slate-400 hover:border-red-300 dark:hover:border-red-700 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-30 cursor-pointer"
                           >
                             {isBusy ? (
                               <Loader2 className="size-3.5 animate-spin" />

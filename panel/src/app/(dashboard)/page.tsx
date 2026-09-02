@@ -77,51 +77,51 @@ function MetricCard({
     ? {
         label: "Yüksek Yük",
         dotColor: "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]",
-        textColor: "text-red-700 font-bold",
-        pctColor: "text-red-600 font-bold",
+        textColor: "text-red-700 dark:text-red-400 font-bold",
+        pctColor: "text-red-600 dark:text-red-400 font-bold",
         barGradient: "linear-gradient(90deg, #ef4444 0%, #b91c1c 100%)",
-        cardBorderHover: "hover:border-red-300",
+        cardBorderHover: "hover:border-red-300 dark:hover:border-red-800",
       }
     : isWarning
     ? {
         label: "Orta Yük",
         dotColor: "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]",
-        textColor: "text-amber-700 font-semibold",
-        pctColor: "text-amber-800 font-bold",
+        textColor: "text-amber-700 dark:text-amber-400 font-semibold",
+        pctColor: "text-amber-800 dark:text-amber-300 font-bold",
         barGradient: "linear-gradient(90deg, #f59e0b 0%, #d97706 100%)",
-        cardBorderHover: "hover:border-amber-300",
+        cardBorderHover: "hover:border-amber-300 dark:hover:border-amber-800",
       }
     : {
         label: "Normal",
         dotColor: "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]",
-        textColor: "text-emerald-700 font-medium",
-        pctColor: "text-slate-800 font-bold",
+        textColor: "text-emerald-700 dark:text-emerald-400 font-medium",
+        pctColor: "text-slate-800 dark:text-slate-200 font-bold",
         barGradient: "linear-gradient(90deg, #10b981 0%, #059669 100%)",
-        cardBorderHover: "hover:border-[#c8a87c]/70",
+        cardBorderHover: "hover:border-[#c8a87c]/70 dark:hover:border-blue-500/50",
       }
 
   return (
     <div className={cn(
-      "group relative rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all duration-300 hover:shadow-[0_8px_24px_rgba(200,168,124,0.12)] flex flex-col justify-between overflow-hidden",
+      "group relative rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] transition-all duration-300 hover:shadow-[0_8px_24px_rgba(200,168,124,0.12)] dark:hover:shadow-[0_8px_24px_rgba(37,99,235,0.15)] flex flex-col justify-between overflow-hidden",
       statusConfig.cardBorderHover
     )}>
       <div>
         <div className="flex items-center justify-between gap-2 mb-3.5">
-          <span className="font-heading text-[12px] font-bold uppercase tracking-wider text-slate-600">
+          <span className="font-heading text-[12px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
             {title}
           </span>
-          <div className="size-9 rounded-xl bg-[#580619]/5 border border-[#c8a87c]/30 flex items-center justify-center text-[#580619] group-hover:bg-[#580619] group-hover:text-white group-hover:border-[#580619] transition-all duration-300 shadow-sm">
+          <div className="size-9 rounded-xl bg-[#580619]/5 dark:bg-blue-500/10 border border-[#c8a87c]/30 dark:border-blue-500/30 flex items-center justify-center text-[#580619] dark:text-blue-400 group-hover:bg-[#580619] dark:group-hover:bg-blue-600 group-hover:text-white group-hover:border-[#580619] dark:group-hover:border-blue-500 transition-all duration-300 shadow-sm">
             <Icon className="size-4.5" />
           </div>
         </div>
 
         <div className="flex items-baseline gap-2 mb-1.5">
-          <span className="font-mono text-3xl font-extrabold tracking-tight text-slate-900">
+          <span className="font-mono text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
             {mainValue}
           </span>
         </div>
 
-        <p className="font-mono text-xs font-medium text-slate-500 truncate mb-5">
+        <p className="font-mono text-xs font-medium text-slate-500 dark:text-slate-400 truncate mb-5">
           {subValue}
         </p>
       </div>
@@ -137,7 +137,7 @@ function MetricCard({
           </span>
         </div>
 
-        <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden border border-slate-200/80 p-[1.5px] shadow-inner">
+        <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800/80 overflow-hidden border border-slate-200/80 dark:border-slate-700/80 p-[1.5px] shadow-inner">
           <div
             className="h-full rounded-full transition-all duration-700"
             style={{
@@ -220,12 +220,12 @@ export default function DashboardPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
       {/* ═══ 1. ÜST BAŞLIK & AKSİYON ALANI ═══ */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-200/80">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
         <div>
-          <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619]">
+          <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
             Anasayfa
           </h1>
-          <p className="text-xs text-slate-500 mt-1 font-sans">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-sans">
             Sunucunuzun gerçek zamanlı donanım telemetrisi, portları ve barındırılan web siteleriniz.
           </p>
         </div>
@@ -236,17 +236,17 @@ export default function DashboardPage() {
             type="button"
             onClick={handleManualRefresh}
             title="Yenile"
-            className="size-9 rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-[#580619] hover:border-[#c8a87c] shadow-sm flex items-center justify-center transition-all cursor-pointer active:scale-95"
+            className="size-9 rounded-xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-slate-600 dark:text-slate-300 hover:text-[#580619] dark:hover:text-blue-400 hover:border-[#c8a87c] dark:hover:border-blue-500/50 shadow-sm flex items-center justify-center transition-all cursor-pointer active:scale-95"
           >
-            <RotateCw className={cn("size-4", refreshing && "animate-spin text-[#580619]")} />
+            <RotateCw className={cn("size-4", refreshing && "animate-spin text-[#580619] dark:text-blue-400")} />
           </button>
 
           <Button
             asChild
-            className="bg-[#580619] hover:bg-[#720a22] text-white font-semibold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-10 border border-[#c8a87c]/40 hover:border-[#c8a87c] hover:scale-[1.02] cursor-pointer"
+            className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white font-semibold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-10 border border-[#c8a87c]/40 dark:border-blue-400/40 hover:border-[#c8a87c] dark:hover:border-blue-400 hover:scale-[1.02] cursor-pointer"
           >
             <Link href="/sites/new">
-              <Plus className="size-4 text-[#dfc9a0]" />
+              <Plus className="size-4 text-[#dfc9a0] dark:text-white" />
               YENİ SİTE EKLE
             </Link>
           </Button>
@@ -257,7 +257,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* CPU Card */}
         {stats === null ? (
-          <div className="h-48 rounded-2xl border border-slate-200 bg-white p-6 animate-pulse" />
+          <div className="h-48 rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 animate-pulse" />
         ) : (
           <MetricCard
             icon={Cpu}
@@ -270,7 +270,7 @@ export default function DashboardPage() {
 
         {/* RAM Card */}
         {stats === null ? (
-          <div className="h-48 rounded-2xl border border-slate-200 bg-white p-6 animate-pulse" />
+          <div className="h-48 rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 animate-pulse" />
         ) : (
           <MetricCard
             icon={MemoryStick}
@@ -283,7 +283,7 @@ export default function DashboardPage() {
 
         {/* Disk Card */}
         {stats === null ? (
-          <div className="h-48 rounded-2xl border border-slate-200 bg-white p-6 animate-pulse" />
+          <div className="h-48 rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 animate-pulse" />
         ) : (
           <MetricCard
             icon={HardDrive}
@@ -296,15 +296,15 @@ export default function DashboardPage() {
 
         {/* Sunucu Bilgisi Card */}
         {stats === null ? (
-          <div className="h-48 rounded-2xl border border-slate-200 bg-white p-6 animate-pulse" />
+          <div className="h-48 rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 animate-pulse" />
         ) : (
-          <div className="group relative rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all duration-300 hover:shadow-[0_8px_24px_rgba(200,168,124,0.12)] hover:border-[#c8a87c]/70 flex flex-col justify-between overflow-hidden">
+          <div className="group relative rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] transition-all duration-300 hover:shadow-[0_8px_24px_rgba(200,168,124,0.12)] dark:hover:shadow-[0_8px_24px_rgba(37,99,235,0.15)] hover:border-[#c8a87c]/70 dark:hover:border-blue-500/50 flex flex-col justify-between overflow-hidden">
             <div>
               <div className="flex items-center justify-between gap-2 mb-3.5">
-                <span className="font-heading text-[12px] font-bold uppercase tracking-wider text-slate-600">
+                <span className="font-heading text-[12px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                   Sunucu Bilgisi
                 </span>
-                <div className="size-9 rounded-xl bg-[#580619]/5 border border-[#c8a87c]/30 flex items-center justify-center text-[#580619] group-hover:bg-[#580619] group-hover:text-white group-hover:border-[#580619] transition-all duration-300 shadow-sm">
+                <div className="size-9 rounded-xl bg-[#580619]/5 dark:bg-blue-500/10 border border-[#c8a87c]/30 dark:border-blue-500/30 flex items-center justify-center text-[#580619] dark:text-blue-400 group-hover:bg-[#580619] dark:group-hover:bg-blue-600 group-hover:text-white group-hover:border-[#580619] dark:group-hover:border-blue-500 transition-all duration-300 shadow-sm">
                   <Server className="size-4.5" />
                 </div>
               </div>
@@ -312,10 +312,10 @@ export default function DashboardPage() {
               <div className="space-y-2 text-xs">
                 {serverInfo.map((info) => (
                   <div key={info.label} className="flex items-center justify-between gap-2">
-                    <span className="text-slate-500 text-[11px] shrink-0 font-medium">
+                    <span className="text-slate-500 dark:text-slate-400 text-[11px] shrink-0 font-medium">
                       {info.label}:
                     </span>
-                    <span className="font-mono text-slate-800 text-[11px] font-bold truncate text-right">
+                    <span className="font-mono text-slate-800 dark:text-slate-200 text-[11px] font-bold truncate text-right">
                       {info.value}
                     </span>
                   </div>
@@ -323,12 +323,12 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="pt-3.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-emerald-700 font-semibold">
+            <div className="pt-3.5 border-t border-slate-100 dark:border-[#16223f] flex items-center justify-between text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="size-3.5 text-emerald-600" />
+                <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400" />
                 Sistem Aktif
               </span>
-              <span className="font-mono text-[10px] text-slate-400">Port 3001</span>
+              <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">Port 3001</span>
             </div>
           </div>
         )}
@@ -338,12 +338,12 @@ export default function DashboardPage() {
       <div className="space-y-4 pt-1">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
-            <h2 className="font-heading text-xl font-extrabold text-[#580619] tracking-tight flex items-center gap-2">
-              <Network className="size-5 text-[#c8a87c]" />
+            <h2 className="font-heading text-xl font-extrabold text-[#580619] dark:text-slate-100 tracking-tight flex items-center gap-2">
+              <Network className="size-5 text-[#c8a87c] dark:text-blue-400" />
               Kullanılan Portlar
             </h2>
             {ports !== null && (
-              <span className="rounded-full bg-[#580619]/10 border border-[#580619]/20 px-2.5 py-0.5 text-xs font-bold text-[#580619] font-mono">
+              <span className="rounded-full bg-[#580619]/10 dark:bg-blue-500/10 border border-[#580619]/20 dark:border-blue-500/30 px-2.5 py-0.5 text-xs font-bold text-[#580619] dark:text-blue-400 font-mono">
                 {ports.length} Aktif
               </span>
             )}
@@ -351,15 +351,15 @@ export default function DashboardPage() {
 
           {/* Filtre Sekmeleri */}
           {ports && ports.length > 0 && (
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs font-medium">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#090e1f] p-1 rounded-xl border border-slate-200/80 dark:border-[#16223f] text-xs font-medium">
               <button
                 type="button"
                 onClick={() => setPortFilter("all")}
                 className={cn(
                   "px-3 py-1 rounded-lg transition-all cursor-pointer",
                   portFilter === "all"
-                    ? "bg-white text-[#580619] font-bold shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-white dark:bg-blue-600 text-[#580619] dark:text-white font-bold shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                 )}
               >
                 Tümü ({ports.length})
@@ -370,8 +370,8 @@ export default function DashboardPage() {
                 className={cn(
                   "px-3 py-1 rounded-lg transition-all cursor-pointer",
                   portFilter === "site"
-                    ? "bg-white text-[#580619] font-bold shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-white dark:bg-blue-600 text-[#580619] dark:text-white font-bold shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                 )}
               >
                 Siteler ({ports.filter((p) => p.source === "site").length})
@@ -382,8 +382,8 @@ export default function DashboardPage() {
                 className={cn(
                   "px-3 py-1 rounded-lg transition-all cursor-pointer",
                   portFilter === "docker"
-                    ? "bg-white text-[#580619] font-bold shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-white dark:bg-blue-600 text-[#580619] dark:text-white font-bold shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                 )}
               >
                 Docker ({ports.filter((p) => p.source === "docker").length})
@@ -394,8 +394,8 @@ export default function DashboardPage() {
                 className={cn(
                   "px-3 py-1 rounded-lg transition-all cursor-pointer",
                   portFilter === "system"
-                    ? "bg-white text-[#580619] font-bold shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-white dark:bg-blue-600 text-[#580619] dark:text-white font-bold shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                 )}
               >
                 Sistem ({ports.filter((p) => p.source === "system").length})
@@ -410,16 +410,16 @@ export default function DashboardPage() {
             {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-24 animate-pulse rounded-2xl border border-slate-200 bg-white"
+                className="h-24 animate-pulse rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f]"
               />
             ))}
           </div>
         ) : ports.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-xs text-slate-500">
+          <div className="rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 text-center text-xs text-slate-500 dark:text-slate-400">
             Sunucuda dinlenen aktif port bulunamadı.
           </div>
         ) : filteredPorts.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-xs text-slate-500">
+          <div className="rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 text-center text-xs text-slate-500 dark:text-slate-400">
             Seçilen filtrede port bulunamadı.
           </div>
         ) : (
@@ -427,11 +427,11 @@ export default function DashboardPage() {
             {filteredPorts.map((p) => (
               <div
                 key={`${p.address}:${p.port}`}
-                className="group relative flex items-center justify-between p-4 rounded-2xl border border-slate-200/90 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:border-[#c8a87c] hover:shadow-md transition-all duration-200"
+                className="group relative flex items-center justify-between p-4 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:border-[#c8a87c] dark:hover:border-blue-500/60 hover:shadow-md transition-all duration-200"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   {/* Port Numarası Rozeti */}
-                  <div className="size-11 rounded-xl bg-[#580619]/5 border border-[#c8a87c]/30 flex flex-col items-center justify-center text-[#580619] group-hover:bg-[#580619] group-hover:text-white transition-colors shrink-0">
+                  <div className="size-11 rounded-xl bg-[#580619]/5 dark:bg-blue-500/10 border border-[#c8a87c]/30 dark:border-blue-500/30 flex flex-col items-center justify-center text-[#580619] dark:text-blue-400 group-hover:bg-[#580619] dark:group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
                     <span className="font-mono text-[13px] font-extrabold leading-none">
                       {p.port}
                     </span>
@@ -443,7 +443,7 @@ export default function DashboardPage() {
                   {/* Servis & Kaynak Detayı */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="truncate text-xs font-bold text-slate-800 leading-tight">
+                      <span className="truncate text-xs font-bold text-slate-800 dark:text-slate-200 leading-tight">
                         {p.label ?? p.process ?? "Sistem Süreci"}
                       </span>
                     </div>
@@ -451,25 +451,25 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2 mt-1">
                       {/* Kaynak Rozeti */}
                       {p.source === "site" && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-[#580619]/10 text-[#580619]">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-[#580619]/10 dark:bg-blue-500/15 text-[#580619] dark:text-blue-400">
                           <Globe className="size-2.5" />
                           Site
                         </span>
                       )}
                       {p.source === "docker" && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
                           <Box className="size-2.5" />
                           Docker
                         </span>
                       )}
                       {p.source === "system" && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-600">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                           <Server className="size-2.5" />
                           Sistem
                         </span>
                       )}
 
-                      <span className="font-mono text-[10px] text-slate-400 truncate">
+                      <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500 truncate">
                         {p.address}
                       </span>
                     </div>
@@ -493,11 +493,11 @@ export default function DashboardPage() {
       <div className="space-y-4 pt-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h2 className="font-heading text-xl font-extrabold text-[#580619] tracking-tight">
+            <h2 className="font-heading text-xl font-extrabold text-[#580619] dark:text-slate-100 tracking-tight">
               Siteleriniz
             </h2>
             {sites !== null && (
-              <span className="rounded-full bg-[#580619]/10 border border-[#580619]/20 px-2.5 py-0.5 text-xs font-bold text-[#580619] font-mono">
+              <span className="rounded-full bg-[#580619]/10 dark:bg-blue-500/10 border border-[#580619]/20 dark:border-blue-500/30 px-2.5 py-0.5 text-xs font-bold text-[#580619] dark:text-blue-400 font-mono">
                 {sites.length}
               </span>
             )}
@@ -505,10 +505,10 @@ export default function DashboardPage() {
 
           <Link
             href="/sites"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#580619] hover:text-[#720a22] transition-colors group px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:border-[#c8a87c] shadow-2xs"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#580619] dark:text-blue-400 hover:text-[#720a22] dark:hover:text-blue-300 transition-colors group px-3 py-1.5 rounded-xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] hover:border-[#c8a87c] dark:hover:border-blue-500/50 shadow-2xs"
           >
             Tüm Siteleri Yönet
-            <ArrowRight className="size-3.5 text-[#c8a87c] transition-transform group-hover:translate-x-0.5" />
+            <ArrowRight className="size-3.5 text-[#c8a87c] dark:text-blue-400 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
 
@@ -518,15 +518,15 @@ export default function DashboardPage() {
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="h-36 animate-pulse rounded-2xl border border-slate-200 bg-white"
+                className="h-36 animate-pulse rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f]"
               />
             ))}
           </div>
         ) : sites.length === 0 ? (
           /* Sade & Şık Boş Durum Alanı */
-          <div className="rounded-3xl border border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-white p-10 md:p-14 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden">
+          <div className="rounded-3xl border border-slate-200/90 dark:border-[#16223f] bg-gradient-to-b from-white dark:from-[#090e1f] via-slate-50/40 dark:via-[#070b18] to-white dark:to-[#090e1f] p-10 md:p-14 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden">
             {/* Ortada Parlayan Dümen Amblemi */}
-            <div className="relative size-20 rounded-2xl bg-gradient-to-b from-[#580619]/10 to-[#580619]/5 border-2 border-[#c8a87c]/40 flex items-center justify-center p-4 mb-5 shadow-inner group">
+            <div className="relative size-20 rounded-2xl bg-gradient-to-b from-[#580619]/10 to-[#580619]/5 dark:from-blue-500/10 dark:to-blue-500/5 border-2 border-[#c8a87c]/40 dark:border-blue-500/30 flex items-center justify-center p-4 mb-5 shadow-inner group">
               <Image
                 src="/rudder-helm-transparent.png"
                 alt="Rudder Dümen"
@@ -536,19 +536,19 @@ export default function DashboardPage() {
               />
             </div>
 
-            <h3 className="font-heading text-xl md:text-2xl font-extrabold text-slate-800 mb-2 tracking-tight">
+            <h3 className="font-heading text-xl md:text-2xl font-extrabold text-slate-800 dark:text-slate-100 mb-2 tracking-tight">
               Henüz bir site eklenmedi.
             </h3>
-            <p className="text-xs md:text-sm text-slate-500 max-w-md mb-7 font-sans leading-relaxed">
+            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-7 font-sans leading-relaxed">
               Sunucunuzda yeni bir WordPress, Node.js, Python veya statik web sitesi yayına alarak self-hosting deneyiminizi başlatın.
             </p>
 
             <Button
               asChild
-              className="bg-[#580619] hover:bg-[#720a22] text-white font-bold text-xs uppercase tracking-wider px-8 py-3 rounded-xl shadow-lg transition-all flex items-center gap-2.5 h-12 hover:scale-[1.03] border border-[#c8a87c]/50"
+              className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider px-8 py-3 rounded-xl shadow-lg transition-all flex items-center gap-2.5 h-12 hover:scale-[1.03] border border-[#c8a87c]/50 dark:border-blue-400/40"
             >
               <Link href="/sites/new">
-                <Plus className="size-4.5 text-[#dfc9a0]" />
+                <Plus className="size-4.5 text-[#dfc9a0] dark:text-white" />
                 İLK SİTENİZİ EKLEYİN
               </Link>
             </Button>

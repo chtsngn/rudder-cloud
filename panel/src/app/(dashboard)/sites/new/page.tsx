@@ -163,30 +163,30 @@ export default function NewSitePage() {
   return (
     <div className="mx-auto max-w-4xl space-y-8 pb-12">
       {/* ═══ 1. ÜST BAŞLIK & GERİ DÖNÜŞ ═══ */}
-      <div className="space-y-3 pb-5 border-b border-slate-200/80">
+      <div className="space-y-3 pb-5 border-b border-slate-200/80 dark:border-slate-800">
         <Link
           href="/sites"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#580619] transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#580619] dark:hover:text-blue-400 transition-colors"
         >
           <ArrowLeft className="size-3.5" />
           Siteler listesine dön
         </Link>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619]">
+            <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
               Yeni Site Ekle
             </h1>
-            <p className="text-xs text-slate-500 mt-1 font-sans">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-sans">
               Sunucunuzda yeni bir web sitesi veya uygulama dağıtımı başlatın.
             </p>
           </div>
 
           {/* Adım Göstergesi */}
-          <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200/80 text-xs font-semibold">
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-[#090e1f] p-1.5 rounded-xl border border-slate-200/80 dark:border-[#16223f] text-xs font-semibold">
             <span
               className={cn(
                 "px-3 py-1 rounded-lg transition-all",
-                step === 1 ? "bg-[#580619] text-white shadow-xs" : "text-slate-500"
+                step === 1 ? "bg-[#580619] dark:bg-blue-600 text-white shadow-xs" : "text-slate-500 dark:text-slate-400"
               )}
             >
               1. Tür Seçimi
@@ -194,7 +194,7 @@ export default function NewSitePage() {
             <span
               className={cn(
                 "px-3 py-1 rounded-lg transition-all",
-                step === 2 ? "bg-[#580619] text-white shadow-xs" : "text-slate-500"
+                step === 2 ? "bg-[#580619] dark:bg-blue-600 text-white shadow-xs" : "text-slate-500 dark:text-slate-400"
               )}
             >
               2. Ayarlar
@@ -202,7 +202,7 @@ export default function NewSitePage() {
             <span
               className={cn(
                 "px-3 py-1 rounded-lg transition-all",
-                step === 3 ? "bg-[#580619] text-white shadow-xs" : "text-slate-500"
+                step === 3 ? "bg-[#580619] dark:bg-blue-600 text-white shadow-xs" : "text-slate-500 dark:text-slate-400"
               )}
             >
               3. Kurulum
@@ -226,8 +226,8 @@ export default function NewSitePage() {
                   className={cn(
                     "group relative flex flex-col items-start gap-3 rounded-2xl border p-5 text-left transition-all duration-200 cursor-pointer",
                     isSelected
-                      ? "border-[#c8a87c] bg-[#580619]/5 shadow-md ring-2 ring-[#c8a87c]/50"
-                      : "border-slate-200/90 bg-white hover:border-[#c8a87c]/70 hover:shadow-sm"
+                      ? "border-[#c8a87c] dark:border-blue-500 bg-[#580619]/5 dark:bg-blue-500/10 shadow-md ring-2 ring-[#c8a87c]/50 dark:ring-blue-500/40"
+                      : "border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] hover:border-[#c8a87c]/70 dark:hover:border-blue-500/60 hover:shadow-sm"
                   )}
                 >
                   <div className="flex w-full items-center justify-between">
@@ -235,22 +235,22 @@ export default function NewSitePage() {
                       className={cn(
                         "size-10 rounded-xl flex items-center justify-center font-mono text-xs font-black transition-colors",
                         isSelected
-                          ? "bg-[#580619] text-white"
-                          : "bg-[#580619]/5 text-[#580619] border border-[#c8a87c]/30 group-hover:bg-[#580619] group-hover:text-white"
+                          ? "bg-[#580619] dark:bg-blue-600 text-white"
+                          : "bg-[#580619]/5 dark:bg-blue-500/10 text-[#580619] dark:text-blue-400 border border-[#c8a87c]/30 dark:border-blue-500/30 group-hover:bg-[#580619] dark:group-hover:bg-blue-600 group-hover:text-white"
                       )}
                     >
                       <TypeIcon className="size-5" />
                     </div>
                     {isSelected && (
-                      <div className="size-6 rounded-full bg-[#580619] text-white flex items-center justify-center">
+                      <div className="size-6 rounded-full bg-[#580619] dark:bg-blue-600 text-white flex items-center justify-center">
                         <Check className="size-3.5 stroke-[3]" />
                       </div>
                     )}
                   </div>
 
                   <div>
-                    <p className="font-heading font-bold text-slate-900 text-sm">{t.label}</p>
-                    <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                    <p className="font-heading font-bold text-slate-900 dark:text-slate-100 text-sm">{t.label}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
                       {t.description}
                     </p>
                   </div>
@@ -263,10 +263,10 @@ export default function NewSitePage() {
             <Button
               disabled={!selectedType}
               onClick={() => setStep(2)}
-              className="bg-[#580619] hover:bg-[#720a22] text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 hover:border-[#c8a87c] disabled:opacity-40 cursor-pointer"
+              className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-blue-400/40 hover:border-[#c8a87c] dark:hover:border-blue-400 disabled:opacity-40 cursor-pointer"
             >
               İleri
-              <ArrowRight className="size-4 text-[#dfc9a0]" />
+              <ArrowRight className="size-4 text-[#dfc9a0] dark:text-white" />
             </Button>
           </div>
         </div>
@@ -275,12 +275,12 @@ export default function NewSitePage() {
       {/* ═══ 3. ADIM 2: AYARLAR ═══ */}
       {step === 2 && typeInfo && (
         <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200/90 bg-white p-6 md:p-8 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-6">
-            <div className="border-b border-slate-100 pb-4">
-              <h2 className="font-heading text-lg font-bold text-slate-900">
+          <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 md:p-8 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-6">
+            <div className="border-b border-slate-100 dark:border-[#16223f] pb-4">
+              <h2 className="font-heading text-lg font-bold text-slate-900 dark:text-slate-100">
                 {typeInfo.label} Sitesi Ayarları
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5 font-sans">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
                 Bu bilgiler daha sonra site ayrıntıları sayfasından kolayca değiştirilebilir.
               </p>
             </div>
@@ -288,13 +288,13 @@ export default function NewSitePage() {
             <div className="space-y-5">
               {/* Domain Input */}
               <div className="space-y-2">
-                <Label htmlFor="domain" className="text-xs font-bold text-slate-700">
+                <Label htmlFor="domain" className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   Alan Adı (Domain)
                 </Label>
                 <Input
                   id="domain"
                   placeholder="ornek.com"
-                  className="font-mono h-11 rounded-xl border-slate-200 focus-visible:ring-[#580619]/20"
+                  className="font-mono h-11 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 dark:text-slate-100 focus-visible:ring-[#580619]/20 dark:focus-visible:ring-blue-500/20"
                   value={domain}
                   onChange={(event) => setDomain(event.target.value)}
                 />
@@ -302,20 +302,20 @@ export default function NewSitePage() {
 
               {/* WWW & SSL Switches */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4 bg-slate-50/50">
+                <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-[#16223f] p-4 bg-slate-50/50 dark:bg-[#060a17]">
                   <div>
-                    <p className="text-xs font-bold text-slate-800">WWW Yönlendirmesi</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">WWW Yönlendirmesi</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                       www.{domain || "ornek.com"} adresini kapsar
                     </p>
                   </div>
                   <Switch checked={useWww} onCheckedChange={setUseWww} />
                 </div>
 
-                <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4 bg-slate-50/50">
+                <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-[#16223f] p-4 bg-slate-50/50 dark:bg-[#060a17]">
                   <div>
-                    <p className="text-xs font-bold text-slate-800">Otomatik SSL (Let&apos;s Encrypt)</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Otomatik SSL (Let&apos;s Encrypt)</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                       Ücretsiz HTTPS kurulumu ve yenileme
                     </p>
                   </div>
@@ -325,14 +325,14 @@ export default function NewSitePage() {
 
               {useSsl && (
                 <div className="space-y-2">
-                  <Label htmlFor="ssl-email" className="text-xs font-bold text-slate-700">
+                  <Label htmlFor="ssl-email" className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     SSL Bildirim E-postası
                   </Label>
                   <Input
                     id="ssl-email"
                     type="email"
                     placeholder="admin@ornek.com"
-                    className="h-11 rounded-xl border-slate-200 focus-visible:ring-[#580619]/20"
+                    className="h-11 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 dark:text-slate-100 focus-visible:ring-[#580619]/20 dark:focus-visible:ring-blue-500/20"
                     value={sslEmail}
                     onChange={(event) => setSslEmail(event.target.value)}
                   />
@@ -348,7 +348,7 @@ export default function NewSitePage() {
               variant="outline"
               onClick={() => setStep(1)}
               disabled={submitting}
-              className="h-11 px-5 rounded-xl border-slate-200 text-xs font-semibold"
+              className="h-11 px-5 rounded-xl border-slate-200 dark:border-slate-700 text-xs font-semibold"
             >
               <ArrowLeft className="size-4" />
               Geri
@@ -356,12 +356,12 @@ export default function NewSitePage() {
             <Button
               onClick={handleCreate}
               disabled={!domain.trim() || submitting}
-              className="bg-[#580619] hover:bg-[#720a22] text-white font-semibold text-xs uppercase tracking-wider px-7 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 hover:border-[#c8a87c] disabled:opacity-40 cursor-pointer"
+              className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white font-semibold text-xs uppercase tracking-wider px-7 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-blue-400/40 hover:border-[#c8a87c] dark:hover:border-blue-400 disabled:opacity-40 cursor-pointer"
             >
               {submitting ? (
-                <Loader2 className="size-4 animate-spin text-[#dfc9a0]" />
+                <Loader2 className="size-4 animate-spin text-[#dfc9a0] dark:text-white" />
               ) : (
-                <Check className="size-4 text-[#dfc9a0]" />
+                <Check className="size-4 text-[#dfc9a0] dark:text-white" />
               )}
               Siteyi Oluştur
             </Button>
@@ -371,24 +371,24 @@ export default function NewSitePage() {
 
       {/* ═══ 4. ADIM 3: KURULUM DURUMU ═══ */}
       {step === 3 && typeInfo && (
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-8 shadow-sm space-y-6">
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
+        <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-8 shadow-sm space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-100 dark:border-[#16223f] pb-5">
             {result === null ? (
-              <Loader2 className="size-6 animate-spin text-[#580619]" />
+              <Loader2 className="size-6 animate-spin text-[#580619] dark:text-blue-400" />
             ) : result.ok ? (
-              <CheckCircle2 className="size-6 text-emerald-600" />
+              <CheckCircle2 className="size-6 text-emerald-600 dark:text-emerald-400" />
             ) : (
-              <XCircle className="size-6 text-red-600" />
+              <XCircle className="size-6 text-red-600 dark:text-red-400" />
             )}
             <div>
-              <h2 className="font-heading text-xl font-bold text-slate-900">
+              <h2 className="font-heading text-xl font-bold text-slate-900 dark:text-slate-100">
                 {result === null
                   ? "Site Kuruluyor..."
                   : result.ok
                   ? "Site Başarıyla Oluşturuldu!"
                   : "Kurulum Başarısız"}
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {result === null
                   ? "Nginx, SSL ve servis yapılandırması uygulanıyor..."
                   : result.ok
@@ -401,29 +401,29 @@ export default function NewSitePage() {
           {result === null ? (
             <div className="space-y-3 py-4">
               {typeChecklist(typeInfo.type, typeInfo.managed, useSsl).map((item, index) => (
-                <div key={index} className="flex items-center gap-3 text-xs text-slate-600 font-medium">
-                  <span className="size-2 rounded-full bg-[#580619] animate-pulse" />
+                <div key={index} className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-300 font-medium">
+                  <span className="size-2 rounded-full bg-[#580619] dark:bg-blue-400 animate-pulse" />
                   {item}
                 </div>
               ))}
             </div>
           ) : result.ok ? (
             <div className="space-y-5 pt-2">
-              <div className="rounded-xl bg-emerald-50 border border-emerald-200/80 p-4 text-xs text-emerald-800">
+              <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 p-4 text-xs text-emerald-800 dark:text-emerald-300">
                 Tebrikler! <strong>{result.site.domain}</strong> başarıyla yapılandırıldı ve sunucunuzda çalışıyor.
               </div>
               <div className="flex justify-end gap-3">
                 <Button asChild variant="outline" className="h-10 rounded-xl text-xs font-semibold">
                   <Link href="/sites">Siteler Listesi</Link>
                 </Button>
-                <Button asChild className="bg-[#580619] hover:bg-[#720a22] text-white h-10 rounded-xl text-xs font-semibold px-5">
+                <Button asChild className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white h-10 rounded-xl text-xs font-semibold px-5">
                   <Link href={`/sites/${result.site.id}`}>Site Yönetimine Git</Link>
                 </Button>
               </div>
             </div>
           ) : (
             <div className="space-y-4 pt-2">
-              <div className="rounded-xl bg-red-50 border border-red-200/80 p-4 text-xs text-red-800 font-mono">
+              <div className="rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200/80 dark:border-red-900 p-4 text-xs text-red-800 dark:text-red-300 font-mono">
                 {result.message}
               </div>
               <div className="flex justify-end gap-3">

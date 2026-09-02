@@ -47,38 +47,38 @@
 .dark {
   --radius: 0.75rem;
 
-  /* Gece Okyanus Laciverti Arka Plan */
-  --background: #080d1a;
+  /* Gece Okyanusu Siyahımsı Zemin (Siyah-Lacivert) */
+  --background: #040711;
   --foreground: #f1f5f9;
 
   /* Kartlar & Yüzeyler: Gece Mavisi Arduvaz */
-  --card: #0f172a;
+  --card: #090e1f;
   --card-foreground: #f1f5f9;
 
-  --popover: #0f172a;
+  --popover: #090e1f;
   --popover-foreground: #f1f5f9;
 
-  /* Okyanus Mavisi & Gece Vurgusu */
-  --primary: #38bdf8;
-  --primary-hover: #0ea5e9;
-  --primary-foreground: #080d1a;
+  /* Koyu Mavi Buton ve Vurgu */
+  --primary: #1d4ed8;
+  --primary-hover: #2563eb;
+  --primary-foreground: #ffffff;
 
-  --secondary: #1e293b;
+  --secondary: #131d36;
   --secondary-foreground: #f1f5f9;
 
-  --muted: #131d33;
+  --muted: #0b1329;
   --muted-foreground: #94a3b8;
 
-  /* Aksan: Sisli Mavi / Altın Parıltı */
+  /* Aksan: Sisli Mavi */
   --accent: #38bdf8;
-  --accent-foreground: #080d1a;
+  --accent-foreground: #ffffff;
 
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
 
-  --border: #1e293b;
-  --input: #334155;
-  --ring: #38bdf8;
+  --border: #16223f;
+  --input: #1e293b;
+  --ring: #2563eb;
 
   --success: #10b981;
   --warning: #f59e0b;

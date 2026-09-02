@@ -210,8 +210,8 @@ function AuditContent() {
       {/* ═══ 1. ÜST BAŞLIK & YENİLE BUTONU ═══ */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
         <div className="flex items-center gap-3.5">
-          <div className="size-12 rounded-2xl bg-[#580619]/5 dark:bg-sky-500/10 border border-[#c8a87c]/30 dark:border-sky-500/30 flex items-center justify-center text-[#580619] dark:text-sky-400 shadow-2xs">
-            <ShieldCheck className="size-6 text-[#580619] dark:text-sky-400" />
+          <div className="size-12 rounded-2xl bg-[#580619]/5 dark:bg-blue-500/10 border border-[#c8a87c]/30 dark:border-blue-500/30 flex items-center justify-center text-[#580619] dark:text-blue-400 shadow-2xs">
+            <ShieldCheck className="size-6 text-[#580619] dark:text-blue-400" />
           </div>
           <div>
             <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
@@ -224,7 +224,7 @@ function AuditContent() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono text-xs font-bold text-slate-700 dark:text-slate-300 shadow-2xs">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-[#090e1f] border border-slate-200 dark:border-[#16223f] font-mono text-xs font-bold text-slate-700 dark:text-slate-300 shadow-2xs">
             <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
             {logs.length} Kayıt
           </span>
@@ -232,9 +232,9 @@ function AuditContent() {
           <Button
             onClick={load}
             disabled={loading}
-            className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs border border-slate-200 dark:border-slate-800 shadow-2xs hover:border-[#c8a87c] dark:hover:border-sky-500/50 transition-all flex items-center gap-2 h-9.5 px-3.5 rounded-xl cursor-pointer"
+            className="bg-white dark:bg-[#090e1f] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs border border-slate-200 dark:border-[#16223f] shadow-2xs hover:border-[#c8a87c] dark:hover:border-blue-500/50 transition-all flex items-center gap-2 h-9.5 px-3.5 rounded-xl cursor-pointer"
           >
-            <RefreshCw className={cn("size-3.5 text-[#580619] dark:text-sky-400", loading && "animate-spin")} />
+            <RefreshCw className={cn("size-3.5 text-[#580619] dark:text-blue-400", loading && "animate-spin")} />
             Yenile
           </Button>
         </div>
@@ -242,7 +242,7 @@ function AuditContent() {
 
       {/* ═══ 2. İSTATİSTİK KARTLARI ═══ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs flex items-center gap-3.5">
+        <div className="rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-4 shadow-2xs flex items-center gap-3.5">
           <div className="size-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
             <Activity className="size-5" />
           </div>
@@ -252,7 +252,7 @@ function AuditContent() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs flex items-center gap-3.5">
+        <div className="rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-4 shadow-2xs flex items-center gap-3.5">
           <div className="size-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
             <CheckCircle2 className="size-5" />
           </div>
@@ -262,7 +262,7 @@ function AuditContent() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs flex items-center gap-3.5">
+        <div className="rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-4 shadow-2xs flex items-center gap-3.5">
           <div className="size-10 rounded-xl bg-rose-50 dark:bg-rose-950/40 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
             <AlertTriangle className="size-5" />
           </div>
@@ -272,7 +272,7 @@ function AuditContent() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs flex items-center gap-3.5">
+        <div className="rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-4 shadow-2xs flex items-center gap-3.5">
           <div className="size-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
             <Users className="size-5" />
           </div>
@@ -284,7 +284,7 @@ function AuditContent() {
       </div>
 
       {/* ═══ 3. ARAMA & KATEGORİ FİLTRELEME ÇUBUĞU ═══ */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white dark:bg-[#090e1f] p-3 rounded-2xl border border-slate-200 dark:border-[#16223f] shadow-2xs">
         {/* Arama Input */}
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
@@ -319,7 +319,7 @@ function AuditContent() {
               className={cn(
                 "px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer",
                 selectedCategory === cat.id
-                  ? "bg-[#580619] dark:bg-sky-600 text-white shadow-xs"
+                  ? "bg-[#580619] dark:bg-blue-600 text-white shadow-xs"
                   : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/80 dark:hover:bg-slate-700"
               )}
             >
@@ -330,11 +330,11 @@ function AuditContent() {
       </div>
 
       {/* ═══ 4. LÜKS DENETİM TABLOSU ═══ */}
-      <Card className="rounded-2xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+      <Card className="rounded-2xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] shadow-xs overflow-hidden">
         <CardContent className="p-0">
           {loading ? (
             <div className="py-24 text-center space-y-3">
-              <RefreshCw className="size-6 text-[#580619] dark:text-sky-400 animate-spin mx-auto" />
+              <RefreshCw className="size-6 text-[#580619] dark:text-blue-400 animate-spin mx-auto" />
               <p className="text-xs font-mono text-slate-500 dark:text-slate-400">Denetim kayıtları yükleniyor...</p>
             </div>
           ) : error ? (
@@ -415,7 +415,7 @@ function AuditContent() {
                         {/* 2. Operatör */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           <div className="flex items-center gap-2.5">
-                            <div className="size-7 rounded-xl bg-[#580619]/10 dark:bg-sky-500/10 border border-[#c8a87c]/30 dark:border-sky-500/30 flex items-center justify-center font-heading font-bold text-[11px] text-[#580619] dark:text-sky-400">
+                            <div className="size-7 rounded-xl bg-[#580619]/10 dark:bg-blue-500/10 border border-[#c8a87c]/30 dark:border-blue-500/30 flex items-center justify-center font-heading font-bold text-[11px] text-[#580619] dark:text-blue-400">
                               {log.username.slice(0, 2).toUpperCase()}
                             </div>
                             <div>
@@ -477,7 +477,7 @@ function AuditContent() {
                               e.stopPropagation()
                               setSelectedLog(log)
                             }}
-                            className="size-7 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-400 group-hover:text-[#580619] dark:group-hover:text-sky-400 group-hover:border-[#c8a87c] dark:group-hover:border-sky-500 flex items-center justify-center transition-all cursor-pointer"
+                            className="size-7 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-400 group-hover:text-[#580619] dark:group-hover:text-blue-400 group-hover:border-[#c8a87c] dark:group-hover:border-blue-500 flex items-center justify-center transition-all cursor-pointer"
                           >
                             <ChevronRight className="size-3.5" />
                           </button>
@@ -494,12 +494,12 @@ function AuditContent() {
 
       {/* ═══ 5. AYRINTILI KAYIT DENETİM MODALI ═══ */}
       {selectedLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#16223f] pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="size-9 rounded-xl bg-[#580619]/10 dark:bg-sky-500/10 text-[#580619] dark:text-sky-400 flex items-center justify-center">
-                  <FileCode className="size-4.5 text-[#580619] dark:text-sky-400" />
+                <div className="size-9 rounded-xl bg-[#580619]/10 dark:bg-blue-500/10 text-[#580619] dark:text-blue-400 flex items-center justify-center">
+                  <FileCode className="size-4.5 text-[#580619] dark:text-blue-400" />
                 </div>
                 <div>
                   <h3 className="font-heading font-bold text-base text-slate-900 dark:text-slate-100">
@@ -518,7 +518,7 @@ function AuditContent() {
             </div>
 
             <div className="space-y-3.5 text-xs">
-              <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-950/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-[#060a17] p-3.5 rounded-xl border border-slate-200/80 dark:border-[#16223f]">
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Operatör</p>
                   <p className="font-bold text-slate-900 dark:text-slate-100 mt-0.5">{selectedLog.username}</p>
@@ -539,7 +539,7 @@ function AuditContent() {
 
               <div>
                 <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Açıklama ve Operasyon Detayı</p>
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs break-all leading-relaxed">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#060a17] border border-slate-200 dark:border-[#16223f] text-slate-800 dark:text-slate-200 font-mono text-xs break-all leading-relaxed">
                   {selectedLog.detail || "Detay bilgisi kaydedilmemiş."}
                 </div>
               </div>
@@ -547,7 +547,7 @@ function AuditContent() {
               <div>
                 <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Kayıt Verisi (JSON)</p>
                 <div className="relative">
-                  <pre className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 text-slate-800 dark:text-slate-200 font-mono text-[11px] overflow-x-auto max-h-48 border border-slate-200 dark:border-slate-800">
+                  <pre className="p-3 rounded-xl bg-slate-50 dark:bg-[#060a17] text-slate-800 dark:text-slate-200 font-mono text-[11px] overflow-x-auto max-h-48 border border-slate-200 dark:border-[#16223f]">
                     {JSON.stringify(selectedLog, null, 2)}
                   </pre>
                   <button
@@ -562,7 +562,7 @@ function AuditContent() {
               </div>
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-[#16223f]">
               <Button
                 variant="outline"
                 size="sm"

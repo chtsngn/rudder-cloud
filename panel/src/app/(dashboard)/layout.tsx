@@ -7,7 +7,7 @@ import { DashboardMain } from "@/components/dashboard-main"
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <TerminalDockProvider>
-      <div className="flex h-screen w-full overflow-hidden bg-[#f8fafc] relative">
+      <div className="flex h-screen w-full overflow-hidden bg-background text-foreground relative">
         <AppSidebar />
         <DashboardMain>
           {children}

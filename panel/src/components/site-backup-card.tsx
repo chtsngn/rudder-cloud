@@ -301,7 +301,7 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
 
             {form.backupUploadToS3 && (
               <div className="space-y-1.5">
-                <Label htmlFor="s3Config" className="text-xs font-bold text-slate-700">S3 Yapılandırması</Label>
+                <Label htmlFor="s3Config" className="text-xs font-bold text-slate-700 dark:text-slate-300">S3 Yapılandırması</Label>
                 <CustomSelect
                   value={form.s3ConfigId}
                   onChange={(val) => setForm((f) => ({ ...f, s3ConfigId: val }))}

@@ -89,14 +89,14 @@ export function AppSidebar() {
         preserveAspectRatio="none"
       >
         <defs>
-          {/* Açık Tema: Zengin Bordo Degrade / Koyu Tema: Gece Okyanus Laciverti */}
+          {/* Açık Tema: Zengin Bordo Degrade / Koyu Tema: Gece Mavisi (Midnight Blue) */}
           <linearGradient id="sailDynamicGrad" x1="0" y1="0" x2="0.8" y2="1">
             {isDark ? (
               <>
-                <stop offset="0%" stopColor="#050811" />
-                <stop offset="35%" stopColor="#0c1833" />
-                <stop offset="70%" stopColor="#081022" />
-                <stop offset="100%" stopColor="#03060c" />
+                <stop offset="0%" stopColor="#0b1739" />
+                <stop offset="35%" stopColor="#0e1f4d" />
+                <stop offset="70%" stopColor="#0a1536" />
+                <stop offset="100%" stopColor="#060e24" />
               </>
             ) : (
               <>
@@ -291,7 +291,7 @@ export function AppSidebar() {
                   className={cn(
                     "shrink-0 transition-all duration-200 group-hover:scale-110",
                     collapsed ? "size-5" : "size-[19px]",
-                    active ? "text-[#dfc9a0]" : "text-white/80"
+                    active ? (isDark ? "text-[#38bdf8]" : "text-[#dfc9a0]") : "text-white/80"
                   )}
                 />
 
@@ -306,7 +306,7 @@ export function AppSidebar() {
                   </span>
                 )}
 
-                {/* ŞERİTLE BİRLEŞİK İÇE BAKAN ALTIN ÜÇGEN OK İMLECİ */}
+                {/* ŞERİTLE BİRLEŞİK İÇE BAKAN ALTIN / AY IŞIĞI ÜÇGEN OK İMLECİ */}
                 {active && !collapsed && (
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 z-20 flex items-center">
                     <div
@@ -314,7 +314,7 @@ export function AppSidebar() {
                       style={{
                         borderTop: "7px solid transparent",
                         borderBottom: "7px solid transparent",
-                        borderRight: "10px solid #dfc9a0",
+                        borderRight: isDark ? "10px solid #38bdf8" : "10px solid #dfc9a0",
                         filter: "drop-shadow(-1px 0 2px rgba(0,0,0,0.4))",
                       }}
                     />
@@ -345,13 +345,13 @@ export function AppSidebar() {
             <Avatar
               className="size-8.5 shrink-0"
               style={{
-                border: "2px solid #dfc9a0",
-                boxShadow: "0 0 8px rgba(223,201,160,0.4)",
+                border: isDark ? "2px solid #38bdf8" : "2px solid #dfc9a0",
+                boxShadow: isDark ? "0 0 8px rgba(56,189,248,0.4)" : "0 0 8px rgba(223,201,160,0.4)",
               }}
             >
               <AvatarFallback
-                className="text-xs font-bold text-[#dfc9a0]"
-                style={{ background: "#38020b" }}
+                className={cn("text-xs font-bold", isDark ? "text-[#38bdf8]" : "text-[#dfc9a0]")}
+                style={{ background: isDark ? "#060e24" : "#38020b" }}
               >
                 {user ? user.username.slice(0, 2).toUpperCase() : "?"}
               </AvatarFallback>
@@ -363,7 +363,7 @@ export function AppSidebar() {
                   <p className="truncate text-[12.5px] font-bold text-white leading-tight">
                     {user?.username ?? "..."}
                   </p>
-                  <p className="truncate text-[10.5px] text-[#dfc9a0]/90 leading-tight mt-0.5">
+                  <p className={cn("truncate text-[10.5px] leading-tight mt-0.5", isDark ? "text-slate-300" : "text-[#dfc9a0]/90")}>
                     {user ? (ROLES[user.role] ?? user.role) : ""}
                   </p>
                 </div>
@@ -371,7 +371,7 @@ export function AppSidebar() {
                   type="button"
                   onClick={logout}
                   title="Çıkış Yap"
-                  className="size-7 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+                  className="size-7 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
                 >
                   <LogOut className="size-3.5" />
                 </button>
