@@ -210,8 +210,8 @@ function AuditContent() {
       {/* ═══ 1. ÜST BAŞLIK & YENİLE BUTONU ═══ */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
         <div className="flex items-center gap-3.5">
-          <div className="size-12 rounded-2xl bg-[#580619]/5 dark:bg-blue-500/10 border border-[#c8a87c]/30 dark:border-blue-500/30 flex items-center justify-center text-[#580619] dark:text-blue-400 shadow-2xs">
-            <ShieldCheck className="size-6 text-[#580619] dark:text-blue-400" />
+          <div className="size-12 rounded-2xl bg-[#580619]/5 dark:bg-[#101c38] border border-[#c8a87c]/30 dark:border-[#1e3568]/50 flex items-center justify-center text-[#580619] dark:text-blue-300 shadow-2xs">
+            <ShieldCheck className="size-6 text-[#580619] dark:text-blue-300" />
           </div>
           <div>
             <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
@@ -232,9 +232,9 @@ function AuditContent() {
           <Button
             onClick={load}
             disabled={loading}
-            className="bg-white dark:bg-[#090e1f] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs border border-slate-200 dark:border-[#16223f] shadow-2xs hover:border-[#c8a87c] dark:hover:border-blue-500/50 transition-all flex items-center gap-2 h-9.5 px-3.5 rounded-xl cursor-pointer"
+            className="bg-white dark:bg-[#090e1f] hover:bg-slate-50 dark:hover:bg-[#111f40] text-slate-700 dark:text-slate-200 font-semibold text-xs border border-slate-200 dark:border-[#16223f] shadow-2xs hover:border-[#c8a87c] dark:hover:border-[#2a4687] transition-all flex items-center gap-2 h-9.5 px-3.5 rounded-xl cursor-pointer"
           >
-            <RefreshCw className={cn("size-3.5 text-[#580619] dark:text-blue-400", loading && "animate-spin")} />
+            <RefreshCw className={cn("size-3.5 text-[#580619] dark:text-blue-300", loading && "animate-spin")} />
             Yenile
           </Button>
         </div>
@@ -292,7 +292,7 @@ function AuditContent() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Kullanıcı adı, eylem (SITE_CREATE), hedef veya detay ara..."
-            className="pl-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-950 transition-all"
+            className="pl-10 h-10 rounded-xl bg-slate-50 dark:bg-[#060a17] border-slate-200 dark:border-[#16223f] text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:bg-white dark:focus:bg-[#060a17] transition-all"
           />
           {searchQuery && (
             <button
@@ -319,8 +319,8 @@ function AuditContent() {
               className={cn(
                 "px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer",
                 selectedCategory === cat.id
-                  ? "bg-[#580619] dark:bg-blue-600 text-white shadow-xs"
-                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/80 dark:hover:bg-slate-700"
+                  ? "bg-[#580619] dark:bg-[#162752] text-white shadow-xs dark:border dark:border-[#2a4687]/60"
+                  : "bg-slate-100 dark:bg-[#070c1a] text-slate-600 dark:text-slate-300 hover:bg-slate-200/80 dark:hover:bg-[#111f40] border border-transparent dark:border-[#16223f]"
               )}
             >
               {cat.label}
@@ -415,7 +415,7 @@ function AuditContent() {
                         {/* 2. Operatör */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           <div className="flex items-center gap-2.5">
-                            <div className="size-7 rounded-xl bg-[#580619]/10 dark:bg-blue-500/10 border border-[#c8a87c]/30 dark:border-blue-500/30 flex items-center justify-center font-heading font-bold text-[11px] text-[#580619] dark:text-blue-400">
+                            <div className="size-7 rounded-xl bg-[#580619]/10 dark:bg-[#101c38] border border-[#c8a87c]/30 dark:border-[#1e3568]/50 flex items-center justify-center font-heading font-bold text-[11px] text-[#580619] dark:text-blue-300">
                               {log.username.slice(0, 2).toUpperCase()}
                             </div>
                             <div>
@@ -498,8 +498,8 @@ function AuditContent() {
           <div className="w-full max-w-lg rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#16223f] pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="size-9 rounded-xl bg-[#580619]/10 dark:bg-blue-500/10 text-[#580619] dark:text-blue-400 flex items-center justify-center">
-                  <FileCode className="size-4.5 text-[#580619] dark:text-blue-400" />
+                <div className="size-9 rounded-xl bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 flex items-center justify-center border border-transparent dark:border-[#1e3568]/50">
+                  <FileCode className="size-4.5 text-[#580619] dark:text-blue-300" />
                 </div>
                 <div>
                   <h3 className="font-heading font-bold text-base text-slate-900 dark:text-slate-100">

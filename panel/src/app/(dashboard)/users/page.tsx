@@ -209,15 +209,15 @@ function UsersContent() {
       {/* ═══ 1. ÜST BAŞLIK & İSTATİSTİK ROZETLERİ ═══ */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
         <div className="flex items-center gap-3.5">
-          <div className="size-12 rounded-2xl bg-[#580619]/5 dark:bg-blue-500/10 border border-[#c8a87c]/30 dark:border-blue-500/30 flex items-center justify-center text-[#580619] dark:text-blue-400 shadow-2xs">
-            <UsersIcon className="size-6 text-[#580619] dark:text-blue-400" />
+          <div className="size-12 rounded-2xl bg-[#580619]/5 dark:bg-[#101c38] border border-[#c8a87c]/30 dark:border-[#1e3568]/50 flex items-center justify-center text-[#580619] dark:text-blue-300 shadow-2xs">
+            <UsersIcon className="size-6 text-[#580619] dark:text-blue-300" />
           </div>
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
                 Kullanıcı Yönetimi
               </h1>
-              <span className="rounded-full bg-[#580619]/10 dark:bg-blue-500/10 border border-[#580619]/20 dark:border-blue-500/30 px-2.5 py-0.5 text-xs font-bold text-[#580619] dark:text-blue-400 font-mono">
+              <span className="rounded-full bg-[#580619]/10 dark:bg-[#101c38] border border-[#580619]/20 dark:border-[#1e3568]/50 px-2.5 py-0.5 text-xs font-bold text-[#580619] dark:text-blue-300 font-mono">
                 {users.length}
               </span>
             </div>
@@ -230,7 +230,7 @@ function UsersContent() {
         {/* Eylem Butonu */}
         <Button
           onClick={() => setCreateOpen((v) => !v)}
-          className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white font-semibold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-blue-400/40 hover:border-[#c8a87c] dark:hover:border-blue-300 shrink-0 cursor-pointer active:scale-95"
+          className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] shrink-0 cursor-pointer active:scale-95"
         >
           <Plus className="size-4 text-[#dfc9a0] dark:text-white" />
           Yeni Kullanıcı Ekle
@@ -239,10 +239,10 @@ function UsersContent() {
 
       {/* ═══ 2. YENİ KULLANICI OLUŞTURMA KARTI ═══ */}
       {createOpen && (
-        <div className="rounded-2xl border border-[#c8a87c]/80 dark:border-blue-500/50 bg-white dark:bg-[#090e1f] p-6 shadow-md space-y-5 animate-in fade-in zoom-in-95 duration-150">
+        <div className="rounded-2xl border border-[#c8a87c]/80 dark:border-[#1e3568] bg-white dark:bg-[#090e1f] p-6 shadow-md space-y-5 animate-in fade-in zoom-in-95 duration-150">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#16223f] pb-3">
             <div className="flex items-center gap-2">
-              <div className="size-8 rounded-xl bg-[#580619]/10 dark:bg-blue-500/10 text-[#580619] dark:text-blue-400 flex items-center justify-center">
+              <div className="size-8 rounded-xl bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 flex items-center justify-center">
                 <Plus className="size-4" />
               </div>
               <h3 className="font-heading font-bold text-base text-slate-900 dark:text-slate-100">
@@ -266,7 +266,7 @@ function UsersContent() {
                   value={createForm.username}
                   onChange={(e) => setCreateForm((f) => ({ ...f, username: e.target.value }))}
                   placeholder="ör. ahmet veya developer"
-                  className="h-10 rounded-xl text-xs bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                  className="h-10 rounded-xl text-xs bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
                   required
                 />
               </div>
@@ -278,7 +278,7 @@ function UsersContent() {
                   value={createForm.password}
                   onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
                   placeholder="en az 8 karakter"
-                  className="h-10 rounded-xl text-xs font-mono bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                  className="h-10 rounded-xl text-xs font-mono bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
                   required
                 />
               </div>
@@ -310,14 +310,14 @@ function UsersContent() {
                 type="button"
                 variant="outline"
                 onClick={() => setCreateOpen(false)}
-                className="h-9 px-4 rounded-xl text-xs font-semibold"
+                className="h-9 px-4 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300 dark:hover:bg-[#111f40]"
               >
                 Vazgeç
               </Button>
               <Button
                 type="submit"
                 disabled={creating}
-                className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white h-9 px-5 rounded-xl text-xs font-semibold border border-[#c8a87c]/40 dark:border-blue-400/40 cursor-pointer"
+                className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-9 px-5 rounded-xl text-xs font-semibold border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer"
               >
                 {creating && <Loader2 className="size-3.5 animate-spin mr-1.5 text-[#dfc9a0] dark:text-white" />}
                 Kullanıcıyı Kaydet
@@ -335,7 +335,7 @@ function UsersContent() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Kullanıcı adına göre ara..."
-            className="pl-9 h-9.5 rounded-xl text-xs bg-slate-50/50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-950"
+            className="pl-9 h-9.5 rounded-xl text-xs bg-slate-50/50 dark:bg-[#060a17] border-slate-200 dark:border-[#16223f] dark:text-slate-100 focus:bg-white dark:focus:bg-[#060a17]"
           />
         </div>
 
@@ -343,14 +343,14 @@ function UsersContent() {
           <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider pl-1">
             Rol Filtresi:
           </span>
-          <div className="flex items-center bg-slate-100/80 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+          <div className="flex items-center bg-slate-100/80 dark:bg-[#070c1a] p-0.5 rounded-xl border border-slate-200 dark:border-[#16223f] text-xs">
             <button
               type="button"
               onClick={() => setRoleFilter("ALL")}
               className={cn(
                 "px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer",
                 roleFilter === "ALL"
-                  ? "bg-white dark:bg-[#090e1f] text-[#580619] dark:text-blue-400 shadow-2xs"
+                  ? "bg-white dark:bg-[#162752] text-[#580619] dark:text-white shadow-2xs dark:border dark:border-[#2a4687]/60"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
               )}
             >
@@ -362,7 +362,7 @@ function UsersContent() {
               className={cn(
                 "px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer",
                 roleFilter === "SUPER_ADMIN"
-                  ? "bg-white dark:bg-[#090e1f] text-[#580619] dark:text-blue-400 shadow-2xs"
+                  ? "bg-white dark:bg-[#162752] text-[#580619] dark:text-white shadow-2xs dark:border dark:border-[#2a4687]/60"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
               )}
             >
@@ -374,7 +374,7 @@ function UsersContent() {
               className={cn(
                 "px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer",
                 roleFilter === "MEMBER"
-                  ? "bg-white dark:bg-[#090e1f] text-[#580619] dark:text-blue-400 shadow-2xs"
+                  ? "bg-white dark:bg-[#162752] text-[#580619] dark:text-white shadow-2xs dark:border dark:border-[#2a4687]/60"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
               )}
             >
@@ -388,7 +388,7 @@ function UsersContent() {
       <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-            <Loader2 className="size-8 animate-spin text-[#580619] dark:text-blue-400 mb-2" />
+            <Loader2 className="size-8 animate-spin text-[#580619] dark:text-blue-300 mb-2" />
             <span className="text-xs font-medium">Kullanıcılar yükleniyor...</span>
           </div>
         ) : listError ? (
@@ -410,7 +410,7 @@ function UsersContent() {
                   <th className="py-3.5 px-5 text-right">Güvenlik &amp; İşlemler</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+              <tbody className="divide-y divide-slate-100 dark:divide-[#16223f] text-xs">
                 {filteredUsers.map((u) => {
                   const isMe = u.id === me?.id
                   const isBusy = rowBusy === u.id
@@ -420,8 +420,8 @@ function UsersContent() {
                     <tr
                       key={u.id}
                       className={cn(
-                        "group transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/40",
-                        isMe && "bg-[#580619]/2 dark:bg-blue-500/5"
+                        "group transition-colors hover:bg-slate-50/60 dark:hover:bg-[#0c1630]",
+                        isMe && "bg-[#580619]/2 dark:bg-[#162752]/20"
                       )}
                     >
                       {/* Kullanıcı Bilgisi */}
@@ -432,8 +432,8 @@ function UsersContent() {
                             className={cn(
                               "size-9 rounded-xl flex items-center justify-center font-heading font-extrabold text-xs shadow-2xs shrink-0",
                               isSuper
-                                ? "bg-[#580619] dark:bg-blue-600 text-[#dfc9a0] dark:text-white border border-[#c8a87c]/40 dark:border-blue-400/40"
-                                : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                                ? "bg-[#580619] dark:bg-[#162752] text-[#dfc9a0] dark:text-white border border-[#c8a87c]/40 dark:border-[#2a4687]/60"
+                                : "bg-slate-100 dark:bg-[#060a17] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#16223f]"
                             )}
                           >
                             {u.username.charAt(0).toUpperCase()}
@@ -445,7 +445,7 @@ function UsersContent() {
                                 {u.username}
                               </span>
                               {isMe && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-[#580619]/10 dark:bg-blue-500/15 border border-[#580619]/20 dark:border-blue-500/30 px-2 py-0.5 text-[10px] font-extrabold text-[#580619] dark:text-blue-300">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[#580619]/10 dark:bg-[#101c38] border border-[#580619]/20 dark:border-[#1e3568]/50 px-2 py-0.5 text-[10px] font-extrabold text-[#580619] dark:text-blue-300">
                                   Siz
                                 </span>
                               )}
@@ -458,20 +458,20 @@ function UsersContent() {
 
                         {/* Parola Sıfırlama Çekmecesi */}
                         {resetOpenFor === u.id && (
-                          <div className="mt-3 flex items-center gap-2 bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 animate-in fade-in duration-100">
+                          <div className="mt-3 flex items-center gap-2 bg-slate-50 dark:bg-[#060a17] p-2.5 rounded-xl border border-slate-200 dark:border-[#16223f] animate-in fade-in duration-100">
                             <Input
                               type="password"
                               placeholder="Yeni parola (en az 8 karakter)"
                               value={resetPassword}
                               onChange={(e) => setResetPassword(e.target.value)}
-                              className="h-8 text-xs font-mono max-w-xs bg-white dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100"
+                              className="h-8 text-xs font-mono max-w-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
                               autoFocus
                             />
                             <Button
                               size="sm"
                               disabled={isBusy}
                               onClick={() => handleResetPassword(u.id)}
-                              className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white h-8 px-3 text-xs font-semibold cursor-pointer"
+                              className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-8 px-3 text-xs font-semibold cursor-pointer border border-[#c8a87c]/40 dark:border-[#2a4687]/60"
                             >
                               {isBusy ? <Loader2 className="size-3 animate-spin" /> : "Kaydet"}
                             </Button>
@@ -482,7 +482,7 @@ function UsersContent() {
                                 setResetOpenFor(null)
                                 setResetPassword("")
                               }}
-                              className="h-8 px-2 text-xs"
+                              className="h-8 px-2 text-xs dark:hover:bg-[#111f40]"
                             >
                               <X className="size-3.5" />
                             </Button>
@@ -513,8 +513,8 @@ function UsersContent() {
                             className={cn(
                               "font-bold min-w-[125px]",
                               isSuper
-                                ? "bg-[#580619]/10 dark:bg-blue-500/10 text-[#580619] dark:text-blue-400 border-[#c8a87c]/50 dark:border-blue-500/30"
-                                : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                                ? "bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 border-[#c8a87c]/50 dark:border-[#1e3568]/50"
+                                : "bg-slate-100 dark:bg-[#060a17] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#16223f]"
                             )}
                           />
                         </div>
@@ -543,11 +543,11 @@ function UsersContent() {
                             className={cn(
                               "h-8 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer",
                               resetOpenFor === u.id
-                                ? "border-[#c8a87c] dark:border-blue-500 bg-[#580619]/5 dark:bg-blue-500/10 text-[#580619] dark:text-blue-400"
-                                : "border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-[#c8a87c] dark:hover:border-blue-400 dark:hover:text-blue-400"
+                                ? "border-[#c8a87c] dark:border-[#2a4687] bg-[#580619]/5 dark:bg-[#162752] text-[#580619] dark:text-white"
+                                : "border-slate-200 dark:border-[#16223f] text-slate-700 dark:text-slate-300 hover:border-[#c8a87c] dark:hover:border-[#2a4687] dark:hover:text-blue-300 dark:hover:bg-[#111f40]"
                             )}
                           >
-                            <KeyRound className="size-3 mr-1 text-[#c8a87c] dark:text-blue-400" />
+                            <KeyRound className="size-3 mr-1 text-[#c8a87c] dark:text-blue-300" />
                             Parola Sıfırla
                           </Button>
 
@@ -558,7 +558,7 @@ function UsersContent() {
                             disabled={isBusy || isMe}
                             onClick={() => handleDelete(u)}
                             title={isMe ? "Kendi hesabınızı silemezsiniz" : "Kullanıcıyı Sil"}
-                            className="size-8 p-0 rounded-xl border-slate-200 dark:border-slate-700 text-slate-400 hover:border-red-300 dark:hover:border-red-700 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-30 cursor-pointer"
+                            className="size-8 p-0 rounded-xl border-slate-200 dark:border-[#16223f] text-slate-400 hover:border-red-300 dark:hover:border-red-900 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 disabled:opacity-30 cursor-pointer"
                           >
                             {isBusy ? (
                               <Loader2 className="size-3.5 animate-spin" />

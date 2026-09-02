@@ -2,7 +2,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --radius: 0.75rem;
@@ -58,27 +58,27 @@
   --popover: #090e1f;
   --popover-foreground: #f1f5f9;
 
-  /* Koyu Mavi Buton ve Vurgu */
-  --primary: #1d4ed8;
-  --primary-hover: #2563eb;
+  /* Koyu Lacivert Buton ve Vurgu */
+  --primary: #162752;
+  --primary-hover: #1e346b;
   --primary-foreground: #ffffff;
 
-  --secondary: #131d36;
+  --secondary: #0d162d;
   --secondary-foreground: #f1f5f9;
 
   --muted: #0b1329;
   --muted-foreground: #94a3b8;
 
-  /* Aksan: Sisli Mavi */
-  --accent: #38bdf8;
+  /* Aksan: Gece Mavisi */
+  --accent: #223e7c;
   --accent-foreground: #ffffff;
 
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
 
   --border: #16223f;
-  --input: #1e293b;
-  --ring: #2563eb;
+  --input: #131f3b;
+  --ring: #223e7c;
 
   --success: #10b981;
   --warning: #f59e0b;

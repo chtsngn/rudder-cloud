@@ -504,7 +504,7 @@ export default function SiteDetailPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           {/* Site Başlığı & Rozetler */}
           <div className="flex items-center gap-3.5">
-            <div className="size-12 rounded-2xl bg-[#580619]/5 dark:bg-blue-500/10 border border-[#c8a87c]/30 dark:border-blue-500/30 flex items-center justify-center text-[#580619] dark:text-blue-400 font-mono text-xs font-black shadow-sm shrink-0">
+            <div className="size-12 rounded-2xl bg-[#580619]/5 dark:bg-[#101c38] border border-[#c8a87c]/30 dark:border-[#1e3568]/50 flex items-center justify-center text-[#580619] dark:text-blue-300 font-mono text-xs font-black shadow-sm shrink-0">
               <TypeIcon className="size-6" />
             </div>
 
@@ -537,7 +537,7 @@ export default function SiteDetailPage() {
               asChild
               variant="outline"
               size="sm"
-              className="h-9 px-3 rounded-xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#580619] dark:hover:text-blue-400 hover:border-[#c8a87c] dark:hover:border-blue-500/50 shadow-2xs"
+              className="h-9 px-3 rounded-xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#580619] dark:hover:text-blue-300 hover:border-[#c8a87c] dark:hover:border-[#2a4687] shadow-2xs"
             >
               <a
                 href={`http://${site.domain}`}
@@ -556,17 +556,17 @@ export default function SiteDetailPage() {
                 asChild
                 variant="outline"
                 size="sm"
-                className="h-9 px-3 rounded-xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#580619] dark:hover:text-blue-400 hover:border-[#c8a87c] dark:hover:border-blue-500/50 shadow-2xs"
+                className="h-9 px-3 rounded-xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#580619] dark:hover:text-blue-300 hover:border-[#c8a87c] dark:hover:border-[#2a4687] shadow-2xs"
               >
                 <Link href={`/sites/${site.id}/files`} className="flex items-center gap-1.5">
-                  <FolderOpen className="size-3.5 text-[#580619] dark:text-blue-400" />
+                  <FolderOpen className="size-3.5 text-[#580619] dark:text-blue-300" />
                   Dosyalar
                 </Link>
               </Button>
             )}
 
             {isManaged && (
-              <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#090e1f] p-1 rounded-xl border border-slate-200/80 dark:border-[#16223f]">
+              <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#070c1a] p-1 rounded-xl border border-slate-200/80 dark:border-[#16223f]">
                 <Button
                   size="sm"
                   variant="ghost"
@@ -602,7 +602,7 @@ export default function SiteDetailPage() {
                   variant="ghost"
                   disabled={actionPending !== null}
                   onClick={() => handleServiceAction("restart")}
-                  className="h-7 px-2.5 rounded-lg text-xs font-semibold text-[#580619] dark:text-blue-400 hover:bg-[#580619]/10 dark:hover:bg-blue-500/15"
+                  className="h-7 px-2.5 rounded-lg text-xs font-semibold text-[#580619] dark:text-blue-300 hover:bg-[#580619]/10 dark:hover:bg-[#162752]"
                   title="Servisi Yeniden Başlat"
                 >
                   {actionPending === "restart" ? (
@@ -662,18 +662,18 @@ export default function SiteDetailPage() {
       </div>
 
       {/* ═══ 2. ŞIK TABLAR (SEKMELER) ═══ */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-px overflow-x-auto">
+      <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-[#16223f] pb-px overflow-x-auto">
         <button
           type="button"
           onClick={() => setActiveTab("overview")}
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
             activeTab === "overview"
-              ? "border-[#580619] dark:border-blue-500 text-[#580619] dark:text-blue-400"
+              ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
               : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
           )}
         >
-          <Settings2 className="size-4 text-[#c8a87c] dark:text-blue-400" />
+          <Settings2 className="size-4 text-[#c8a87c] dark:text-blue-300" />
           Genel Bakış &amp; Ayarlar
         </button>
 
@@ -684,11 +684,11 @@ export default function SiteDetailPage() {
             className={cn(
               "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
               activeTab === "git"
-                ? "border-[#580619] dark:border-blue-500 text-[#580619] dark:text-blue-400"
+                ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
                 : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
             )}
           >
-            <GitBranch className="size-4 text-[#c8a87c] dark:text-blue-400" />
+            <GitBranch className="size-4 text-[#c8a87c] dark:text-blue-300" />
             Git &amp; Otomatik Dağıtım
           </button>
         )}
@@ -699,11 +699,11 @@ export default function SiteDetailPage() {
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
             activeTab === "backups"
-              ? "border-[#580619] dark:border-blue-500 text-[#580619] dark:text-blue-400"
+              ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
               : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-          )}
+            )}
         >
-          <Database className="size-4 text-[#c8a87c] dark:text-blue-400" />
+          <Database className="size-4 text-[#c8a87c] dark:text-blue-300" />
           Yedekler &amp; S3
         </button>
 
@@ -713,11 +713,11 @@ export default function SiteDetailPage() {
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
             activeTab === "access"
-              ? "border-[#580619] dark:border-blue-500 text-[#580619] dark:text-blue-400"
+              ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
               : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
           )}
         >
-          <Users className="size-4 text-[#c8a87c] dark:text-blue-400" />
+          <Users className="size-4 text-[#c8a87c] dark:text-blue-300" />
           Erişim Yetkileri
         </button>
 
@@ -728,11 +728,11 @@ export default function SiteDetailPage() {
             className={cn(
               "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
               activeTab === "logs"
-                ? "border-[#580619] dark:border-blue-500 text-[#580619] dark:text-blue-400"
+                ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
                 : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
             )}
           >
-            <Terminal className="size-4 text-[#c8a87c] dark:text-blue-400" />
+            <Terminal className="size-4 text-[#c8a87c] dark:text-blue-300" />
             Servis Logları
           </button>
         )}
@@ -772,13 +772,13 @@ export default function SiteDetailPage() {
                   placeholder="http://127.0.0.1:3000"
                   value={upstreamUrl}
                   onChange={(e) => setUpstreamUrl(e.target.value)}
-                  className="font-mono text-xs h-10 rounded-xl bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                  className="font-mono text-xs h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
                 />
                 <Button
                   type="button"
                   onClick={handleUpstreamSave}
                   disabled={upstreamSaving || !upstreamUrl.trim()}
-                  className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white h-10 px-5 rounded-xl text-xs font-semibold shrink-0 cursor-pointer"
+                  className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-10 px-5 rounded-xl text-xs font-semibold shrink-0 cursor-pointer border border-[#c8a87c]/40 dark:border-[#2a4687]/60"
                 >
                   {upstreamSaving && <Loader2 className="size-3.5 animate-spin mr-1" />}
                   Güncelle
@@ -801,7 +801,7 @@ export default function SiteDetailPage() {
               Sunucu &amp; Yapılandırma Detayları
             </h3>
 
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="divide-y divide-slate-100 dark:divide-[#16223f]">
               {configRows.map((item) => (
                 <div
                   key={item.label}
@@ -840,7 +840,7 @@ export default function SiteDetailPage() {
                   <Input
                     id="repoUrl"
                     placeholder="git@github.com:owner/repo.git"
-                    className="font-mono text-xs h-10 rounded-xl bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                    className="font-mono text-xs h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
                     value={gitForm.repoUrl}
                     onChange={(e) => setGitForm((f) => ({ ...f, repoUrl: e.target.value }))}
                   />
@@ -852,7 +852,7 @@ export default function SiteDetailPage() {
                   <Input
                     id="gitBranch"
                     placeholder="main"
-                    className="font-mono text-xs h-10 rounded-xl bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                    className="font-mono text-xs h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
                     value={gitForm.gitBranch}
                     onChange={(e) => setGitForm((f) => ({ ...f, gitBranch: e.target.value }))}
                   />
@@ -886,7 +886,7 @@ export default function SiteDetailPage() {
                     type="number"
                     min={5}
                     max={86400}
-                    className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                    className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
                     value={gitForm.autoPullIntervalSeconds}
                     onChange={(e) =>
                       setGitForm((f) => ({
@@ -931,7 +931,7 @@ export default function SiteDetailPage() {
                   <Input
                     id="customRestartCommand"
                     placeholder={`/var/www/${site.domain}/deploy/restart.sh`}
-                    className="font-mono text-xs h-10 rounded-xl bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                    className="font-mono text-xs h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
                     value={gitForm.customRestartCommand}
                     onChange={(e) =>
                       setGitForm((f) => ({ ...f, customRestartCommand: e.target.value }))
@@ -946,7 +946,7 @@ export default function SiteDetailPage() {
                 <Button
                   onClick={handleGitSave}
                   disabled={gitSaving}
-                  className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white h-10 px-6 rounded-xl text-xs font-semibold cursor-pointer"
+                  className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-10 px-6 rounded-xl text-xs font-semibold cursor-pointer border border-[#c8a87c]/40 dark:border-[#2a4687]/60"
                 >
                   {gitSaving && <Loader2 className="size-3.5 animate-spin mr-1" />}
                   Ayarları Kaydet
@@ -955,7 +955,7 @@ export default function SiteDetailPage() {
                   variant="outline"
                   onClick={handleGitPull}
                   disabled={gitPulling || !gitForm.repoUrl.trim()}
-                  className="h-10 px-5 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer"
+                  className="h-10 px-5 rounded-xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#060a17] text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer dark:hover:bg-[#111f40]"
                 >
                   {gitPulling ? (
                     <Loader2 className="size-3.5 animate-spin mr-1" />
@@ -979,7 +979,7 @@ export default function SiteDetailPage() {
               )}
 
               {/* Son Pull Durumu */}
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <div className="pt-4 border-t border-slate-100 dark:border-[#16223f] flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                 <span>Son Git Pull:</span>
                 <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
                   {gitLastPull.at ? new Date(gitLastPull.at).toLocaleString("tr-TR") : "Henüz yapılmadı"}
@@ -1024,7 +1024,7 @@ export default function SiteDetailPage() {
               size="sm"
               onClick={() => loadLogs()}
               disabled={logsLoading}
-              className="h-8 px-3 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer"
+              className="h-8 px-3 rounded-xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#060a17] text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer dark:hover:bg-[#111f40]"
             >
               {logsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCw className="size-3.5" />}
               Yenile

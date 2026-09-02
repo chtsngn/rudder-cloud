@@ -182,11 +182,11 @@ export default function NewSitePage() {
           </div>
 
           {/* Adım Göstergesi */}
-          <div className="flex items-center gap-2 bg-slate-100 dark:bg-[#090e1f] p-1.5 rounded-xl border border-slate-200/80 dark:border-[#16223f] text-xs font-semibold">
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-[#070c1a] p-1.5 rounded-xl border border-slate-200/80 dark:border-[#16223f] text-xs font-semibold">
             <span
               className={cn(
                 "px-3 py-1 rounded-lg transition-all",
-                step === 1 ? "bg-[#580619] dark:bg-blue-600 text-white shadow-xs" : "text-slate-500 dark:text-slate-400"
+                step === 1 ? "bg-[#580619] dark:bg-[#162752] text-white shadow-xs dark:border dark:border-[#2a4687]/60" : "text-slate-500 dark:text-slate-400"
               )}
             >
               1. Tür Seçimi
@@ -194,7 +194,7 @@ export default function NewSitePage() {
             <span
               className={cn(
                 "px-3 py-1 rounded-lg transition-all",
-                step === 2 ? "bg-[#580619] dark:bg-blue-600 text-white shadow-xs" : "text-slate-500 dark:text-slate-400"
+                step === 2 ? "bg-[#580619] dark:bg-[#162752] text-white shadow-xs dark:border dark:border-[#2a4687]/60" : "text-slate-500 dark:text-slate-400"
               )}
             >
               2. Ayarlar
@@ -202,7 +202,7 @@ export default function NewSitePage() {
             <span
               className={cn(
                 "px-3 py-1 rounded-lg transition-all",
-                step === 3 ? "bg-[#580619] dark:bg-blue-600 text-white shadow-xs" : "text-slate-500 dark:text-slate-400"
+                step === 3 ? "bg-[#580619] dark:bg-[#162752] text-white shadow-xs dark:border dark:border-[#2a4687]/60" : "text-slate-500 dark:text-slate-400"
               )}
             >
               3. Kurulum
@@ -226,8 +226,8 @@ export default function NewSitePage() {
                   className={cn(
                     "group relative flex flex-col items-start gap-3 rounded-2xl border p-5 text-left transition-all duration-200 cursor-pointer",
                     isSelected
-                      ? "border-[#c8a87c] dark:border-blue-500 bg-[#580619]/5 dark:bg-blue-500/10 shadow-md ring-2 ring-[#c8a87c]/50 dark:ring-blue-500/40"
-                      : "border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] hover:border-[#c8a87c]/70 dark:hover:border-blue-500/60 hover:shadow-sm"
+                      ? "border-[#c8a87c] dark:border-[#2a4687] bg-[#580619]/5 dark:bg-[#101c38] shadow-md ring-2 ring-[#c8a87c]/50 dark:ring-[#2a4687]/50"
+                      : "border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] hover:border-[#c8a87c]/70 dark:hover:border-[#2a4687] hover:shadow-sm"
                   )}
                 >
                   <div className="flex w-full items-center justify-between">
@@ -235,14 +235,14 @@ export default function NewSitePage() {
                       className={cn(
                         "size-10 rounded-xl flex items-center justify-center font-mono text-xs font-black transition-colors",
                         isSelected
-                          ? "bg-[#580619] dark:bg-blue-600 text-white"
-                          : "bg-[#580619]/5 dark:bg-blue-500/10 text-[#580619] dark:text-blue-400 border border-[#c8a87c]/30 dark:border-blue-500/30 group-hover:bg-[#580619] dark:group-hover:bg-blue-600 group-hover:text-white"
+                          ? "bg-[#580619] dark:bg-[#162752] text-white dark:border dark:border-[#2a4687]/60"
+                          : "bg-[#580619]/5 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 border border-[#c8a87c]/30 dark:border-[#1e3568]/50 group-hover:bg-[#580619] dark:group-hover:bg-[#162752] group-hover:text-white dark:group-hover:text-white"
                       )}
                     >
                       <TypeIcon className="size-5" />
                     </div>
                     {isSelected && (
-                      <div className="size-6 rounded-full bg-[#580619] dark:bg-blue-600 text-white flex items-center justify-center">
+                      <div className="size-6 rounded-full bg-[#580619] dark:bg-[#162752] text-white flex items-center justify-center dark:border dark:border-[#2a4687]/60">
                         <Check className="size-3.5 stroke-[3]" />
                       </div>
                     )}
@@ -263,7 +263,7 @@ export default function NewSitePage() {
             <Button
               disabled={!selectedType}
               onClick={() => setStep(2)}
-              className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-blue-400/40 hover:border-[#c8a87c] dark:hover:border-blue-400 disabled:opacity-40 cursor-pointer"
+              className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] disabled:opacity-40 cursor-pointer"
             >
               İleri
               <ArrowRight className="size-4 text-[#dfc9a0] dark:text-white" />
@@ -294,7 +294,7 @@ export default function NewSitePage() {
                 <Input
                   id="domain"
                   placeholder="ornek.com"
-                  className="font-mono h-11 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 dark:text-slate-100 focus-visible:ring-[#580619]/20 dark:focus-visible:ring-blue-500/20"
+                  className="font-mono h-11 rounded-xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#060a17] dark:text-slate-100 focus-visible:ring-[#580619]/20 dark:focus-visible:ring-blue-500/20"
                   value={domain}
                   onChange={(event) => setDomain(event.target.value)}
                 />
@@ -332,7 +332,7 @@ export default function NewSitePage() {
                     id="ssl-email"
                     type="email"
                     placeholder="admin@ornek.com"
-                    className="h-11 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 dark:text-slate-100 focus-visible:ring-[#580619]/20 dark:focus-visible:ring-blue-500/20"
+                    className="h-11 rounded-xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#060a17] dark:text-slate-100 focus-visible:ring-[#580619]/20 dark:focus-visible:ring-blue-500/20"
                     value={sslEmail}
                     onChange={(event) => setSslEmail(event.target.value)}
                   />
@@ -348,7 +348,7 @@ export default function NewSitePage() {
               variant="outline"
               onClick={() => setStep(1)}
               disabled={submitting}
-              className="h-11 px-5 rounded-xl border-slate-200 dark:border-slate-700 text-xs font-semibold"
+              className="h-11 px-5 rounded-xl border-slate-200 dark:border-[#16223f] text-xs font-semibold dark:text-slate-300 dark:hover:bg-[#111f40]"
             >
               <ArrowLeft className="size-4" />
               Geri
@@ -356,7 +356,7 @@ export default function NewSitePage() {
             <Button
               onClick={handleCreate}
               disabled={!domain.trim() || submitting}
-              className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white font-semibold text-xs uppercase tracking-wider px-7 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-blue-400/40 hover:border-[#c8a87c] dark:hover:border-blue-400 disabled:opacity-40 cursor-pointer"
+              className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-7 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] disabled:opacity-40 cursor-pointer"
             >
               {submitting ? (
                 <Loader2 className="size-4 animate-spin text-[#dfc9a0] dark:text-white" />
@@ -374,7 +374,7 @@ export default function NewSitePage() {
         <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-8 shadow-sm space-y-6">
           <div className="flex items-center gap-3 border-b border-slate-100 dark:border-[#16223f] pb-5">
             {result === null ? (
-              <Loader2 className="size-6 animate-spin text-[#580619] dark:text-blue-400" />
+              <Loader2 className="size-6 animate-spin text-[#580619] dark:text-blue-300" />
             ) : result.ok ? (
               <CheckCircle2 className="size-6 text-emerald-600 dark:text-emerald-400" />
             ) : (
@@ -402,7 +402,7 @@ export default function NewSitePage() {
             <div className="space-y-3 py-4">
               {typeChecklist(typeInfo.type, typeInfo.managed, useSsl).map((item, index) => (
                 <div key={index} className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-300 font-medium">
-                  <span className="size-2 rounded-full bg-[#580619] dark:bg-blue-400 animate-pulse" />
+                  <span className="size-2 rounded-full bg-[#580619] dark:bg-blue-300 animate-pulse" />
                   {item}
                 </div>
               ))}
@@ -413,10 +413,10 @@ export default function NewSitePage() {
                 Tebrikler! <strong>{result.site.domain}</strong> başarıyla yapılandırıldı ve sunucunuzda çalışıyor.
               </div>
               <div className="flex justify-end gap-3">
-                <Button asChild variant="outline" className="h-10 rounded-xl text-xs font-semibold">
+                <Button asChild variant="outline" className="h-10 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300 dark:hover:bg-[#111f40]">
                   <Link href="/sites">Siteler Listesi</Link>
                 </Button>
-                <Button asChild className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white h-10 rounded-xl text-xs font-semibold px-5">
+                <Button asChild className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-10 rounded-xl text-xs font-semibold px-5 border border-[#c8a87c]/40 dark:border-[#2a4687]/60">
                   <Link href={`/sites/${result.site.id}`}>Site Yönetimine Git</Link>
                 </Button>
               </div>
@@ -427,7 +427,7 @@ export default function NewSitePage() {
                 {result.message}
               </div>
               <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setStep(2)} className="h-10 rounded-xl text-xs font-semibold">
+                <Button variant="outline" onClick={() => setStep(2)} className="h-10 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300">
                   Ayarlara Dön
                 </Button>
               </div>
@@ -445,95 +445,95 @@ function TypeSpecificFields({ type, domain }: { type: SiteType; domain: string }
   switch (type) {
     case "nodejs":
       return (
-        <div className="space-y-4 pt-2 border-t border-slate-100">
+        <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-[#16223f]">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="node-version" className="text-xs font-bold text-slate-700">Node.js Sürümü</Label>
-              <Input id="node-version" defaultValue="20.x" className="font-mono h-10 rounded-xl" />
+              <Label htmlFor="node-version" className="text-xs font-bold text-slate-700 dark:text-slate-300">Node.js Sürümü</Label>
+              <Input id="node-version" defaultValue="20.x" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="start-cmd" className="text-xs font-bold text-slate-700">Başlatma Komutu</Label>
-              <Input id="start-cmd" defaultValue="npm run start" className="font-mono h-10 rounded-xl" />
+              <Label htmlFor="start-cmd" className="text-xs font-bold text-slate-700 dark:text-slate-300">Başlatma Komutu</Label>
+              <Input id="start-cmd" defaultValue="npm run start" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="port" className="text-xs font-bold text-slate-700">Uygulama Portu</Label>
-              <Input id="port" defaultValue="3000" className="font-mono h-10 rounded-xl" />
+              <Label htmlFor="port" className="text-xs font-bold text-slate-700 dark:text-slate-300">Uygulama Portu</Label>
+              <Input id="port" defaultValue="3000" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
             </div>
           </div>
-          <p className="text-[11px] text-slate-500 font-sans">
-            Uygulama kodunuz <code className="font-mono text-slate-800">{rootPlaceholder}</code> dizininde barındırılır.
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-sans">
+            Uygulama kodunuz <code className="font-mono text-slate-800 dark:text-slate-200">{rootPlaceholder}</code> dizininde barındırılır.
           </p>
         </div>
       )
     case "python":
       return (
-        <div className="space-y-4 pt-2 border-t border-slate-100">
+        <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-[#16223f]">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="python-version" className="text-xs font-bold text-slate-700">Python Sürümü</Label>
-              <Input id="python-version" defaultValue="3.12" className="font-mono h-10 rounded-xl" />
+              <Label htmlFor="python-version" className="text-xs font-bold text-slate-700 dark:text-slate-300">Python Sürümü</Label>
+              <Input id="python-version" defaultValue="3.12" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="start-cmd" className="text-xs font-bold text-slate-700">Başlatma Komutu</Label>
-              <Input id="start-cmd" defaultValue="gunicorn app:app --bind 127.0.0.1:$PORT" className="font-mono h-10 rounded-xl" />
+              <Label htmlFor="start-cmd" className="text-xs font-bold text-slate-700 dark:text-slate-300">Başlatma Komutu</Label>
+              <Input id="start-cmd" defaultValue="gunicorn app:app --bind 127.0.0.1:$PORT" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="port" className="text-xs font-bold text-slate-700">Uygulama Portu</Label>
-              <Input id="port" defaultValue="8000" className="font-mono h-10 rounded-xl" />
+              <Label htmlFor="port" className="text-xs font-bold text-slate-700 dark:text-slate-300">Uygulama Portu</Label>
+              <Input id="port" defaultValue="8000" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
             </div>
           </div>
         </div>
       )
     case "wordpress":
       return (
-        <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-slate-100">
+        <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-slate-100 dark:border-[#16223f]">
           <div className="space-y-2">
-            <Label htmlFor="php-version" className="text-xs font-bold text-slate-700">PHP Sürümü</Label>
-            <Input id="php-version" defaultValue="8.3" className="font-mono h-10 rounded-xl" />
+            <Label htmlFor="php-version" className="text-xs font-bold text-slate-700 dark:text-slate-300">PHP Sürümü</Label>
+            <Input id="php-version" defaultValue="8.3" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="site-root" className="text-xs font-bold text-slate-700">Site Kök Dizini</Label>
-            <Input id="site-root" placeholder={rootPlaceholder} className="font-mono h-10 rounded-xl" />
+            <Label htmlFor="site-root" className="text-xs font-bold text-slate-700 dark:text-slate-300">Site Kök Dizini</Label>
+            <Input id="site-root" placeholder={rootPlaceholder} className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="db-name" className="text-xs font-bold text-slate-700">Veritabanı Adı</Label>
-            <Input id="db-name" placeholder={domain.replace(/[^a-zA-Z0-9]/g, "_") || "wp_db"} className="font-mono h-10 rounded-xl" />
+            <Label htmlFor="db-name" className="text-xs font-bold text-slate-700 dark:text-slate-300">Veritabanı Adı</Label>
+            <Input id="db-name" placeholder={domain.replace(/[^a-zA-Z0-9]/g, "_") || "wp_db"} className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="db-user" className="text-xs font-bold text-slate-700">Veritabanı Kullanıcısı</Label>
-            <Input id="db-user" placeholder="wp_user" className="font-mono h-10 rounded-xl" />
+            <Label htmlFor="db-user" className="text-xs font-bold text-slate-700 dark:text-slate-300">Veritabanı Kullanıcısı</Label>
+            <Input id="db-user" placeholder="wp_user" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="db-password" className="text-xs font-bold text-slate-700">Veritabanı Şifresi</Label>
-            <Input id="db-password" type="password" placeholder="Güçlü şifre girin" className="font-mono h-10 rounded-xl" />
+            <Label htmlFor="db-password" className="text-xs font-bold text-slate-700 dark:text-slate-300">Veritabanı Şifresi</Label>
+            <Input id="db-password" type="password" placeholder="Güçlü şifre girin" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
           </div>
         </div>
       )
     case "php":
       return (
-        <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-slate-100">
+        <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-slate-100 dark:border-[#16223f]">
           <div className="space-y-2">
-            <Label htmlFor="php-version" className="text-xs font-bold text-slate-700">PHP Sürümü</Label>
-            <Input id="php-version" defaultValue="8.3" className="font-mono h-10 rounded-xl" />
+            <Label htmlFor="php-version" className="text-xs font-bold text-slate-700 dark:text-slate-300">PHP Sürümü</Label>
+            <Input id="php-version" defaultValue="8.3" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="site-root" className="text-xs font-bold text-slate-700">Site Kök Dizini</Label>
-            <Input id="site-root" placeholder={rootPlaceholder} className="font-mono h-10 rounded-xl" />
+            <Label htmlFor="site-root" className="text-xs font-bold text-slate-700 dark:text-slate-300">Site Kök Dizini</Label>
+            <Input id="site-root" placeholder={rootPlaceholder} className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
           </div>
         </div>
       )
     case "static":
       return (
-        <div className="space-y-2 pt-2 border-t border-slate-100">
-          <Label htmlFor="site-root" className="text-xs font-bold text-slate-700">Site Kök Dizini</Label>
-          <Input id="site-root" placeholder={rootPlaceholder} className="font-mono h-10 rounded-xl" />
+        <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-[#16223f]">
+          <Label htmlFor="site-root" className="text-xs font-bold text-slate-700 dark:text-slate-300">Site Kök Dizini</Label>
+          <Input id="site-root" placeholder={rootPlaceholder} className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
         </div>
       )
     case "proxy":
       return (
-        <div className="space-y-2 pt-2 border-t border-slate-100">
-          <Label htmlFor="target-url" className="text-xs font-bold text-slate-700">Hedef Adres (Upstream URL)</Label>
-          <Input id="target-url" placeholder="http://127.0.0.1:8080" className="font-mono h-10 rounded-xl" />
+        <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-[#16223f]">
+          <Label htmlFor="target-url" className="text-xs font-bold text-slate-700 dark:text-slate-300">Hedef Adres (Upstream URL)</Label>
+          <Input id="target-url" placeholder="http://127.0.0.1:8080" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
         </div>
       )
   }

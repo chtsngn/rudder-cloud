@@ -80,16 +80,16 @@ export function SiteCard({ site }: { site: Site }) {
   const TypeIcon = getTypeIcon(site.type)
 
   return (
-    <div className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-5 shadow-[0_4px_16px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] transition-all duration-300 hover:border-[#c8a87c] dark:hover:border-blue-500/60 hover:shadow-[0_8px_24px_rgba(200,168,124,0.12)] overflow-hidden">
+    <div className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-5 shadow-[0_4px_16px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] transition-all duration-300 hover:border-[#c8a87c] dark:hover:border-[#2a4687] hover:shadow-[0_8px_24px_rgba(200,168,124,0.12)] dark:hover:shadow-[0_8px_24px_rgba(22,39,82,0.3)] overflow-hidden">
       {/* Üst Vurgu Çizgisi */}
-      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#580619]/20 dark:via-blue-500/30 to-transparent group-hover:via-[#c8a87c] dark:group-hover:via-blue-400 transition-all duration-500" />
+      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#580619]/20 dark:via-[#2a4687]/50 to-transparent group-hover:via-[#c8a87c] dark:group-hover:via-[#385db3] transition-all duration-500" />
 
       {/* ── 1. ÜST BAŞLIK & ROZETLER ── */}
       <div>
         <div className="flex items-center justify-between gap-3 mb-4">
           {/* Framework / Tip Rozeti */}
           <div className="flex items-center gap-2">
-            <div className="size-9 rounded-xl bg-[#580619]/5 dark:bg-blue-500/10 border border-[#c8a87c]/30 dark:border-blue-500/30 flex items-center justify-center text-[#580619] dark:text-blue-400 font-mono text-xs font-black shadow-sm group-hover:bg-[#580619] dark:group-hover:bg-blue-600 group-hover:text-white transition-colors">
+            <div className="size-9 rounded-xl bg-[#580619]/5 dark:bg-[#101c38] border border-[#c8a87c]/30 dark:border-[#1e3568]/50 flex items-center justify-center text-[#580619] dark:text-blue-300 font-mono text-xs font-black shadow-sm group-hover:bg-[#580619] dark:group-hover:bg-[#162752] group-hover:text-white dark:group-hover:text-white transition-colors">
               {typeInfo.abbr}
             </div>
             <div>
@@ -118,10 +118,10 @@ export function SiteCard({ site }: { site: Site }) {
         <div className="mb-5">
           <Link
             href={`/sites/${site.id}`}
-            className="group/link flex items-center gap-1.5 text-base font-bold font-mono text-slate-900 dark:text-slate-100 hover:text-[#580619] dark:hover:text-blue-400 transition-colors"
+            className="group/link flex items-center gap-1.5 text-base font-bold font-mono text-slate-900 dark:text-slate-100 hover:text-[#580619] dark:hover:text-blue-300 transition-colors"
           >
             <span className="truncate">{site.domain}</span>
-            <ArrowUpRight className="size-4 text-slate-400 group-hover/link:text-[#580619] dark:group-hover/link:text-blue-400 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-all shrink-0" />
+            <ArrowUpRight className="size-4 text-slate-400 group-hover/link:text-[#580619] dark:group-hover/link:text-blue-300 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-all shrink-0" />
           </Link>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
             {typeInfo.description || "Yönetilen web sitesi."}
@@ -142,7 +142,7 @@ export function SiteCard({ site }: { site: Site }) {
               <Button
                 size="icon"
                 variant="outline"
-                className="size-7 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:text-[#580619] dark:hover:text-blue-400 hover:border-[#c8a87c] dark:hover:border-blue-400"
+                className="size-7 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#16223f] hover:text-[#580619] dark:hover:text-blue-300 hover:border-[#c8a87c] dark:hover:border-[#2a4687] dark:hover:bg-[#111f40]"
                 title="Yeniden Başlat"
               >
                 <RotateCw className="size-3" />
@@ -153,7 +153,7 @@ export function SiteCard({ site }: { site: Site }) {
           <Button
             asChild
             size="sm"
-            className="h-7.5 px-3 rounded-lg bg-slate-50 dark:bg-[#060a17] hover:bg-[#580619] dark:hover:bg-blue-600 text-slate-700 dark:text-slate-200 hover:text-white border border-slate-200 dark:border-[#16223f] hover:border-[#580619] dark:hover:border-blue-500 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5"
+            className="h-7.5 px-3 rounded-lg bg-slate-50 dark:bg-[#060a17] hover:bg-[#580619] dark:hover:bg-[#162752] text-slate-700 dark:text-slate-200 hover:text-white dark:hover:text-white border border-slate-200 dark:border-[#16223f] hover:border-[#580619] dark:hover:border-[#2a4687] text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5"
           >
             <Link href={`/sites/${site.id}`}>
               <Settings2 className="size-3.5" />

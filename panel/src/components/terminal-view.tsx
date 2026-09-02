@@ -626,7 +626,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
           <button
             type="button"
             onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#c8a87c]/80 dark:border-blue-400/60 bg-[#580619] dark:bg-blue-600 px-3 py-1.5 font-bold text-[11px] text-white shadow-xs hover:bg-[#720a22] dark:hover:bg-blue-500 hover:border-[#dfc9a0] dark:hover:border-blue-300 transition-all cursor-pointer shrink-0 active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#c8a87c]/80 dark:border-[#2a4687]/60 bg-[#580619] dark:bg-[#162752] px-3 py-1.5 font-bold text-[11px] text-white shadow-xs hover:bg-[#720a22] dark:hover:bg-[#1e346b] hover:border-[#dfc9a0] dark:hover:border-[#385db3] transition-all cursor-pointer shrink-0 active:scale-95"
           >
             <Plus className="size-3.5 text-[#dfc9a0] dark:text-white" />
             Komut Ekle
@@ -640,9 +640,9 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
               setLibrarySearchQuery("")
               setLibraryCategory("all")
             }}
-            className="inline-flex items-center gap-1.5 rounded-full border border-slate-700/80 dark:border-blue-500/40 bg-[#161d2d] dark:bg-[#0e1730] px-3 py-1.5 font-bold text-[11px] text-[#dfc9a0] dark:text-blue-300 shadow-2xs hover:border-[#c8a87c] dark:hover:border-blue-400 hover:text-white hover:bg-[#1f283d] dark:hover:bg-[#142145] transition-all cursor-pointer shrink-0 active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-700/80 dark:border-[#2a4687]/50 bg-[#161d2d] dark:bg-[#0e1730] px-3 py-1.5 font-bold text-[11px] text-[#dfc9a0] dark:text-blue-300 shadow-2xs hover:border-[#c8a87c] dark:hover:border-[#2a4687] hover:text-white hover:bg-[#1f283d] dark:hover:bg-[#142145] transition-all cursor-pointer shrink-0 active:scale-95"
           >
-            <BookOpen className="size-3.5 text-[#c8a87c] dark:text-blue-400" />
+            <BookOpen className="size-3.5 text-[#c8a87c] dark:text-blue-300" />
             Komut Kitaplığı
           </button>
         </div>
@@ -659,10 +659,10 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                 className={cn(
                   "group relative inline-flex items-center rounded-full border transition-all shrink-0",
                   isPinned
-                    ? "border-[#c8a87c] dark:border-blue-500/60 bg-[#580619]/50 dark:bg-blue-600/30 text-[#dfc9a0] dark:text-blue-200 hover:bg-[#580619]/70 dark:hover:bg-blue-600/50 pl-2.5 pr-1.5 py-1 text-[11px] font-mono font-bold shadow-xs"
+                    ? "border-[#c8a87c] dark:border-[#2a4687]/60 bg-[#580619]/50 dark:bg-[#162752]/40 text-[#dfc9a0] dark:text-blue-200 hover:bg-[#580619]/70 dark:hover:bg-[#162752]/70 pl-2.5 pr-1.5 py-1 text-[11px] font-mono font-bold shadow-xs"
                     : isCustom
-                    ? "border-slate-700/80 dark:border-slate-700 bg-[#161d2d] dark:bg-[#0c1326] text-slate-300 hover:text-white hover:border-[#c8a87c] dark:hover:border-blue-400 pl-2.5 pr-1.5 py-1 text-[11px] font-mono font-semibold"
-                    : "border-slate-700/80 dark:border-slate-800 bg-[#111622] dark:bg-[#080d1a] hover:bg-[#1a2336] dark:hover:bg-[#0f172e] text-slate-300 hover:text-white hover:border-[#c8a87c] dark:hover:border-blue-400 px-3 py-1.5 text-[11px] font-mono font-semibold cursor-pointer"
+                    ? "border-slate-700/80 dark:border-[#16223f] bg-[#161d2d] dark:bg-[#0c1326] text-slate-300 hover:text-white hover:border-[#c8a87c] dark:hover:border-[#2a4687] pl-2.5 pr-1.5 py-1 text-[11px] font-mono font-semibold"
+                    : "border-slate-700/80 dark:border-[#16223f] bg-[#111622] dark:bg-[#080d1a] hover:bg-[#1a2336] dark:hover:bg-[#0f172e] text-slate-300 hover:text-white hover:border-[#c8a87c] dark:hover:border-[#2a4687] px-3 py-1.5 text-[11px] font-mono font-semibold cursor-pointer"
                 )}
               >
                 <button
@@ -674,7 +674,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                   {isPinned ? (
                     <Pin className="size-3 text-[#dfc9a0] dark:text-blue-300 shrink-0 fill-[#dfc9a0] dark:fill-blue-300" />
                   ) : (
-                    <ChevronRight className="size-3 text-slate-500 group-hover:text-[#c8a87c] dark:group-hover:text-blue-400 transition-colors" />
+                    <ChevronRight className="size-3 text-slate-500 group-hover:text-[#c8a87c] dark:group-hover:text-blue-300 transition-colors" />
                   )}
                   <span>{qc.label}</span>
                 </button>
@@ -717,7 +717,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
           <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#16223f] pb-3">
               <div className="flex items-center gap-2">
-                <div className="size-8 rounded-xl bg-[#580619]/10 dark:bg-blue-500/10 text-[#580619] dark:text-blue-400 flex items-center justify-center">
+                <div className="size-8 rounded-xl bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 flex items-center justify-center">
                   <Plus className="size-4" />
                 </div>
                 <h3 className="font-heading font-bold text-base text-slate-900 dark:text-slate-100">
@@ -743,7 +743,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                   placeholder="Örn: PM2 Restart, Git Pull, Nginx Test"
                   value={newLabel}
                   onChange={(e) => setNewLabel(e.target.value)}
-                  className="h-10 rounded-xl font-medium text-xs bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                  className="h-10 rounded-xl font-medium text-xs bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
                   required
                 />
               </div>
@@ -757,7 +757,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                   placeholder="Örn: pm2 restart all veya cd /var/www && git pull"
                   value={newCmd}
                   onChange={(e) => setNewCmd(e.target.value)}
-                  className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                  className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
                   required
                 />
               </div>
@@ -771,7 +771,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                   placeholder="Örn: Projeyi günceller ve sunucuyu yeniden başlatır"
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
-                  className="h-10 rounded-xl text-xs bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                  className="h-10 rounded-xl text-xs bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
                 />
               </div>
 
@@ -782,10 +782,10 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                   id="cmd-pin"
                   checked={newIsPinned}
                   onChange={(e) => setNewIsPinned(e.target.checked)}
-                  className="size-4 rounded accent-[#580619] dark:accent-blue-600 cursor-pointer"
+                  className="size-4 rounded accent-[#580619] dark:accent-[#162752] cursor-pointer"
                 />
                 <Label htmlFor="cmd-pin" className="text-xs font-bold text-slate-800 dark:text-slate-200 cursor-pointer flex items-center gap-1.5 select-none">
-                  <Pin className="size-3.5 text-[#580619] dark:text-blue-400 shrink-0" />
+                  <Pin className="size-3.5 text-[#580619] dark:text-blue-300 shrink-0" />
                   <span>Hızlı Bar'a Sabitle (Her zaman en önde dursun)</span>
                 </Label>
               </div>
@@ -795,13 +795,13 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                   type="button"
                   variant="outline"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="h-9 px-4 rounded-xl text-xs font-semibold"
+                  className="h-9 px-4 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300 dark:hover:bg-[#111f40]"
                 >
                   İptal
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white h-9 px-5 rounded-xl text-xs font-semibold border border-[#c8a87c]/40 dark:border-blue-400/40 cursor-pointer"
+                  className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-9 px-5 rounded-xl text-xs font-semibold border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer"
                 >
                   Komutu Kaydet
                 </Button>
@@ -818,8 +818,8 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
             {/* Başlık */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#16223f] p-5 bg-slate-50/60 dark:bg-[#060a17] shrink-0">
               <div className="flex items-center gap-3">
-                <div className="size-10 rounded-2xl bg-[#580619]/10 dark:bg-blue-500/10 text-[#580619] dark:text-blue-400 border border-[#c8a87c]/30 dark:border-blue-500/30 flex items-center justify-center shadow-2xs">
-                  <BookOpen className="size-5 text-[#580619] dark:text-blue-400" />
+                <div className="size-10 rounded-2xl bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 border border-[#c8a87c]/30 dark:border-[#1e3568]/50 flex items-center justify-center shadow-2xs">
+                  <BookOpen className="size-5 text-[#580619] dark:text-blue-300" />
                 </div>
                 <div>
                   <h3 className="font-heading font-extrabold text-lg text-slate-900 dark:text-slate-100">
@@ -847,7 +847,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                   value={librarySearchQuery}
                   onChange={(e) => setLibrarySearchQuery(e.target.value)}
                   placeholder="Kitaplıkta komut veya açıklama ara (örn: logs, prune, port, ssl)..."
-                  className="pl-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-950 transition-all"
+                  className="pl-10 h-10 rounded-xl bg-slate-50 dark:bg-[#060a17] border-slate-200 dark:border-[#16223f] text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:bg-white dark:focus:bg-[#060a17] transition-all"
                 />
                 {librarySearchQuery && (
                   <button
@@ -873,8 +873,8 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                     className={cn(
                       "px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer",
                       libraryCategory === cat.id
-                        ? "bg-[#580619] dark:bg-blue-600 text-white shadow-2xs"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/80 dark:hover:bg-slate-700"
+                        ? "bg-[#580619] dark:bg-[#162752] text-white shadow-2xs dark:border dark:border-[#2a4687]/60"
+                        : "bg-slate-100 dark:bg-[#070c1a] text-slate-600 dark:text-slate-300 hover:bg-slate-200/80 dark:hover:bg-[#111f40] border border-transparent dark:border-[#16223f]"
                     )}
                   >
                     {cat.label}
@@ -898,7 +898,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                   {filteredLibraryCommands.map((item) => (
                     <div
                       key={item.id}
-                      className="flex flex-col justify-between p-4 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] hover:bg-white dark:hover:bg-[#0c1429] hover:border-[#c8a87c]/80 dark:hover:border-blue-500/60 hover:shadow-xs transition-all space-y-3"
+                      className="flex flex-col justify-between p-4 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] hover:bg-white dark:hover:bg-[#0c1429] hover:border-[#c8a87c]/80 dark:hover:border-[#2a4687] hover:shadow-xs transition-all space-y-3"
                     >
                       <div>
                         <div className="flex items-center justify-between gap-2">
@@ -908,7 +908,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">{item.desc}</p>
-                        <code className="block mt-2 font-mono text-[10px] text-slate-800 dark:text-slate-200 bg-white dark:bg-[#030610] p-2 rounded-xl border border-slate-200/80 dark:border-slate-800 select-all truncate">
+                        <code className="block mt-2 font-mono text-[10px] text-slate-800 dark:text-slate-200 bg-white dark:bg-[#030610] p-2 rounded-xl border border-slate-200/80 dark:border-[#16223f] select-all truncate">
                           {item.cmd}
                         </code>
                       </div>
@@ -919,9 +919,9 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                           type="button"
                           onClick={() => handlePinFromLibrary(item)}
                           title="Hızlı Komut Barı'na Sabitle"
-                          className="h-7 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[#580619]/10 dark:hover:bg-blue-500/20 text-slate-700 dark:text-slate-300 hover:text-[#580619] dark:hover:text-blue-400 text-[10px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                          className="h-7 px-2.5 rounded-lg bg-slate-100 dark:bg-[#0e1730] hover:bg-[#580619]/10 dark:hover:bg-[#162752] text-slate-700 dark:text-slate-300 hover:text-[#580619] dark:hover:text-blue-300 text-[10px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-transparent dark:border-[#16223f]"
                         >
-                          <Pin className="size-3 text-[#580619] dark:text-blue-400" />
+                          <Pin className="size-3 text-[#580619] dark:text-blue-300" />
                           <span>Sabitle</span>
                         </button>
 
@@ -933,7 +933,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                               handlePasteCommand(item.cmd)
                               setIsLibraryOpen(false)
                             }}
-                            className="h-7 text-[11px] px-2.5 rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
+                            className="h-7 text-[11px] px-2.5 rounded-lg border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#070c1a] hover:bg-slate-100 dark:hover:bg-[#111f40] text-slate-700 dark:text-slate-200"
                           >
                             <Copy className="size-3 mr-1 text-slate-400" />
                             Yapıştır
@@ -944,7 +944,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                               handleExecuteCommand(item.cmd, item.id)
                               setIsLibraryOpen(false)
                             }}
-                            className="h-7 text-[11px] px-3 rounded-lg bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white font-bold border border-[#c8a87c]/40 dark:border-blue-400/40 cursor-pointer"
+                            className="h-7 text-[11px] px-3 rounded-lg bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-bold border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer"
                           >
                             <CornerDownLeft className="size-3 mr-1 text-[#dfc9a0] dark:text-white" />
                             Çalıştır
@@ -970,8 +970,8 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
         >
           <div className="w-full max-w-xl rounded-2xl border border-slate-700/80 dark:border-[#16223f] bg-[#0f141f] text-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col">
             {/* Arama Inputu & Kapatma Butonu */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800 bg-[#161c2b]">
-              <Search className="size-4 text-[#c8a87c] dark:text-blue-400 shrink-0" />
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800 dark:border-[#16223f] bg-[#161c2b] dark:bg-[#070b17]">
+              <Search className="size-4 text-[#c8a87c] dark:text-blue-300 shrink-0" />
               <input
                 type="text"
                 autoFocus
@@ -1012,7 +1012,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                 type="button"
                 onClick={() => setIsPaletteOpen(false)}
                 title="Pencereyi Kapat"
-                className="size-7 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/80 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                className="size-7 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/80 dark:border-[#16223f] flex items-center justify-center transition-colors cursor-pointer shrink-0"
               >
                 <X className="size-4" />
               </button>
@@ -1038,8 +1038,8 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                       className={cn(
                         "w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-colors cursor-pointer",
                         isSelected
-                          ? "bg-[#580619] dark:bg-blue-600 text-white"
-                          : "text-slate-300 hover:bg-slate-800/60"
+                          ? "bg-[#580619] dark:bg-[#162752] text-white"
+                          : "text-slate-300 hover:bg-slate-800/60 dark:hover:bg-[#101c38]"
                       )}
                     >
                       <div className="flex items-center gap-2.5 overflow-hidden">
@@ -1053,7 +1053,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-xs font-bold">{item.label}</span>
                             {item.isCustom && (
-                              <span className="text-[9px] bg-[#c8a87c]/20 dark:bg-blue-500/20 text-[#dfc9a0] dark:text-blue-300 px-1.5 py-0.2 rounded font-sans uppercase">
+                              <span className="text-[9px] bg-[#c8a87c]/20 dark:bg-[#101c38] text-[#dfc9a0] dark:text-blue-300 px-1.5 py-0.2 rounded font-sans uppercase border border-[#c8a87c]/30 dark:border-[#1e3568]/50">
                                 Özel
                               </span>
                             )}
@@ -1075,7 +1075,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                         <span
                           className={cn(
                             "font-mono text-[10px] px-1.5 py-0.5 rounded",
-                            isSelected ? "bg-black/30 text-[#dfc9a0] dark:text-white" : "bg-slate-800 text-slate-400"
+                            isSelected ? "bg-black/30 text-[#dfc9a0] dark:text-white" : "bg-slate-800 dark:bg-[#070c1a] text-slate-400"
                           )}
                         >
                           Enter ↵

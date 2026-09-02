@@ -79,7 +79,7 @@ export default function SitesListPage() {
               Siteleriniz
             </h1>
             {sites !== null && (
-              <span className="rounded-full bg-[#580619]/10 dark:bg-blue-500/10 border border-[#580619]/20 dark:border-blue-500/30 px-3 py-0.5 text-xs font-bold text-[#580619] dark:text-blue-400 font-mono">
+              <span className="rounded-full bg-[#580619]/10 dark:bg-[#101c38] border border-[#580619]/20 dark:border-[#1e3568]/50 px-3 py-0.5 text-xs font-bold text-[#580619] dark:text-blue-300 font-mono">
                 {sites.length} Toplam Site
               </span>
             )}
@@ -94,14 +94,14 @@ export default function SitesListPage() {
             type="button"
             onClick={handleRefresh}
             title="Yenile"
-            className="size-9 rounded-xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-slate-600 dark:text-slate-300 hover:text-[#580619] dark:hover:text-blue-400 hover:border-[#c8a87c] dark:hover:border-blue-400 shadow-sm flex items-center justify-center transition-all cursor-pointer active:scale-95"
+            className="size-9 rounded-xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-slate-600 dark:text-slate-300 hover:text-[#580619] dark:hover:text-blue-300 hover:border-[#c8a87c] dark:hover:border-[#2a4687] shadow-sm flex items-center justify-center transition-all cursor-pointer active:scale-95"
           >
-            <RotateCw className={cn("size-4", refreshing && "animate-spin text-[#580619] dark:text-blue-400")} />
+            <RotateCw className={cn("size-4", refreshing && "animate-spin text-[#580619] dark:text-blue-300")} />
           </button>
 
           <Button
             asChild
-            className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white font-semibold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-10 border border-[#c8a87c]/40 dark:border-blue-400/40 hover:border-[#c8a87c] dark:hover:border-blue-300 hover:scale-[1.02] cursor-pointer"
+            className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-10 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] hover:scale-[1.02] cursor-pointer"
           >
             <Link href="/sites/new">
               <Plus className="size-4 text-[#dfc9a0] dark:text-white" />
@@ -216,7 +216,7 @@ export default function SitesListPage() {
         ) : sites.length === 0 ? (
           /* Boş Durum */
           <div className="rounded-3xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-12 shadow-sm flex flex-col items-center justify-center text-center">
-            <div className="size-18 rounded-2xl bg-[#580619]/5 dark:bg-blue-500/10 border-2 border-[#c8a87c]/40 dark:border-blue-500/30 flex items-center justify-center p-3.5 mb-4 shadow-inner">
+            <div className="size-18 rounded-2xl bg-[#580619]/5 dark:bg-[#101c38] border-2 border-[#c8a87c]/40 dark:border-[#1e3568]/50 flex items-center justify-center p-3.5 mb-4 shadow-inner">
               <Image
                 src="/rudder-helm-transparent.png"
                 alt="Rudder"
@@ -233,7 +233,7 @@ export default function SitesListPage() {
             </p>
             <Button
               asChild
-              className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/50 dark:border-blue-400/40"
+              className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-bold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/50 dark:border-[#2a4687]/60"
             >
               <Link href="/sites/new">
                 <Plus className="size-4 text-[#dfc9a0] dark:text-white" />

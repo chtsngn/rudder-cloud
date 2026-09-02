@@ -306,8 +306,8 @@ export default function SettingsPage() {
       {/* ═══ 1. ÜST BAŞLIK ═══ */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
         <div className="flex items-center gap-3.5">
-          <div className="size-12 rounded-2xl bg-[#580619]/5 dark:bg-blue-500/10 border border-[#c8a87c]/30 dark:border-blue-500/30 flex items-center justify-center text-[#580619] dark:text-blue-400 shadow-2xs">
-            <SettingsIcon className="size-6 text-[#580619] dark:text-blue-400" />
+          <div className="size-12 rounded-2xl bg-[#580619]/5 dark:bg-[#101c38] border border-[#c8a87c]/30 dark:border-[#1e3568]/50 flex items-center justify-center text-[#580619] dark:text-blue-300 shadow-2xs">
+            <SettingsIcon className="size-6 text-[#580619] dark:text-blue-300" />
           </div>
           <div>
             <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
@@ -324,7 +324,7 @@ export default function SettingsPage() {
       <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 md:p-8 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-6">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#16223f] pb-4">
           <div className="flex items-center gap-3">
-            <div className="size-9 rounded-xl bg-[#580619]/10 dark:bg-blue-500/10 text-[#580619] dark:text-blue-400 flex items-center justify-center">
+            <div className="size-9 rounded-xl bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 flex items-center justify-center">
               <Palette className="size-5" />
             </div>
             <div>
@@ -346,7 +346,7 @@ export default function SettingsPage() {
               "group relative flex flex-col justify-between p-5 rounded-2xl border-2 transition-all cursor-pointer",
               theme === "light"
                 ? "border-[#580619] bg-[#580619]/5 shadow-sm"
-                : "border-slate-200 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] hover:border-slate-300 dark:hover:border-slate-700"
+                : "border-slate-200 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] hover:border-slate-300 dark:hover:border-[#2a4687]"
             )}
           >
             <div className="space-y-3">
@@ -387,14 +387,14 @@ export default function SettingsPage() {
             className={cn(
               "group relative flex flex-col justify-between p-5 rounded-2xl border-2 transition-all cursor-pointer",
               theme === "dark"
-                ? "border-blue-500 bg-blue-500/10 shadow-sm"
-                : "border-slate-200 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] hover:border-slate-300 dark:hover:border-slate-700"
+                ? "border-[#2a4687] bg-[#101c38] shadow-sm ring-2 ring-[#2a4687]/40"
+                : "border-slate-200 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] hover:border-slate-300 dark:hover:border-[#2a4687]"
             )}
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="size-8 rounded-xl bg-blue-950/80 text-blue-400 border border-blue-500/30 flex items-center justify-center">
+                  <div className="size-8 rounded-xl bg-[#101c38] text-blue-300 border border-[#1e3568]/50 flex items-center justify-center">
                     <Moon className="size-4" />
                   </div>
                   <div>
@@ -403,7 +403,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 {theme === "dark" && (
-                  <div className="size-6 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-xs">
+                  <div className="size-6 rounded-full bg-[#162752] text-white flex items-center justify-center shadow-xs border border-[#2a4687]/60">
                     <Check className="size-3.5 font-bold" />
                   </div>
                 )}
@@ -411,7 +411,7 @@ export default function SettingsPage() {
 
               {/* Tema Minyatür Önizleme */}
               <div className="rounded-xl border border-slate-800 bg-[#040711] p-2.5 flex gap-2">
-                <div className="w-12 h-14 rounded-lg bg-[#0b1739] border border-blue-500/30 flex flex-col items-center justify-center p-1">
+                <div className="w-12 h-14 rounded-lg bg-[#0b1739] border border-[#16223f] flex flex-col items-center justify-center p-1">
                   <div className="w-6 h-1 rounded bg-[#cbd5e1] mb-1" />
                   <div className="w-4 h-1 rounded bg-slate-700" />
                 </div>
@@ -549,7 +549,7 @@ export default function SettingsPage() {
                 size="sm"
                 disabled={!canBindDomain || domainSaving}
                 onClick={handleBindDomain}
-                className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-blue-400/40 hover:border-[#c8a87c] dark:hover:border-blue-300 disabled:opacity-40 cursor-pointer"
+                className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] disabled:opacity-40 cursor-pointer"
               >
                 {domainSaving ? (
                   <Loader2 className="size-4 animate-spin text-[#dfc9a0] dark:text-white" />
@@ -567,7 +567,7 @@ export default function SettingsPage() {
       <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 md:p-8 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 dark:border-[#16223f] pb-4">
           <div className="flex items-center gap-3">
-            <div className="size-9 rounded-xl bg-[#580619]/10 dark:bg-blue-500/10 text-[#580619] dark:text-blue-400 flex items-center justify-center">
+            <div className="size-9 rounded-xl bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 flex items-center justify-center">
               <Cloud className="size-5" />
             </div>
             <div>
@@ -583,7 +583,7 @@ export default function SettingsPage() {
           <Button
             size="sm"
             onClick={openCreateForm}
-            className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white font-semibold text-xs uppercase tracking-wider px-4 py-2 rounded-xl shadow-sm transition-all flex items-center gap-1.5 h-10 border border-[#c8a87c]/40 dark:border-blue-400/40 hover:border-[#c8a87c] dark:hover:border-blue-300 shrink-0 cursor-pointer"
+            className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-4 py-2 rounded-xl shadow-sm transition-all flex items-center gap-1.5 h-10 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] shrink-0 cursor-pointer"
           >
             <Plus className="size-4 text-[#dfc9a0] dark:text-white" />
             Yeni Yapılandırma
@@ -592,10 +592,10 @@ export default function SettingsPage() {
 
         {/* Yeni / Düzenleme Formu */}
         {formOpen && (
-          <div className="rounded-2xl border border-[#c8a87c]/70 dark:border-blue-500/50 bg-slate-50/60 dark:bg-[#060a17] p-6 shadow-sm space-y-5 animate-in fade-in zoom-in-95 duration-150">
+          <div className="rounded-2xl border border-[#c8a87c]/70 dark:border-[#2a4687] bg-slate-50/60 dark:bg-[#060a17] p-6 shadow-sm space-y-5 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-[#16223f] pb-3">
               <div className="flex items-center gap-2">
-                <Sparkles className="size-4 text-[#c8a87c] dark:text-blue-400" />
+                <Sparkles className="size-4 text-[#c8a87c] dark:text-blue-300" />
                 <h3 className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
                   {editingId ? "S3 Yapılandırmasını Düzenle" : "Yeni S3 Sağlayıcı Profili Ekle"}
                 </h3>
@@ -610,7 +610,7 @@ export default function SettingsPage() {
                   value={form.label}
                   onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
                   placeholder="Örn: AWS Frankfurt, Cloudflare R2 Yedekler"
-                  className="h-10 rounded-xl text-xs bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                  className="h-10 rounded-xl text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
                 />
               </div>
 
@@ -620,7 +620,7 @@ export default function SettingsPage() {
                   value={form.bucket}
                   onChange={(e) => setForm((f) => ({ ...f, bucket: e.target.value }))}
                   placeholder="panel-backups-bucket"
-                  className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                  className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
                 />
               </div>
 
@@ -630,7 +630,7 @@ export default function SettingsPage() {
                   value={form.region}
                   onChange={(e) => setForm((f) => ({ ...f, region: e.target.value }))}
                   placeholder="eu-central-1 veya auto"
-                  className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                  className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
                 />
               </div>
 
@@ -642,7 +642,7 @@ export default function SettingsPage() {
                   value={form.endpoint}
                   onChange={(e) => setForm((f) => ({ ...f, endpoint: e.target.value }))}
                   placeholder="https://<accountid>.r2.cloudflarestorage.com"
-                  className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                  className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
                 />
               </div>
 
@@ -651,7 +651,7 @@ export default function SettingsPage() {
                 <Input
                   value={form.accessKeyId}
                   onChange={(e) => setForm((f) => ({ ...f, accessKeyId: e.target.value }))}
-                  className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                  className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
                 />
               </div>
 
@@ -664,7 +664,7 @@ export default function SettingsPage() {
                   value={form.secretAccessKey}
                   onChange={(e) => setForm((f) => ({ ...f, secretAccessKey: e.target.value }))}
                   placeholder={editingId ? "••••••••••••••••••••••••" : ""}
-                  className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                  className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
                 />
               </div>
 
@@ -676,7 +676,7 @@ export default function SettingsPage() {
                   value={form.pathPrefix}
                   onChange={(e) => setForm((f) => ({ ...f, pathPrefix: e.target.value }))}
                   placeholder="rudder-backups/"
-                  className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100"
+                  className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
                 />
               </div>
             </div>
@@ -692,7 +692,7 @@ export default function SettingsPage() {
                 size="sm"
                 variant="outline"
                 onClick={() => setFormOpen(false)}
-                className="h-10 px-4 rounded-xl text-xs font-semibold"
+                className="h-10 px-4 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300 dark:hover:bg-[#111f40]"
               >
                 Vazgeç
               </Button>
@@ -700,7 +700,7 @@ export default function SettingsPage() {
                 size="sm"
                 disabled={!canSubmit || saving}
                 onClick={handleSave}
-                className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white h-10 px-6 rounded-xl text-xs font-semibold border border-[#c8a87c]/40 dark:border-blue-400/40"
+                className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-10 px-6 rounded-xl text-xs font-semibold border border-[#c8a87c]/40 dark:border-[#2a4687]/60"
               >
                 {saving && <Loader2 className="size-3.5 animate-spin mr-1 text-[#dfc9a0] dark:text-white" />}
                 {editingId ? "Değişiklikleri Kaydet" : "Profili Oluştur"}
@@ -718,11 +718,11 @@ export default function SettingsPage() {
         {/* Profil Listesi */}
         {loading ? (
           <div className="flex items-center justify-center py-8 text-slate-400">
-            <Loader2 className="size-6 animate-spin text-[#580619] dark:text-blue-400" />
+            <Loader2 className="size-6 animate-spin text-[#580619] dark:text-blue-300" />
           </div>
         ) : configs.length === 0 ? (
           <div className="rounded-2xl border border-slate-200/80 dark:border-[#16223f] bg-slate-50/40 dark:bg-[#060a17] p-8 text-center flex flex-col items-center justify-center">
-            <div className="size-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mb-3">
+            <div className="size-12 rounded-2xl bg-slate-100 dark:bg-[#090e1f] flex items-center justify-center text-slate-400 mb-3 border border-slate-200 dark:border-[#16223f]">
               <Database className="size-6" />
             </div>
             <h3 className="font-heading font-bold text-sm text-slate-800 dark:text-slate-200">
@@ -734,7 +734,7 @@ export default function SettingsPage() {
             <Button
               size="sm"
               onClick={openCreateForm}
-              className="bg-[#580619] dark:bg-blue-600 hover:bg-[#720a22] dark:hover:bg-blue-500 text-white text-xs font-semibold px-4 h-9 rounded-xl border border-[#c8a87c]/40 dark:border-blue-400/40 cursor-pointer"
+              className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white text-xs font-semibold px-4 h-9 rounded-xl border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer"
             >
               <Plus className="size-3.5 mr-1 text-[#dfc9a0] dark:text-white" />
               İlk S3 Profilini Ekle
@@ -745,14 +745,14 @@ export default function SettingsPage() {
             {configs.map((config) => (
               <div
                 key={config.id}
-                className="flex flex-col justify-between p-5 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#060a17] hover:border-[#c8a87c]/60 dark:hover:border-blue-500/50 shadow-xs hover:shadow-sm transition-all"
+                className="flex flex-col justify-between p-5 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#060a17] hover:border-[#c8a87c]/60 dark:hover:border-[#2a4687] shadow-xs hover:shadow-sm transition-all"
               >
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
                       {config.label || "İsimsiz S3 Profili"}
                     </span>
-                    <span className="text-[10px] font-mono font-bold bg-[#580619]/10 dark:bg-blue-500/10 text-[#580619] dark:text-blue-400 px-2 py-0.5 rounded-full border border-[#c8a87c]/30 dark:border-blue-500/30">
+                    <span className="text-[10px] font-mono font-bold bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 px-2 py-0.5 rounded-full border border-[#c8a87c]/30 dark:border-[#1e3568]/50">
                       S3 Uyumlu
                     </span>
                   </div>
@@ -788,9 +788,9 @@ export default function SettingsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => openEditForm(config)}
-                    className="h-8 rounded-xl text-xs font-semibold px-3"
+                    className="h-8 rounded-xl text-xs font-semibold px-3 dark:border-[#16223f] dark:text-slate-300 dark:hover:border-[#2a4687] dark:hover:bg-[#111f40]"
                   >
-                    <Pencil className="size-3 mr-1 text-[#c8a87c] dark:text-blue-400" />
+                    <Pencil className="size-3 mr-1 text-[#c8a87c] dark:text-blue-300" />
                     Düzenle
                   </Button>
                   <Button
@@ -798,7 +798,7 @@ export default function SettingsPage() {
                     size="sm"
                     disabled={deletingId === config.id}
                     onClick={() => handleDelete(config.id)}
-                    className="h-8 rounded-xl text-xs font-semibold px-3 border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30"
+                    className="h-8 rounded-xl text-xs font-semibold px-3 border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
                   >
                     {deletingId === config.id ? (
                       <Loader2 className="size-3 animate-spin mr-1" />
