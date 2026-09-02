@@ -959,9 +959,14 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
 
       {/* ═══ 5. SPOTLIGHT KOMUT PALETİ (CTRL + K) ═══ */}
       {isPaletteOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 pt-20 p-4 backdrop-blur-xs">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsPaletteOpen(false)
+          }}
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 pt-20 p-4 backdrop-blur-xs"
+        >
           <div className="w-full max-w-xl rounded-2xl border border-slate-700/80 bg-[#0f141f] text-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col">
-            {/* Arama Inputu */}
+            {/* Arama Inputu & Kapatma Butonu */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800 bg-[#161c2b]">
               <Search className="size-4 text-[#c8a87c] shrink-0" />
               <input
@@ -974,7 +979,10 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                   setPaletteSelectedIndex(0)
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === "ArrowDown") {
+                  if (e.key === "Escape") {
+                    e.preventDefault()
+                    setIsPaletteOpen(false)
+                  } else if (e.key === "ArrowDown") {
                     e.preventDefault()
                     setPaletteSelectedIndex((prev) =>
                       prev < filteredPaletteCommands.length - 1 ? prev + 1 : 0
@@ -997,9 +1005,14 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                 }}
                 className="flex-1 bg-transparent text-sm text-white placeholder:text-slate-500 outline-none font-medium"
               />
-              <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
-                ESC
-              </span>
+              <button
+                type="button"
+                onClick={() => setIsPaletteOpen(false)}
+                title="Pencereyi Kapat"
+                className="size-7 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/80 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+              >
+                <X className="size-4" />
+              </button>
             </div>
 
             {/* Komut Listesi */}

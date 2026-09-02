@@ -30,6 +30,7 @@
   - **Sabitleme Sistemi (Pinning):** Yeni komut ekleme formuna \📌 Hızlı Bar'a Sabitle\ seçeneği eklendi; sabitlenen komutlar her zaman en önde kalıyor. Ayrıca Komut Kitaplığı'ndaki herhangi bir komut tek tıkla hızlı bara sabitlenebiliyor.
   - **Tam Oval Hızlı Komut Barı:** Alt komut barı dış kasası ve butonları tam oval (\ounded-full\) estetik kapsüle dönüştürüldü.
   - **Dengeli & Canlı Arama Destekli Komut Kitaplığı:** Renk dengesizlikleri giderildi, lüks kartlar ve anlık arama / filtreleme çubuğu ile kategori hapları eklendi.
+  - **Spotlight Komut Paleti Kapatma Butonu:** Statik ESC rozeti yerine tıklanabilir zarif kapatma (\X\) butonu ve arka plan tıklamasıyla kapatma desteği eklendi.
   - **Sağa Tuttur Butonu:** Terminal üst başlığındaki buton neon ışıktan arındırılıp sade ve lüks **\Sağa Tuttur\** butonuna revize edildi.
 - [x] **Sistem Ayarları (\/settings\) Sayfası Temaya Uygun Olarak Yenilendi.**
 - [x] **Kullanıcı Yönetimi (\/users\) Sayfası Lüks Tablo & Arama/Filtre Sistemiyle Yenilendi.**
@@ -53,3 +54,4 @@ px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 | 2026-09-02 | Kalıcı Yan Terminal, Rekürsif Sayfa Uyumlanması (\DashboardMain\) ve Obsidian Komut Barı | \dashboard-main.tsx\, \layout.tsx\, \	erminal-dock-context.tsx\, \	erminal-view.tsx\, \side-terminal-dock.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | Bordo/Altın Minimalist Terminal Rozeti ve \/audit\ Aydınlık Kart Uyarlaması | \side-terminal-dock.tsx\, \udit/page.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | Oval Hızlı Komut Barı, En Sık Kullanılanlar Sıralaması, Sabitleme (Pin) ve Arama Destekli Komut Kitaplığı | \	erminal-view.tsx\, \	erminal/page.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | Spotlight Komut Paleti (\Ctrl+K\) penceresine kapatma butonu (\X\) eklendi | \	erminal-view.tsx\ | Başarılı (TypeScript 0 hata) |
