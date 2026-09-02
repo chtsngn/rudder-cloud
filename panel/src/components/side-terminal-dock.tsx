@@ -114,30 +114,31 @@ export function SideTerminalDock() {
         </aside>
       )}
 
-      {/* ═══ 2. KÜÇÜLTÜLMÜŞ / SABİT KOD TARZI SİYAH TERMINAL BUTONU (NO TEXT) ═══ */}
+      {/* ═══ 2. KÜÇÜLTÜLMÜŞ / SABİT LÜKS BORDO & ALTIN TERMİNAL BUTONU (NO TEXT) ═══ */}
       {(!isOpen || isMinimized) && (
-        <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
+        <div className="fixed bottom-5 right-5 z-40 group animate-in fade-in slide-in-from-bottom-3 duration-200">
+          {/* Hover Kısayol Tooltipi */}
+          <div className="absolute -top-9 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 whitespace-nowrap">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/95 text-white text-[11px] font-mono shadow-xl border border-slate-700/80 backdrop-blur-xs">
+              <span className="text-[#dfc9a0]">Terminal</span>
+              <kbd className="text-[10px] text-slate-400 bg-black/50 px-1 py-0.5 rounded">Ctrl+`</kbd>
+            </span>
+          </div>
+
           <button
             type="button"
             onClick={openDock}
             title="Terminal Konsolunu Aç (Ctrl + `)"
-            className="group relative inline-flex items-center gap-2 rounded-2xl border border-emerald-500/40 bg-[#0a0d14] px-3.5 py-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:border-emerald-400 transition-all cursor-pointer hover:scale-105 active:scale-95"
+            className="relative size-11 rounded-2xl border border-[#c8a87c]/60 bg-[#2b040d] hover:bg-[#420614] text-[#dfc9a0] shadow-[0_6px_20px_rgba(43,4,13,0.45)] hover:shadow-[0_8px_25px_rgba(200,168,124,0.35)] hover:border-[#dfc9a0] flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95"
           >
             {/* Terminal Prompt Icon */}
-            <div className="size-6 rounded-lg bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-900/60 transition-colors">
-              <TerminalIcon className="size-3.5 text-emerald-400" />
-            </div>
+            <TerminalIcon className="size-4.5 text-[#dfc9a0]" />
 
-            {/* Live Neon Emerald Dot */}
-            <span className="relative flex size-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full size-2 bg-emerald-400 shadow-[0_0_8px_rgba(74,222,128,0.9)]" />
+            {/* Subtle Warm Gold Indicator Dot */}
+            <span className="absolute -top-1 -right-1 flex size-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#c8a87c] opacity-60" />
+              <span className="relative inline-flex rounded-full size-2.5 bg-[#c8a87c] border-2 border-[#2b040d]" />
             </span>
-
-            {/* Keyboard Hotkey Badge */}
-            <kbd className="bg-emerald-950/80 text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg text-emerald-400 border border-emerald-500/40 shadow-inner group-hover:border-emerald-300 transition-colors">
-              Ctrl+`
-            </kbd>
           </button>
         </div>
       )}

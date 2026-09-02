@@ -29,12 +29,12 @@
 - [x] **Sistem Ayarları (\/settings\) Sayfası Temaya Uygun Olarak Yenilendi.**
 - [x] **Kullanıcı Yönetimi (\/users\) Sayfası Lüks Tablo & Arama/Filtre Sistemiyle Yenilendi.**
 - [x] **Kalıcı Sağ Yan Terminal Dock'u & Rekürsif Sayfa Uyumlanması (Adaptive Split Screen).**
-- [x] **Terminal Sabit Launcher Butonu Siyah & Neon Zümrüt Kod Temasına Dönüştürüldü (Yazısız, Kompakt Kapsül).**
-- [x] **Denetim Günlüğü (\/audit\) Sayfası Tamamen Yenilendi:**
-  - **Lüks İstatistik Kartları:** Toplam Olay, Başarılı İşlemler, Hata/Uyarı, Aktif Operatörler metrik kartları eklendi.
-  - **Canlı Arama & Filtreleme:** Operatör adı, eylem (SITE_CREATE, USER_DELETE vb.), hedef veya detay kelimelerine göre anlık filtreleme ve kategori hapları (\Tümü\, \Siteler\, \Kullanıcılar\, \Güvenlik & SSL\, \Hatalı Olaylar\).
-  - **Lüks Denetim Tablosu:** Operatör avatarları, renk kodlu eylem rozetleri (Emerald, Rose, Indigo, Amber), zaman damgası ve göreceli zaman ("5 dk önce"), durum rozetleri.
-  - **Detaylı Kayıt İnceleme Modalı (JSON & Raw Data):** Herhangi bir satıra tıklandığında olayın tam ayrıntılarını, açıklamasını ve kopyalanabilir ham JSON verisini gösteren şık modal çekmecesi.
+- [x] **Terminal Sabit Launcher Butonu Lüks Bordo/Altın Minimalist Rozete Dönüştürüldü:**
+  - Parlak neon renkler ve buton üzeri metinler kaldırıldı.
+  - Derin bordo (\#2b040d\) gövde, fırçalanmış altın (\#c8a87c\) çerçeve ve altın terminal ikonu ile kompakt karemsi kapsül (\size-11 rounded-2xl\) haline getirildi.
+  - Kısayol bilgisi butonun üstünde yalnızca hover esnasında beliren zarif bir tooltip'e (\Terminal Ctrl+\\) taşındı.
+- [x] **Denetim Günlüğü (\/audit\) Sayfası & Kart Tasarımı Beyaz Temaya Tam Uyumlandı:**
+  - Koyu/siyah kutular ve göze batan koyu alanlar tamamen kaldırıldı; sayfanın aydınlık lüks tasarımına tam uyumlu yumuşak açık gri (\g-slate-50\) ve altın kenarlıklı kartlara dönüştürüldü.
 - [x] **Test & Doğrulama:** TypeScript typecheck (\
 px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 
@@ -51,4 +51,4 @@ px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 | 2026-09-02 | \/settings\ sayfası (Alan Adı/SSL ve S3 Depolama) lüks tasarımla yenilendi | \settings/page.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | \/users\ sayfası lüks tablo, arama/filtre çubuğu ve avatar sistemiyle yenilendi | \users/page.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | Kalıcı Yan Terminal, Rekürsif Sayfa Uyumlanması (\DashboardMain\) ve Obsidian Komut Barı | \dashboard-main.tsx\, \layout.tsx\, \	erminal-dock-context.tsx\, \	erminal-view.tsx\, \side-terminal-dock.tsx\ | Başarılı (TypeScript 0 hata) |
-| 2026-09-02 | Siyah & Zümrüt Yazısız Kod Tarzı Launcher Butonu ve \/audit\ Denetim Günlüğü Yenilendi | \side-terminal-dock.tsx\, \udit/page.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | Bordo/Altın Minimalist Terminal Rozeti ve \/audit\ Aydınlık Kart Uyarlaması | \side-terminal-dock.tsx\, \udit/page.tsx\ | Başarılı (TypeScript 0 hata) |

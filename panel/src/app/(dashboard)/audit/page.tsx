@@ -539,23 +539,23 @@ function AuditContent() {
 
               <div>
                 <p className="text-[11px] font-bold text-slate-500 mb-1">Açıklama ve Operasyon Detayı</p>
-                <div className="p-3 rounded-xl bg-slate-900 text-slate-200 font-mono text-xs break-all leading-relaxed">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 font-mono text-xs break-all leading-relaxed">
                   {selectedLog.detail || "Detay bilgisi kaydedilmemiş."}
                 </div>
               </div>
 
               <div>
-                <p className="text-[11px] font-bold text-slate-500 mb-1">Ham JSON Nesnesi</p>
+                <p className="text-[11px] font-bold text-slate-500 mb-1">Kayıt Verisi (JSON)</p>
                 <div className="relative">
-                  <pre className="p-3 rounded-xl bg-slate-900 text-[#dfc9a0] font-mono text-[11px] overflow-x-auto max-h-40 border border-slate-800">
+                  <pre className="p-3 rounded-xl bg-slate-50 text-slate-800 font-mono text-[11px] overflow-x-auto max-h-48 border border-slate-200">
                     {JSON.stringify(selectedLog, null, 2)}
                   </pre>
                   <button
                     type="button"
                     onClick={() => copyToClipboard(JSON.stringify(selectedLog, null, 2), "modal-json")}
-                    className="absolute right-2.5 top-2.5 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[10px] flex items-center gap-1 cursor-pointer transition-colors"
+                    className="absolute right-2.5 top-2.5 px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-mono text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
                   >
-                    {copiedId === "modal-json" ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                    {copiedId === "modal-json" ? <Check className="size-3 text-emerald-600" /> : <Copy className="size-3 text-slate-500" />}
                     Kopyala
                   </button>
                 </div>
