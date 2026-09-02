@@ -12,6 +12,11 @@ import {
   Server,
   CheckCircle2,
   RotateCw,
+  Network,
+  Box,
+  Radio,
+  Layers,
+  Search,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -25,6 +30,21 @@ interface SystemStats {
   mem: { usedPercent: number; usedGB: number; totalGB: number }
   disk: { usedPercent: number; usedGB: number; totalGB: number }
   host: { hostname: string; platform: string; uptimeSeconds: number; ip: string }
+}
+
+interface UsedPort {
+  port: number
+  protocol: "tcp"
+  address: string
+  process: string | null
+  source: "site" | "docker" | "system"
+  label: string | null
+}
+
+interface PortsResponse {
+  used: UsedPort[]
+  suggestions: number[]
+  suggestRange: { start: number; end: number }
 }
 
 const STATS_POLL_MS = 5000
@@ -52,7 +72,6 @@ function MetricCard({
   const isHigh = safePct >= 85
   const isWarning = safePct >= 70 && safePct < 85
 
-  // Tam uyumlu renk paleti: Bar, Durum Noktası ve Metin %100 eşleşir
   const statusConfig = isHigh
     ? {
         label: "Yüksek Yük",
@@ -85,7 +104,6 @@ function MetricCard({
       "group relative rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all duration-300 hover:shadow-[0_8px_24px_rgba(200,168,124,0.12)] flex flex-col justify-between overflow-hidden",
       statusConfig.cardBorderHover
     )}>
-      {/* Top Header: Title & Relevant Tech Icon */}
       <div>
         <div className="flex items-center justify-between gap-2 mb-3.5">
           <span className="font-heading text-[12px] font-bold uppercase tracking-wider text-slate-600">
@@ -96,20 +114,17 @@ function MetricCard({
           </div>
         </div>
 
-        {/* Main Metric Value */}
         <div className="flex items-baseline gap-2 mb-1.5">
           <span className="font-mono text-3xl font-extrabold tracking-tight text-slate-900">
             {mainValue}
           </span>
         </div>
 
-        {/* Subtext info */}
         <p className="font-mono text-xs font-medium text-slate-500 truncate mb-5">
           {subValue}
         </p>
       </div>
 
-      {/* Recessed Progress Gauge (Birebir Noktayla Uyumlu Renk) */}
       <div>
         <div className="flex items-center justify-between text-xs font-semibold mb-2 font-mono">
           <span className={cn("flex items-center gap-1.5", statusConfig.textColor)}>
@@ -121,7 +136,6 @@ function MetricCard({
           </span>
         </div>
 
-        {/* Bar */}
         <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden border border-slate-200/80 p-[1.5px] shadow-inner">
           <div
             className="h-full rounded-full transition-all duration-700"
@@ -139,6 +153,8 @@ function MetricCard({
 export default function DashboardPage() {
   const [stats, setStats] = useState<SystemStats | null>(null)
   const [sites, setSites] = useState<Site[] | null>(null)
+  const [ports, setPorts] = useState<UsedPort[] | null>(null)
+  const [portFilter, setPortFilter] = useState<"all" | "site" | "docker" | "system">("all")
   const [refreshing, setRefreshing] = useState(false)
 
   const loadStats = async () => {
@@ -163,16 +179,28 @@ export default function DashboardPage() {
     }
   }
 
+  const loadPorts = async () => {
+    try {
+      const res = await fetch("/api/system/ports", { cache: "no-store" })
+      if (!res.ok) throw new Error("failed")
+      const data = (await res.json()) as PortsResponse
+      setPorts(data.used ?? [])
+    } catch {
+      setPorts([])
+    }
+  }
+
   useEffect(() => {
     loadStats()
     loadSites()
+    loadPorts()
     const interval = setInterval(loadStats, STATS_POLL_MS)
     return () => clearInterval(interval)
   }, [])
 
   const handleManualRefresh = async () => {
     setRefreshing(true)
-    await Promise.all([loadStats(), loadSites()])
+    await Promise.all([loadStats(), loadSites(), loadPorts()])
     setTimeout(() => setRefreshing(false), 500)
   }
 
@@ -183,6 +211,11 @@ export default function DashboardPage() {
     { label: "IP Adresi", value: stats?.host.ip ?? "—" },
   ]
 
+  const filteredPorts = (ports ?? []).filter((p) => {
+    if (portFilter === "all") return true
+    return p.source === portFilter
+  })
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
       {/* ═══ 1. ÜST BAŞLIK & AKSİYON ALANI ═══ */}
@@ -192,7 +225,7 @@ export default function DashboardPage() {
             Anasayfa
           </h1>
           <p className="text-xs text-slate-500 mt-1 font-sans">
-            Sunucunuzun gerçek zamanlı donanım telemetrisi ve barındırılan web siteleriniz.
+            Sunucunuzun gerçek zamanlı donanım telemetrisi, portları ve barındırılan web siteleriniz.
           </p>
         </div>
 
@@ -219,7 +252,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ═══ 2. ÜST 4 TELEMETRİ KARTI (RENK UYUMLU GÖSTERGELER) ═══ */}
+      {/* ═══ 2. ÜST 4 TELEMETRİ KARTI ═══ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* CPU Card */}
         {stats === null ? (
@@ -300,8 +333,163 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* ═══ 3. SİTELERİNİZ ALANI ═══ */}
-      <div className="space-y-5 pt-2">
+      {/* ═══ 3. KULLANILAN PORTLAR ALANI (DASHBOARD PORT MONİTÖRÜ) ═══ */}
+      <div className="space-y-4 pt-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <h2 className="font-heading text-xl font-extrabold text-[#580619] tracking-tight flex items-center gap-2">
+              <Network className="size-5 text-[#c8a87c]" />
+              Kullanılan Portlar
+            </h2>
+            {ports !== null && (
+              <span className="rounded-full bg-[#580619]/10 border border-[#580619]/20 px-2.5 py-0.5 text-xs font-bold text-[#580619] font-mono">
+                {ports.length} Aktif
+              </span>
+            )}
+          </div>
+
+          {/* Filtre Sekmeleri */}
+          {ports && ports.length > 0 && (
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setPortFilter("all")}
+                className={cn(
+                  "px-3 py-1 rounded-lg transition-all cursor-pointer",
+                  portFilter === "all"
+                    ? "bg-white text-[#580619] font-bold shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                Tümü ({ports.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPortFilter("site")}
+                className={cn(
+                  "px-3 py-1 rounded-lg transition-all cursor-pointer",
+                  portFilter === "site"
+                    ? "bg-white text-[#580619] font-bold shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                Siteler ({ports.filter((p) => p.source === "site").length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPortFilter("docker")}
+                className={cn(
+                  "px-3 py-1 rounded-lg transition-all cursor-pointer",
+                  portFilter === "docker"
+                    ? "bg-white text-[#580619] font-bold shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                Docker ({ports.filter((p) => p.source === "docker").length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPortFilter("system")}
+                className={cn(
+                  "px-3 py-1 rounded-lg transition-all cursor-pointer",
+                  portFilter === "system"
+                    ? "bg-white text-[#580619] font-bold shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                Sistem ({ports.filter((p) => p.source === "system").length})
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Port Kartları Grid Yapısı */}
+        {ports === null ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-24 animate-pulse rounded-2xl border border-slate-200 bg-white"
+              />
+            ))}
+          </div>
+        ) : ports.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-xs text-slate-500">
+            Sunucuda dinlenen aktif port bulunamadı.
+          </div>
+        ) : filteredPorts.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-xs text-slate-500">
+            Seçilen filtrede port bulunamadı.
+          </div>
+        ) : (
+          <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredPorts.map((p) => (
+              <div
+                key={`${p.address}:${p.port}`}
+                className="group relative flex items-center justify-between p-4 rounded-2xl border border-slate-200/90 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:border-[#c8a87c] hover:shadow-md transition-all duration-200"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {/* Port Numarası Rozeti */}
+                  <div className="size-11 rounded-xl bg-[#580619]/5 border border-[#c8a87c]/30 flex flex-col items-center justify-center text-[#580619] group-hover:bg-[#580619] group-hover:text-white transition-colors shrink-0">
+                    <span className="font-mono text-[13px] font-extrabold leading-none">
+                      {p.port}
+                    </span>
+                    <span className="font-mono text-[9px] uppercase tracking-wider opacity-80 mt-0.5">
+                      {p.protocol}
+                    </span>
+                  </div>
+
+                  {/* Servis & Kaynak Detayı */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate text-xs font-bold text-slate-800 leading-tight">
+                        {p.label ?? p.process ?? "Sistem Süreci"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-1">
+                      {/* Kaynak Rozeti */}
+                      {p.source === "site" && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-[#580619]/10 text-[#580619]">
+                          <Globe className="size-2.5" />
+                          Site
+                        </span>
+                      )}
+                      {p.source === "docker" && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60">
+                          <Box className="size-2.5" />
+                          Docker
+                        </span>
+                      )}
+                      {p.source === "system" && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-600">
+                          <Server className="size-2.5" />
+                          Sistem
+                        </span>
+                      )}
+
+                      <span className="font-mono text-[10px] text-slate-400 truncate">
+                        {p.address}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Canlı Dinleme Durumu */}
+                <div className="shrink-0 pl-2">
+                  <span
+                    className="size-2 rounded-full bg-emerald-500 block shadow-[0_0_6px_rgba(16,185,129,0.5)]"
+                    title="Dinleniyor (Listening)"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ═══ 4. SİTELERİNİZ ALANI ═══ */}
+      <div className="space-y-4 pt-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h2 className="font-heading text-xl font-extrabold text-[#580619] tracking-tight">

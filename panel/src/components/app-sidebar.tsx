@@ -22,7 +22,6 @@ const SIDEBAR_KEY = "panel:sidebar-collapsed"
 
 const BASE_NAV = [{ href: "/", label: "Anasayfa", icon: Home }]
 const ADMIN_NAV = [
-  { href: "/ports", label: "Portlar", icon: Network },
   { href: "/terminal", label: "Terminal", icon: Terminal },
   { href: "/settings", label: "Ayarlar", icon: Settings },
   { href: "/users", label: "Kullanıcılar", icon: Users },
