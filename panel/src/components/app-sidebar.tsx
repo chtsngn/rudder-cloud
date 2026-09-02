@@ -1,10 +1,12 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import {
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   Home,
   LogOut,
@@ -12,7 +14,6 @@ import {
   Settings,
   Terminal,
   Users,
-  Scroll,
 } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -37,7 +38,6 @@ export function AppSidebar() {
   const router = useRouter()
   const { user } = useCurrentUser()
   const [collapsed, setCollapsed] = useState(false)
-  const navRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -62,155 +62,135 @@ export function AppSidebar() {
     }
   }
 
-  // Aktif nav öğesinin index'ini bul (altın şerit konumu için)
-  const activeIdx = navItems.findIndex(item =>
-    item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
-  )
-
   return (
     <aside
       className={cn(
         "sticky top-0 flex h-screen shrink-0 flex-col z-30 relative select-none overflow-visible",
-        "transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]",
-        collapsed ? "w-[68px]" : "w-[256px]"
+        "transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+        collapsed ? "w-[76px]" : "w-[275px]"
       )}
     >
-      {/* ═══ ANA YELKEN GÖVDESİ ═══ */}
-      <div
-        className={cn(
-          "absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]",
-          collapsed ? "rounded-r-[18px]" : "rounded-tr-[48px] rounded-br-[72px]"
+      {/* ═══ ORGANİK YELKEN VE ALTIN KENAR ÇİZGİSİ (SVG GÖVDE) ═══ */}
+      <svg
+        className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-xl"
+        viewBox={collapsed ? "0 0 76 1000" : "0 0 275 1000"}
+        preserveAspectRatio="none"
+      >
+        <defs>
+          {/* Zengin Bordo Degrade */}
+          <linearGradient id="sailBurgundyGrad" x1="0" y1="0" x2="0.8" y2="1">
+            <stop offset="0%" stopColor="#500412" />
+            <stop offset="35%" stopColor="#680b22" />
+            <stop offset="70%" stopColor="#580619" />
+            <stop offset="100%" stopColor="#38020b" />
+          </linearGradient>
+
+          {/* Yelkeni Saran Parlak Altın Çizgi */}
+          <linearGradient id="sailGoldStroke" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#d4b27d" />
+            <stop offset="20%" stopColor="#fae5bf" />
+            <stop offset="50%" stopColor="#dfc9a0" />
+            <stop offset="80%" stopColor="#c8a87c" />
+            <stop offset="100%" stopColor="#9a733e" />
+          </linearGradient>
+        </defs>
+
+        {collapsed ? (
+          /* Dürülmüş Defter / Katlanmış Yelken Formu */
+          <path
+            d="M 0,0 L 62,0 C 70,0 76,15 76,35 C 76,200 78,500 78,500 C 78,500 76,800 76,965 C 76,985 70,1000 62,1000 L 0,1000 Z"
+            fill="url(#sailBurgundyGrad)"
+            stroke="url(#sailGoldStroke)"
+            strokeWidth="3.5"
+            vectorEffect="non-scaling-stroke"
+          />
+        ) : (
+          /* Görsel 3'teki Gibi Yayvan, Geniş Göbekli Organik Yelken Formu */
+          <path
+            d="M 0,0 L 205,0 C 228,0 242,16 246,45 C 258,160 275,380 275,520 C 275,680 256,860 236,950 C 226,985 208,1000 180,1000 L 0,1000 Z"
+            fill="url(#sailBurgundyGrad)"
+            stroke="url(#sailGoldStroke)"
+            strokeWidth="3.5"
+            vectorEffect="non-scaling-stroke"
+          />
         )}
-        style={{
-          background: "linear-gradient(180deg, #5a0618 0%, #6e0d25 40%, #520514 100%)",
-          boxShadow: collapsed
-            ? "3px 0 12px rgba(0,0,0,0.12)"
-            : "6px 0 32px rgba(0,0,0,0.2), 2px 0 8px rgba(0,0,0,0.1)",
-        }}
-      />
+      </svg>
 
-      {/* ═══ SAĞ KENAR ALTIN ŞERİT (Yelkenin ucundan geçen) ═══ */}
-      <div
-        className={cn(
-          "absolute right-0 inset-y-0 w-[3px] transition-all duration-500",
-          "bg-gradient-to-b from-[#c8a87c]/50 via-[#dfc9a0] to-[#c8a87c]/50",
-          collapsed ? "rounded-r-[18px]" : "rounded-r-[48px]"
-        )}
-      />
-
-      {/* ═══ AKTİF SAYFA İMLECİ (Altın şerit üzerinde süzülen imleç) ═══ */}
-      {activeIdx >= 0 && (
-        <div
-          className="absolute right-[-5px] z-50 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
-          style={{
-            top: collapsed
-              ? `${120 + activeIdx * 52}px`
-              : `${98 + activeIdx * 44}px`,
-          }}
-        >
-          {/* Altın damla/imleç şekli */}
-          <div
-            className="relative"
-            style={{
-              width: 13,
-              height: 28,
-            }}
-          >
-            {/* Altın parlayan nokta */}
-            <div
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-[10px] rounded-full"
-              style={{
-                background: "radial-gradient(circle, #e8d5a8 0%, #c8a87c 70%)",
-                boxShadow: "0 0 8px 2px rgba(200,168,124,0.6), 0 0 16px 4px rgba(200,168,124,0.3)",
-              }}
-            />
-            {/* Üst ve alt ince uzantılar */}
-            <div
-              className="absolute left-1/2 -translate-x-1/2 top-0 w-[2px] h-[10px] rounded-full"
-              style={{ background: "linear-gradient(to bottom, transparent, #c8a87c)" }}
-            />
-            <div
-              className="absolute left-1/2 -translate-x-1/2 bottom-0 w-[2px] h-[10px] rounded-full"
-              style={{ background: "linear-gradient(to top, transparent, #c8a87c)" }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* ═══ SAĞ ÜST AÇMA/KAPAMA BUTONU ═══ */}
+      {/* ═══ SAĞ ÜST AÇMA/KAPAMA BUTONU (< / > CHEVRON İKONLU ALTIN BUTON) ═══ */}
       <button
         type="button"
         onClick={toggle}
-        title={collapsed ? "Yelkeni Aç" : "Yelkeni Katla"}
+        title={collapsed ? "Menüyü Aç" : "Menüyü Kapat"}
         className={cn(
-          "absolute z-50 flex items-center justify-center cursor-pointer transition-all duration-300",
-          "hover:scale-110 active:scale-95",
+          "absolute z-50 flex items-center justify-center cursor-pointer transition-all duration-300 shadow-lg",
+          "hover:scale-110 active:scale-95 border-2 border-[#500412]",
           collapsed
-            ? "right-[-14px] top-5 size-7 rounded-full"
-            : "right-[-14px] top-8 size-7 rounded-full"
+            ? "right-[-12px] top-20 size-7 rounded-full bg-[#dfc9a0] text-[#500412]"
+            : "right-[-12px] top-6 size-7 rounded-full bg-[#dfc9a0] text-[#500412]"
         )}
         style={{
-          background: "linear-gradient(135deg, #dfc9a0 0%, #c8a87c 100%)",
-          border: "2px solid #520514",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.35)",
         }}
       >
-        <Scroll
-          className={cn(
-            "size-3.5 transition-transform duration-500",
-            collapsed ? "rotate-0" : "rotate-180"
-          )}
-          style={{ color: "#520514" }}
-        />
+        {collapsed ? (
+          <ChevronRight className="size-4 stroke-[3]" />
+        ) : (
+          <ChevronLeft className="size-4 stroke-[3]" />
+        )}
       </button>
 
-      {/* ═══ İÇERİK (Z-index yüksek, overlay üzerinde) ═══ */}
-      <div className="relative z-10 flex flex-1 flex-col h-full">
+      {/* ═══ İÇERİK KATMANI ═══ */}
+      <div className="relative z-10 flex flex-1 flex-col h-full overflow-hidden">
 
-        {/* ── HEADER: Küçük dümen + "Rudder" ── */}
+        {/* ── 1. HEADER: BELİRGİN, BÜYÜK LOGO + ALTIN RUDDER YAZISI ── */}
         <div
           className={cn(
-            "flex items-center shrink-0 transition-all duration-500",
-            collapsed ? "h-16 justify-center px-0" : "h-[72px] px-5"
+            "flex items-center shrink-0 transition-all duration-300",
+            collapsed ? "h-20 justify-center px-0" : "h-24 px-5"
           )}
         >
-          <Link href="/" className="flex items-center gap-2.5 group outline-none">
-            <Image
-              src="/rudder-helm-transparent.png"
-              alt="Rudder"
-              width={collapsed ? 28 : 30}
-              height={collapsed ? 28 : 30}
-              className="shrink-0 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)] transition-transform duration-300 group-hover:rotate-[30deg]"
-              priority
-            />
+          <Link href="/" className="flex items-center gap-3.5 group outline-none">
+            {/* Büyük Belirgin Dümen Logosu */}
+            <div className="relative shrink-0 flex items-center justify-center">
+              <Image
+                src="/rudder-helm-transparent.png"
+                alt="Rudder Dümen"
+                width={collapsed ? 36 : 42}
+                height={collapsed ? 36 : 42}
+                className="object-contain drop-shadow-[0_3px_10px_rgba(0,0,0,0.6)] transition-transform duration-500 group-hover:rotate-90"
+                priority
+              />
+            </div>
+
             {!collapsed && (
               <span
-                className="font-heading font-bold text-[17px] tracking-[0.2em] uppercase transition-opacity duration-300"
+                className="font-heading font-extrabold text-[22px] tracking-[0.24em] uppercase text-[#dfc9a0] select-none leading-none"
                 style={{
-                  color: "#c8a87c",
-                  textShadow: "0 1px 6px rgba(0,0,0,0.5)",
+                  textShadow: "0 2px 8px rgba(0,0,0,0.6), 0 0 1px #fae5bf",
                 }}
               >
-                Rudder
+                RUDDER
               </span>
             )}
           </Link>
         </div>
 
-        {/* ── İNCE AYIRICI ── */}
-        <div className={cn("h-px mx-3 transition-all", collapsed ? "mx-2" : "mx-4")}
-          style={{ background: "linear-gradient(to right, transparent, rgba(200,168,124,0.2), transparent)" }}
+        {/* İnce Ayırıcı Şerit */}
+        <div
+          className={cn("h-px transition-all duration-300", collapsed ? "mx-3" : "mx-5")}
+          style={{
+            background: "linear-gradient(to right, transparent, rgba(223,201,160,0.25), transparent)",
+          }}
         />
 
-        {/* ── NAVİGASYON ── */}
+        {/* ── 2. NAVİGASYON LİNKLERİ ── */}
         <nav
-          ref={navRef}
           className={cn(
-            "flex flex-1 flex-col gap-1 pt-5 transition-all duration-500",
-            collapsed ? "items-center px-1.5" : "px-3"
+            "flex flex-1 flex-col gap-2 pt-6 transition-all duration-300",
+            collapsed ? "items-center px-2" : "px-3.5"
           )}
         >
-          {navItems.map((item, idx) => {
+          {navItems.map((item) => {
             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
             const Icon = item.icon
             return (
@@ -219,76 +199,92 @@ export function AppSidebar() {
                 href={item.href}
                 title={collapsed ? item.label : undefined}
                 className={cn(
-                  "relative flex items-center gap-3 font-medium transition-all duration-200 group",
+                  "relative flex items-center gap-3.5 font-medium transition-all duration-200 group",
                   collapsed
-                    ? "justify-center rounded-lg p-3 mx-0.5"
-                    : "rounded-xl px-4 py-2.5",
+                    ? "justify-center rounded-xl p-3 size-12"
+                    : "rounded-r-2xl rounded-l-xl px-4 py-3",
                   active
-                    ? "text-white"
-                    : "text-white/70 hover:text-white hover:bg-white/[0.08]"
+                    ? "text-white shadow-inner"
+                    : "text-white/80 hover:text-white hover:bg-white/[0.08]"
                 )}
-                style={active ? {
-                  background: "rgba(0,0,0,0.2)",
-                  boxShadow: "inset 0 1px 2px rgba(0,0,0,0.2)",
-                } : undefined}
+                style={
+                  active
+                    ? {
+                        background: "rgba(0, 0, 0, 0.35)",
+                        boxShadow: "inset 0 1px 3px rgba(0,0,0,0.4)",
+                      }
+                    : undefined
+                }
               >
                 <Icon
                   className={cn(
                     "shrink-0 transition-all duration-200 group-hover:scale-110",
-                    collapsed ? "size-5" : "size-[18px]",
-                    active ? "text-[#c8a87c]" : "text-white/75"
+                    collapsed ? "size-5" : "size-[19px]",
+                    active ? "text-[#dfc9a0]" : "text-white/80"
                   )}
                 />
+
                 {!collapsed && (
-                  <span className={cn(
-                    "text-[13px] tracking-wide font-sans transition-all duration-300",
-                    active ? "font-semibold text-white" : "font-normal"
-                  )}>
+                  <span
+                    className={cn(
+                      "text-[14px] tracking-wide font-sans transition-all duration-200",
+                      active ? "font-bold text-white" : "font-normal"
+                    )}
+                  >
                     {item.label}
                   </span>
+                )}
+
+                {/* Görsel 3'teki gibi aktif öğenin sağındaki imleç ucu */}
+                {active && !collapsed && (
+                  <div className="ml-auto flex items-center pr-1">
+                    <span
+                      className="size-2 rounded-full bg-[#dfc9a0]"
+                      style={{
+                        boxShadow: "0 0 8px #dfc9a0, 0 0 16px rgba(223,201,160,0.5)",
+                      }}
+                    />
+                  </div>
                 )}
               </Link>
             )
           })}
         </nav>
 
-        {/* ── ALT KULLANICI ALANI ── */}
-        <div className={cn("p-3 pb-4", collapsed && "px-1.5 pb-3")}>
-          {/* İnce çizgi */}
-          <div className={cn("h-px mb-3", collapsed ? "mx-1" : "mx-1")}
-            style={{ background: "linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)" }}
-          />
+        {/* ── 3. ALT PROFİL ALANI ── */}
+        <div className={cn("p-4 pb-6 transition-all duration-300", collapsed && "px-2 pb-4")}>
           <div
             className={cn(
-              "flex items-center gap-2.5 rounded-xl p-2 transition-all",
+              "flex items-center gap-2.5 rounded-2xl p-2.5 transition-all shadow-inner",
               collapsed ? "justify-center" : ""
             )}
             style={{
-              background: "rgba(0,0,0,0.15)",
-              border: "1px solid rgba(255,255,255,0.05)",
+              background: "rgba(0,0,0,0.22)",
+              border: "1px solid rgba(255,255,255,0.06)",
             }}
           >
             <Avatar
-              className="size-8 shrink-0"
+              className="size-9 shrink-0"
               style={{
-                border: "2px solid rgba(200,168,124,0.6)",
-                boxShadow: "0 0 6px rgba(200,168,124,0.3)",
+                border: "2px solid #dfc9a0",
+                boxShadow: "0 0 8px rgba(223,201,160,0.4)",
               }}
             >
               <AvatarFallback
-                className="text-[11px] font-bold text-[#c8a87c]"
-                style={{ background: "#3a040e" }}
+                className="text-xs font-bold text-[#dfc9a0]"
+                style={{ background: "#38020b" }}
               >
                 {user ? user.username.slice(0, 2).toUpperCase() : "?"}
               </AvatarFallback>
             </Avatar>
+
             {!collapsed && (
               <>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-bold text-white/95 leading-tight">
+                  <p className="truncate text-[13px] font-bold text-white leading-tight">
                     {user?.username ?? "..."}
                   </p>
-                  <p className="truncate text-[10px] text-[#c8a87c]/80 leading-tight mt-0.5">
+                  <p className="truncate text-[11px] text-[#dfc9a0]/90 leading-tight mt-0.5">
                     {user ? (ROLES[user.role] ?? user.role) : ""}
                   </p>
                 </div>
@@ -296,14 +292,15 @@ export function AppSidebar() {
                   type="button"
                   onClick={logout}
                   title="Çıkış Yap"
-                  className="size-7 flex items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+                  className="size-7 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0"
                 >
-                  <LogOut className="size-3.5" />
+                  <LogOut className="size-4" />
                 </button>
               </>
             )}
           </div>
         </div>
+
       </div>
     </aside>
   )
