@@ -10,7 +10,7 @@
 
 - **Framework & Runtime:** Next.js 16.3.3 (App Router), React 19.2.8, Node.js 20+
 - **Stil & Tasarım:** Tailwind CSS v4, Radix UI & shadcn/ui temelli bileşenler, Lucide React ikonları
-- **Tema:** Ekran Kenarında Çizgisiz Saf Bordo + Sağ Kavisinde Kalın Altın Şerit ve Altın Ok İmleci Taşıyan Yelken Sidebar + Beyaz Aydınlık (\#f8fafc\) Çalışma Alanı.
+- **Tema:** Ekran Kenarında Çizgisiz Saf Bordo + Sağ Kavisinde Kalın Altın Şerit ve Şeritle Birleşik Altın Ok İmleci Taşıyan Yelken Sidebar + Beyaz Aydınlık (\#f8fafc\) Çalışma Alanı.
 - **Tipografi:** Google Fonts \Cinzel\ (Başlıklar / Brand wordmark), \Plus Jakarta Sans\ (Arayüz / Gövde metinleri), \JetBrains Mono\ (Kod & Metrikler)
 - **Veritabanı & ORM:** PostgreSQL + Prisma 7 (@prisma/adapter-pg)
 - **Kimlik & Güvenlik:** JWT tabanlı oturum yönetimi (jose, bcryptjs, httpOnly cookie), RBAC (SUPER_ADMIN, MEMBER), AES-256-GCM şifreleme
@@ -31,11 +31,9 @@
 - [x] **Branch Kurulumu:** \1.1.0\ dalı oluşturuldu ve geçiş yapıldı.
 - [x] **Yerel Çalışma Ortamı:** PostgreSQL Docker konteyneri ve Next.js dev sunucusu ayağa kaldırıldı.
 - [x] **Yelken Sidebar İyileştirmeleri (Kullanıcı İsteklerine Birebir):**
-  - Ekranın en solundaki (x=0) sarı çizgi kaldırıldı; sol kenar tamamen temiz bordo yapıldı.
-  - Sağ kavis boyunca uzanan altın çizgi 2. görseldeki gibi kalınlaştırıldı (\5px\).
-  - 2. görseldeki gibi altın çizgiden içeriye doğru aktif sekmeyi işaret eden üçgen **altın ok imleci** eklendi.
-  - Sekmelerin ve alt profil kutucuğunun yelkenden dışarı taşma sorunu \clip-path\ ve kavis içi boşluklarla %100 çözüldü.
-  - Açma/kapama butonu pirinç denizci madalyonu tarzında elit altın kaplama butona dönüştürüldü ve konumu optimize edildi.
+  - Altın ok imleci bordo alanda altın şeritle birebir birleşik ve aktif sekmenin sağ ucuna oturacak şekilde yerleştirildi.
+  - Alttaki admin kullanıcı butonundaki ve aktif sekmedeki dışarı taşma sorunu safe-width sınırlamalarıyla tamamen çözüldü.
+  - Geri tuşuna benzeyen buton kaldırıldı; yerine logo hizasında şık altın panel kontrol butonu (\PanelLeftClose\ / \PanelLeftOpen\) konumlandırıldı.
 - [x] **Kurumsal & Elit Dashboard Kartları:**
   - Beyaz zemin, net teknoloji ikonları (CPU, RAM, Disk, Server) ve Stripe/Vercel standardında metrik göstergeleri uygulandı.
 - [ ] **Özellik Eklemeleri & Çıkarmaları:** (Kullanıcı direktiflerine göre detaylandırılacak)
@@ -49,4 +47,4 @@ px tsc --noEmit\), 8 ana route (200 OK) test edildi.
 | Tarih | İşlem / Değişiklik | Etkilenen Dosyalar | Doğrulama Durumu |
 |---|---|---|---|
 | 2026-09-02 | \1.1.0\ dalı oluşturuldu, yerel ortam ayağa kaldırıldı | Git branch, Docker, .env | Başarılı (200 OK) |
-| 2026-09-02 | Sol kenar çizgisiz, kalın altın sağ şerit + altın ok imleci, sıfır taşma maskelemesi, elit pirinç buton | \pp-sidebar.tsx\ | Başarılı (TypeScript 0 hata, HTTP 200) |
+| 2026-09-02 | Sarı şeritle birleşik altın ok imleci, sıfır taşma admin alanı, elit panel daraltma ikonu | \pp-sidebar.tsx\ | Başarılı (TypeScript 0 hata, HTTP 200) |
