@@ -55,22 +55,14 @@ export default function LoginPage() {
       {/* Subtle Background Radial Glow */}
       <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 size-[600px] rounded-full bg-red-600/10 blur-[120px]" />
       
-      <div className="relative z-10 w-full max-w-sm space-y-7">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <RudderLogo size="xl" showText={false} />
+      <div className="relative z-10 w-full max-w-sm space-y-8">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <RudderLogo size="2xl" showText={false} />
           
-          <div className="space-y-1">
-            <div className="flex items-center justify-center gap-2">
-              <span className="font-heading text-2xl font-black tracking-[0.2em] bg-gradient-to-r from-red-500 via-rose-500 to-red-400 bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(225,29,72,0.35)]">
-                RUDDER
-              </span>
-              <span className="font-heading text-lg font-semibold tracking-widest text-foreground/80">
-                CLOUD
-              </span>
-            </div>
-            <p className="font-mono text-xs tracking-wider text-muted-foreground">
-              Sunucu Yönetim ve Dağıtım Paneli
-            </p>
+          <div>
+            <span className="font-heading text-4xl font-black lowercase tracking-wide bg-gradient-to-r from-red-500 via-rose-500 to-red-400 bg-clip-text text-transparent drop-shadow-[0_2px_16px_rgba(225,29,72,0.45)]">
+              rudder
+            </span>
           </div>
         </div>
 

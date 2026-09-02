@@ -110,12 +110,12 @@ export function AppSidebar() {
         collapsed ? "w-16" : "w-64"
       )}
     >
-      <div className={cn("flex h-16 items-center px-4", collapsed ? "justify-center px-0" : "justify-start")}>
+      <div className={cn("flex h-20 items-center px-4", collapsed ? "justify-center px-0" : "justify-start")}>
         <RudderLogo
-          size={collapsed ? "sm" : "sm"}
+          size={collapsed ? "sm" : "md"}
           iconOnly={collapsed}
           href="/"
-          className={collapsed ? "justify-center" : ""}
+          className={collapsed ? "justify-center" : "pl-1"}
         />
       </div>
 

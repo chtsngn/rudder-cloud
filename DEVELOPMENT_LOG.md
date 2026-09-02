@@ -31,8 +31,9 @@
 - [x] **Yerel Çalışma Ortamı:** PostgreSQL Docker konteyneri ve Next.js Turbopack dev sunucusu ayağa kaldırıldı.
 - [x] **Yeni Logo & Marka Tipografisi Entegrasyonu:**
   - 3D ruby elmas & dümen amblemi optimize edildi ve saydam arka planlı olarak \public/\ varlıklarına eklendi.
-  - \Space Grotesk\ geometrik display tipografisi ve kırmızı degradeli "RUDDER CLOUD" kelime markası tasarlandı.
-  - \RudderLogo\ bileşeni oluşturuldu, Login sayfası, Sidebar ve Layout metadata'sına entegre edildi.
+  - \Space Grotesk\ tipografisi ile yalın ve güçlü "rudder" kelime markası entegre edildi.
+  - Logo boyutları büyütüldü (Sidebar ve Login için daha belirgin ve etkileyici oranlar).
+  - Ek kelimeler/etiketler kaldırıldı, sadece saf "rudder" markası konumlandırıldı.
 - [ ] **Kullanıcı Arayüzü & Tasarım Revizyonu:** (Kullanıcı direktiflerine göre detaylandırılacak)
 - [ ] **Özellik Eklemeleri & Çıkarmaları:** (Kullanıcı direktiflerine göre detaylandırılacak)
 - [x] **Test & Doğrulama:** TypeScript typecheck (\
@@ -46,4 +47,5 @@ px tsc --noEmit\), Dev Server (200 OK) test edildi.
 |---|---|---|---|
 | 2026-09-02 | \1.1.0\ dalı oluşturuldu, yerel ortam ayağa kaldırıldı | Git branch, Docker, .env | Başarılı (200 OK) |
 | 2026-09-02 | Yeni 3D Ruby Rudder logosu ve tipografi entegrasyonu | \udder-logo.tsx\, \globals.css\, \layout.tsx\, \pp-sidebar.tsx\, \login/page.tsx\, \public/*\ | Başarılı (TypeScript 0 hata, HTTP 200) |
+| 2026-09-02 | Logo boyutu büyütüldü, sadece 'rudder' kelime markası bırakıldı | \udder-logo.tsx\, \pp-sidebar.tsx\, \login/page.tsx\ | Başarılı (TypeScript 0 hata, HTTP 200) |
 
