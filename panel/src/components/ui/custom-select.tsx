@@ -77,9 +77,9 @@ export function CustomSelect({
         disabled={disabled}
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
         className={cn(
-          "w-full flex items-center justify-between gap-2.5 border border-slate-200 bg-white font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer select-none",
-          "hover:bg-slate-50/90 hover:border-[#c8a87c] focus:outline-none focus:border-[#c8a87c] focus:ring-2 focus:ring-[#580619]/10",
-          isOpen && "border-[#c8a87c] ring-2 ring-[#580619]/10 bg-slate-50/50",
+          "w-full flex items-center justify-between gap-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-semibold text-slate-700 dark:text-slate-200 shadow-2xs transition-all cursor-pointer select-none",
+          "hover:bg-slate-50/90 dark:hover:bg-slate-800 hover:border-[#c8a87c] dark:hover:border-sky-500/50 focus:outline-none focus:border-[#c8a87c] focus:ring-2 focus:ring-[#580619]/10 dark:focus:ring-sky-500/20",
+          isOpen && "border-[#c8a87c] dark:border-sky-500 ring-2 ring-[#580619]/10 dark:ring-sky-500/20 bg-slate-50/50 dark:bg-slate-800/50",
           disabled && "opacity-50 cursor-not-allowed",
           sizeClasses[size],
           className
@@ -92,7 +92,7 @@ export function CustomSelect({
         <ChevronDown
           className={cn(
             "size-3.5 text-slate-400 transition-transform duration-200 shrink-0",
-            isOpen && "rotate-180 text-[#580619]"
+            isOpen && "rotate-180 text-[#580619] dark:text-sky-400"
           )}
         />
       </button>
@@ -101,7 +101,7 @@ export function CustomSelect({
       {isOpen && (
         <div
           className={cn(
-            "absolute left-0 top-full mt-1.5 z-50 min-w-[180px] max-h-64 overflow-y-auto rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.12)] animate-in fade-in-0 zoom-in-95 duration-150 scrollbar-none",
+            "absolute left-0 top-full mt-1.5 z-50 min-w-[180px] max-h-64 overflow-y-auto rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.12)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.6)] animate-in fade-in-0 zoom-in-95 duration-150 scrollbar-none",
             dropdownClassName
           )}
         >
@@ -120,8 +120,8 @@ export function CustomSelect({
                   className={cn(
                     "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-left text-xs font-semibold transition-all cursor-pointer select-none",
                     isSelected
-                      ? "bg-[#580619]/10 text-[#580619] font-bold"
-                      : "text-slate-700 hover:bg-slate-100/80 hover:text-slate-900"
+                      ? "bg-[#580619]/10 text-[#580619] dark:bg-sky-500/15 dark:text-sky-300 font-bold"
+                      : "text-slate-700 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
                   )}
                 >
                   <span className="flex items-center gap-2 truncate">
@@ -130,10 +130,10 @@ export function CustomSelect({
                   </span>
 
                   {isSelected && (
-                    <Check className="size-3.5 text-[#580619] shrink-0" />
+                    <Check className="size-3.5 text-[#580619] dark:text-sky-400 shrink-0" />
                   )}
                   {!isSelected && option.badge && (
-                    <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                    <span className="text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                       {option.badge}
                     </span>
                   )}

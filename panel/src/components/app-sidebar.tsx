@@ -17,6 +17,7 @@ import {
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useCurrentUser } from "@/hooks/use-current-user"
+import { useTheme } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 
 const SIDEBAR_KEY = "panel:sidebar-collapsed"
@@ -38,8 +39,11 @@ export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { user } = useCurrentUser()
+  const { theme } = useTheme()
   const [collapsed, setCollapsed] = useState(false)
   const [isSpinning, setIsSpinning] = useState(false)
+
+  const isDark = theme === "dark"
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -78,28 +82,51 @@ export function AppSidebar() {
         collapsed ? "w-[80px]" : "w-[285px]"
       )}
     >
-      {/* ═══ ORGANİK YELKEN VE KALIN ALTIN KENAR ÇİZGİSİ (SVG GÖVDE) ═══ */}
+      {/* ═══ ORGANİK YELKEN VE KALIN ALTIN/AY IŞIĞI KENAR ÇİZGİSİ (SVG GÖVDE) ═══ */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-2xl"
         viewBox={collapsed ? "0 0 80 1000" : "0 0 285 1000"}
         preserveAspectRatio="none"
       >
         <defs>
-          {/* Zengin Bordo Degrade (Sol kenar sıfır çizgi, saf bordo) */}
-          <linearGradient id="sailBurgundyGrad" x1="0" y1="0" x2="0.8" y2="1">
-            <stop offset="0%" stopColor="#48030f" />
-            <stop offset="35%" stopColor="#680b22" />
-            <stop offset="70%" stopColor="#540516" />
-            <stop offset="100%" stopColor="#320108" />
+          {/* Açık Tema: Zengin Bordo Degrade / Koyu Tema: Gece Okyanus Laciverti */}
+          <linearGradient id="sailDynamicGrad" x1="0" y1="0" x2="0.8" y2="1">
+            {isDark ? (
+              <>
+                <stop offset="0%" stopColor="#050811" />
+                <stop offset="35%" stopColor="#0c1833" />
+                <stop offset="70%" stopColor="#081022" />
+                <stop offset="100%" stopColor="#03060c" />
+              </>
+            ) : (
+              <>
+                <stop offset="0%" stopColor="#48030f" />
+                <stop offset="35%" stopColor="#680b22" />
+                <stop offset="70%" stopColor="#540516" />
+                <stop offset="100%" stopColor="#320108" />
+              </>
+            )}
           </linearGradient>
 
-          {/* Kalın Altın Çizgi Degradesi */}
-          <linearGradient id="sailGoldStroke" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#c5a059" />
-            <stop offset="20%" stopColor="#fbedd0" />
-            <stop offset="45%" stopColor="#dfc9a0" />
-            <stop offset="75%" stopColor="#c8a87c" />
-            <stop offset="100%" stopColor="#8e6425" />
+          {/* Kenar Çizgi Degradesi (Açık: Altın, Koyu: Ay Işığı & Okyanus) */}
+          <linearGradient id="sailDynamicStroke" x1="0" y1="0" x2="0" y2="1">
+            {isDark ? (
+              <>
+                <stop offset="0%" stopColor="#38bdf8" />
+                <stop offset="20%" stopColor="#e2e8f0" />
+                <stop offset="45%" stopColor="#7dd3fc" />
+                <stop offset="75%" stopColor="#38bdf8" />
+                <stop offset="100%" stopColor="#0284c7" />
+              </>
+            ) : (
+              <>
+                <stop offset="0%" stopColor="#c5a059" />
+                <stop offset="20%" stopColor="#fbedd0" />
+                <stop offset="45%" stopColor="#dfc9a0" />
+                <stop offset="75%" stopColor="#c8a87c" />
+                <stop offset="100%" stopColor="#8e6425" />
+              </>
+            )}
           </linearGradient>
         </defs>
 
@@ -110,10 +137,10 @@ export function AppSidebar() {
               ? "M 0,0 L 66,0 C 74,0 80,15 80,35 C 80,200 82,500 82,500 C 82,500 80,800 80,965 C 80,985 74,1000 66,1000 L 0,1000 Z"
               : "M 0,0 L 210,0 C 234,0 248,16 252,45 C 266,160 285,380 285,520 C 285,680 264,860 242,950 C 232,985 214,1000 184,1000 L 0,1000 Z"
           }
-          fill="url(#sailBurgundyGrad)"
+          fill="url(#sailDynamicGrad)"
         />
 
-        {/* 2. SADECE SAĞ KAVİSTEKİ KALIN ALTIN ÇİZGİ */}
+        {/* 2. SADECE SAĞ KAVİSTEKİ KALIN ÇİZGİ */}
         <path
           d={
             collapsed
@@ -121,7 +148,7 @@ export function AppSidebar() {
               : "M 210,0 C 234,0 248,16 252,45 C 266,160 285,380 285,520 C 285,680 264,860 242,950 C 232,985 214,1000 184,1000"
           }
           fill="none"
-          stroke="url(#sailGoldStroke)"
+          stroke="url(#sailDynamicStroke)"
           strokeWidth="5"
           strokeLinecap="round"
           vectorEffect="non-scaling-stroke"
@@ -139,15 +166,24 @@ export function AppSidebar() {
           collapsed ? "-right-3.5 size-7.5" : "-right-4 size-9"
         )}
       >
-        {/* Altın Işıma Halosu */}
-        <div className="absolute inset-0 rounded-full bg-[#dfc9a0]/30 blur-sm group-hover:bg-[#dfc9a0]/60 transition-all" />
+        {/* Işıma Halosu */}
+        <div
+          className={cn(
+            "absolute inset-0 rounded-full blur-sm transition-all",
+            isDark
+              ? "bg-[#38bdf8]/30 group-hover:bg-[#38bdf8]/60"
+              : "bg-[#dfc9a0]/30 group-hover:bg-[#dfc9a0]/60"
+          )}
+        />
 
-        {/* Pirinç Madalyon Gövdesi */}
+        {/* Madalyon Gövdesi */}
         <div
           className="relative size-full rounded-full flex items-center justify-center p-1"
           style={{
-            background: "radial-gradient(circle at 35% 35%, #fcedd2 0%, #dfc9a0 50%, #9e7535 100%)",
-            border: "2px solid #3d020a",
+            background: isDark
+              ? "radial-gradient(circle at 35% 35%, #e2e8f0 0%, #94a3b8 50%, #1e293b 100%)"
+              : "radial-gradient(circle at 35% 35%, #fcedd2 0%, #dfc9a0 50%, #9e7535 100%)",
+            border: isDark ? "2px solid #080d1a" : "2px solid #3d020a",
             boxShadow: "0 4px 14px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.9)",
           }}
         >
@@ -189,9 +225,16 @@ export function AppSidebar() {
 
             {!collapsed && (
               <span
-                className="font-heading font-extrabold text-[22px] tracking-[0.24em] uppercase text-[#dfc9a0] select-none leading-none"
+                className={cn(
+                  "font-heading font-extrabold text-[22px] tracking-[0.24em] uppercase select-none leading-none transition-all duration-300",
+                  isDark
+                    ? "text-[#cbd5e1] tracking-[0.26em]"
+                    : "text-[#dfc9a0]"
+                )}
                 style={{
-                  textShadow: "0 2px 8px rgba(0,0,0,0.7), 0 0 2px rgba(251, 237, 208, 0.4)",
+                  textShadow: isDark
+                    ? "0 0 14px rgba(203, 213, 225, 0.45), 0 2px 6px rgba(0,0,0,0.9)"
+                    : "0 2px 8px rgba(0,0,0,0.7), 0 0 2px rgba(251, 237, 208, 0.4)",
                 }}
               >
                 RUDDER
@@ -204,7 +247,9 @@ export function AppSidebar() {
         <div
           className={cn("h-px transition-all duration-300", collapsed ? "mx-3" : "mx-5 mr-8")}
           style={{
-            background: "linear-gradient(to right, transparent, rgba(223,201,160,0.25), transparent)",
+            background: isDark
+              ? "linear-gradient(to right, transparent, rgba(148,163,184,0.25), transparent)"
+              : "linear-gradient(to right, transparent, rgba(223,201,160,0.25), transparent)",
           }}
         />
 

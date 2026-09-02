@@ -46,28 +46,42 @@
 
 .dark {
   --radius: 0.75rem;
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #6e0d25;
-  --primary-hover: #86102e;
-  --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f8fafc;
-  --muted-foreground: #64748b;
-  --accent: #c8a87c;
-  --accent-foreground: #6e0d25;
-  --destructive: #dc2626;
+
+  /* Gece Okyanus Laciverti Arka Plan */
+  --background: #080d1a;
+  --foreground: #f1f5f9;
+
+  /* Kartlar & Yüzeyler: Gece Mavisi Arduvaz */
+  --card: #0f172a;
+  --card-foreground: #f1f5f9;
+
+  --popover: #0f172a;
+  --popover-foreground: #f1f5f9;
+
+  /* Okyanus Mavisi & Gece Vurgusu */
+  --primary: #38bdf8;
+  --primary-hover: #0ea5e9;
+  --primary-foreground: #080d1a;
+
+  --secondary: #1e293b;
+  --secondary-foreground: #f1f5f9;
+
+  --muted: #131d33;
+  --muted-foreground: #94a3b8;
+
+  /* Aksan: Sisli Mavi / Altın Parıltı */
+  --accent: #38bdf8;
+  --accent-foreground: #080d1a;
+
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
-  --input: #cbd5e1;
-  --ring: #c8a87c;
-  --success: #16a34a;
-  --warning: #d97706;
+
+  --border: #1e293b;
+  --input: #334155;
+  --ring: #38bdf8;
+
+  --success: #10b981;
+  --warning: #f59e0b;
 }
 
 @theme inline {

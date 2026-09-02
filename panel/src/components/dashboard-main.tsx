@@ -19,7 +19,7 @@ export function DashboardMain({ children }: { children: ReactNode }) {
           ? "none"
           : "margin-right 200ms cubic-bezier(0.16, 1, 0.3, 1)",
       }}
-      className="flex-1 h-screen overflow-y-auto bg-[#f8fafc] p-6 md:p-8 lg:p-10 min-w-0"
+      className="flex-1 h-screen overflow-y-auto bg-background text-foreground p-6 md:p-8 lg:p-10 min-w-0 transition-colors duration-200"
     >
       {children}
     </main>

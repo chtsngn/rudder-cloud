@@ -36,17 +36,17 @@ export default function TerminalPage() {
   return (
     <div className="max-w-7xl mx-auto flex h-full flex-col space-y-6 pb-8">
       {/* ═══ 1. ÜST BAŞLIK & GÜVENLİK UYARISI ═══ */}
-      <div className="space-y-4 pb-4 border-b border-slate-200/80">
+      <div className="space-y-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="size-11 rounded-2xl bg-[#580619]/5 border border-[#c8a87c]/30 flex items-center justify-center text-[#580619] shadow-2xs">
-              <TerminalIcon className="size-5 text-[#580619]" />
+            <div className="size-11 rounded-2xl bg-[#580619]/5 dark:bg-sky-500/10 border border-[#c8a87c]/30 dark:border-sky-500/30 flex items-center justify-center text-[#580619] dark:text-sky-400 shadow-2xs">
+              <TerminalIcon className="size-5 text-[#580619] dark:text-sky-400" />
             </div>
             <div>
-              <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619]">
+              <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
                 Sunucu Terminali
               </h1>
-              <p className="text-xs text-slate-500 font-sans mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-sans mt-0.5">
                 Doğrudan Linux ana makinenize bağlı gerçek zamanlı Web PTY konsolu.
               </p>
             </div>
@@ -55,27 +55,27 @@ export default function TerminalPage() {
           <button
             type="button"
             onClick={handleDockToRight}
-            className="group inline-flex items-center gap-2 rounded-xl border border-[#c8a87c]/50 bg-[#580619] hover:bg-[#720a22] hover:border-[#dfc9a0] px-4 py-2 text-xs font-bold text-white shadow-2xs transition-all cursor-pointer hover:scale-102 active:scale-98 shrink-0"
+            className="group inline-flex items-center gap-2 rounded-xl border border-[#c8a87c]/50 dark:border-sky-400/40 bg-[#580619] dark:bg-sky-600 hover:bg-[#720a22] dark:hover:bg-sky-500 hover:border-[#dfc9a0] px-4 py-2 text-xs font-bold text-white shadow-2xs transition-all cursor-pointer hover:scale-102 active:scale-98 shrink-0"
           >
-            <Columns2 className="size-4 text-[#dfc9a0] transition-transform group-hover:scale-110" />
+            <Columns2 className="size-4 text-[#dfc9a0] dark:text-white transition-transform group-hover:scale-110" />
             <span className="font-heading tracking-wide">Sağa Tuttur</span>
           </button>
         </div>
 
         {/* Güvenlik & Yetki Bilgilendirme Bandı */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/50 p-3.5 text-xs text-amber-900 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/30 p-3.5 text-xs text-amber-900 dark:text-amber-300 shadow-2xs">
           <div className="flex items-start gap-2.5">
-            <ShieldAlert className="size-4 text-amber-600 shrink-0 mt-0.5" />
+            <ShieldAlert className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div>
               <p className="font-bold">
                 Yüksek Yetkili Kabuk Oturumu (Root/Sudo Erişimi)
               </p>
-              <p className="text-[11px] text-amber-700 mt-0.5 leading-relaxed font-sans">
+              <p className="text-[11px] text-amber-700 dark:text-amber-400/90 mt-0.5 leading-relaxed font-sans">
                 Burada çalıştırılan komutlar sunucu dosya sistemini ve çalışan servisleri anında etkiler. Sekme kapatıldığında veya bağlantı koptuğunda oturum otomatik sonlandırılır.
               </p>
             </div>
           </div>
-          <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-amber-200 font-mono text-[11px] font-bold text-amber-800 shadow-2xs">
+          <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/60 font-mono text-[11px] font-bold text-amber-800 dark:text-amber-300 shadow-2xs">
             /bin/bash • PTY
           </span>
         </div>

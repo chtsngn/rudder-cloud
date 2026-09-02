@@ -10,7 +10,9 @@
 
 - **Framework & Runtime:** Next.js 16.3.3 (App Router), React 19.2.8, Node.js 20+
 - **Stil & Tasarım:** Tailwind CSS v4, Radix UI & shadcn/ui temelli bileşenler, Lucide React ikonları
-- **Tema:** Yelken Kavisli Bordo Sidebar + Beyaz Aydınlık (\#f8fafc\) Çalışma Alanı + Kaptan Köşkü Donanım Telemetrisi + Siteler Yönetim Paneli.
+- **Tema Sistemi:**
+  - **Açık Tema:** Yelken Kavisli Bordo Sidebar + Beyaz Aydınlık (\#f8fafc\) Çalışma Alanı + Sıcak Altın Vurgular
+  - **Koyu Tema:** Gece Okyanus Laciverti (\#080d1a\, \#0b1329\) + Gece Mavisi Yüzeyler (\#0f172a\) + Sisli Grimsi "RUDDER" Başlığı (\#cbd5e1\ puslu ışıma)
 - **Tipografi:** Google Fonts \Cinzel\ (Başlıklar / Brand wordmark), \Plus Jakarta Sans\ (Arayüz / Gövde metinleri), \JetBrains Mono\ (Kod & Metrikler)
 - **Veritabanı & ORM:** PostgreSQL + Prisma 7 (@prisma/adapter-pg)
 - **Kimlik & Güvenlik:** JWT tabanlı oturum yönetimi (jose, bcryptjs, httpOnly cookie), RBAC (SUPER_ADMIN, MEMBER), AES-256-GCM şifreleme
@@ -26,19 +28,19 @@
 - [x] **Navigasyon Erişimi Güçlendirildi (Sidebar & Anasayfa Siteler Linki).**
 - [x] **Sunucu Terminali (\/terminal\) Lüks Kaptan Köşkü Konsoluna Dönüştürüldü.**
 - [x] **Terminal Akıllı Komut Sistemi:**
-  - **En Sık Kullanılan Komutlar Algoritması:** Çalıştırılan her komutun frekansı yerel olarak izlenip hızlı komut barında en çok kullanılanlar otomatik olarak öne çıkarılıyor.
-  - **Sabitleme Sistemi (Pinning):** Yeni komut ekleme formuna \Pin\ ikonu eklendi; sabitlenen komutlar her zaman en önde kalıyor. Tüm emoji karakterleri temizlenip Lucide \Pin\ vektör ikonlarıyla değiştirildi.
-  - **Tam Oval Hızlı Komut Barı:** Alt komut barı dış kasası ve butonları tam oval (\ounded-full\) estetik kapsüle dönüştürüldü.
-  - **Dengeli & Canlı Arama Destekli Komut Kitaplığı:** Renk dengesizlikleri giderildi, lüks kartlar ve anlık arama / filtreleme çubuğu ile kategori hapları eklendi.
-  - **Spotlight Komut Paleti Kapatma Butonu:** Statik ESC rozeti yerine tıklanabilir zarif kapatma (\X\) butonu ve arka plan tıklamasıyla kapatma desteği eklendi.
-  - **Sağa Tuttur Butonu:** Karmaşık pencere ikonu yerine çok daha anlaşılır, modern \Columns2\ ikonu yerleştirildi.
-- [x] **Tüm Dropdown ve Seçim Menülerinin Temaya Uygun Olarak Yenilenmesi (\CustomSelect\):**
-  - Tarayıcının varsayılan ham ve kaba gri HTML \<select>\ menüleri projedeki tüm sayfalardan tamamen kaldırıldı.
-  - Yerine yumuşak açılış animasyonlu (\ade-in zoom-in-95\), kavisli oval köşeli (\ounded-2xl\), altın kenarlıklı (\#c8a87c\) ve aktif seçeneklerde bordo-altın onay ikonlu lüks \<CustomSelect>\ bileşeni entegre edildi.
-- [x] **Sistem Ayarları (\/settings\) Sayfası Temaya Uygun Olarak Yenilendi.**
-- [x] **Kullanıcı Yönetimi (\/users\) Sayfası Lüks Tablo & Arama/Filtre Sistemiyle Yenilendi.**
-- [x] **Kalıcı Sağ Yan Terminal Dock'u & Rekürsif Sayfa Uyumlanması (Adaptive Split Screen).**
-- [x] **Denetim Günlüğü (\/audit\) Sayfası & Kart Tasarımı Beyaz Temaya Tam Uyumlandı.**
+  - **En Sık Kullanılan Komutlar Algoritması:** Frekans izleme ve dinamik öne çıkarma.
+  - **Sabitleme Sistemi (Pinning):** Vektörel \Pin\ ikonuyla hızlı bara sabitleme.
+  - **Tam Oval Hızlı Komut Barı:** \ounded-full\ estetik kapsül.
+  - **Dengeli & Canlı Arama Destekli Komut Kitaplığı.**
+  - **Spotlight Komut Paleti Kapatma Butonu.**
+  - **Sağa Tuttur Butonu:** Modern \Columns2\ ikonu.
+- [x] **Tüm Dropdown ve Seçim Menülerinin Temaya Uygun Olarak Yenilenmesi (\CustomSelect\).**
+- [x] **Koyu Tema (Gece Okyanus Laciverti & Sisli Gri) ve Ayarlar Sayfasından Tema Yönetimi:**
+  - \ThemeProvider\ ve \useTheme\ hook'u oluşturuldu, \localStorage\ kalıcılığı ve anti-flicker scripti eklendi.
+  - \globals.css\ üzerinde derin gece okyanus laciverti (\#080d1a\) CSS değişkenleri tanımlandı.
+  - Ayarlar (\/settings\) sayfasına interaktif görsel Açık / Koyu tema seçim kartı eklendi.
+  - Sol yelken sidebar SVG degrade dolgusu koyu temada gece okyanusu lacivertine, **RUDDER** wordmark başlığı ise kullanıcının talebi doğrultusunda **sisli grimsi (\#cbd5e1\) puslu ışımalı** renge dönüştürüldü.
+  - Projedeki tüm sayfalar (\/sites\, \/users\, \/audit\, \/terminal\, vb.) ve bileşenler (\CustomSelect\, \SiteCard\, \DashboardMain\) koyu temaya tam uyarlandı.
 - [x] **Test & Doğrulama:** TypeScript typecheck (\
 px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 
@@ -51,11 +53,9 @@ px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 | 2026-09-02 | \1.1.0\ dalı oluşturuldu, yerel ortam ayağa kaldırıldı | Git branch, Docker, .env | Başarılı (200 OK) |
 | 2026-09-02 | \/sites\ sayfası ve \/sites/new\ sihirbazı temaya uygun yenilendi | \sites/page.tsx\, \sites/new/page.tsx\, \site-card.tsx\ | Başarılı (TypeScript 0 hata, HTTP 200) |
 | 2026-09-02 | \/sites/[id]\ detay sayfası tablı mimariye geçirildi | \sites/[id]/page.tsx\ | Başarılı (TypeScript 0 hata) |
-| 2026-09-02 | \/terminal\ sayfası ve akıllı komut sistemi (\Ctrl+K\, özel komutlar, kitaplık) kuruldu | \	erminal/page.tsx\, \	erminal-view.tsx\ | Başarılı (TypeScript 0 hata) |
-| 2026-09-02 | \/settings\ sayfası (Alan Adı/SSL ve S3 Depolama) lüks tasarımla yenilendi | \settings/page.tsx\ | Başarılı (TypeScript 0 hata) |
-| 2026-09-02 | \/users\ sayfası lüks tablo, arama/filtre çubuğu ve avatar sistemiyle yenilendi | \users/page.tsx\ | Başarılı (TypeScript 0 hata) |
-| 2026-09-02 | Kalıcı Yan Terminal, Rekürsif Sayfa Uyumlanması (\DashboardMain\) ve Obsidian Komut Barı | \dashboard-main.tsx\, \layout.tsx\, \	erminal-dock-context.tsx\, \	erminal-view.tsx\, \side-terminal-dock.tsx\ | Başarılı (TypeScript 0 hata) |
-| 2026-09-02 | Bordo/Altın Minimalist Terminal Rozeti ve \/audit\ Aydınlık Kart Uyarlaması | \side-terminal-dock.tsx\, \udit/page.tsx\ | Başarılı (TypeScript 0 hata) |
-| 2026-09-02 | Oval Hızlı Komut Barı, En Sık Kullanılanlar Sıralaması, Sabitleme (Pin) ve Arama Destekli Komut Kitaplığı | \	erminal-view.tsx\, \	erminal/page.tsx\ | Başarılı (TypeScript 0 hata) |
-| 2026-09-02 | Projedeki tüm native \<select>\ menüleri \<CustomSelect>\ ile lüks animasyonlu menülere dönüştürüldü | \custom-select.tsx\, \sites/page.tsx\, \users/page.tsx\, \sites/[id]/page.tsx\, \site-backup-card.tsx\, \sites/[id]/files/page.tsx\ | Başarılı (TypeScript 0 hata) |
-| 2026-09-02 | Emojiler temizlenip Lucide \Pin\ vektör ikonuyla değiştirildi, Sağa Tuttur ikonu \Columns2\ yapıldı | \	erminal-view.tsx\, \	erminal/page.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | \/terminal\ sayfası ve akıllı komut sistemi kuruldu | \	erminal/page.tsx\, \	erminal-view.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | \/settings\ sayfası ve \/users\ sayfası yenilendi | \settings/page.tsx\, \users/page.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | Kalıcı Yan Terminal, Rekürsif Sayfa Uyumlanması ve \/audit\ Uyarlaması | \dashboard-main.tsx\, \udit/page.tsx\, \side-terminal-dock.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | Projedeki tüm \<select>\ menüleri \<CustomSelect>\ ile lüks animasyonlu menülere dönüştürüldü | \custom-select.tsx\, \sites/page.tsx\, \users/page.tsx\, \sites/[id]/page.tsx\, \site-backup-card.tsx\, \sites/[id]/files/page.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | Lucide Pin ikonu ve Columns2 Sağa Tuttur ikonu güncellendi | \	erminal-view.tsx\, \	erminal/page.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | Tam kapsamlı Koyu Tema (Gece Okyanus Laciverti & Sisli Gri) ve Ayarlar Tema Seçim Sistemi entegre edildi | \	heme-provider.tsx\, \globals.css\, \layout.tsx\, \pp-sidebar.tsx\, \settings/page.tsx\, \custom-select.tsx\, \site-card.tsx\, \sites/page.tsx\, \users/page.tsx\, \udit/page.tsx\, \	erminal/page.tsx\, \dashboard-main.tsx\ | Başarılı (TypeScript 0 hata) |

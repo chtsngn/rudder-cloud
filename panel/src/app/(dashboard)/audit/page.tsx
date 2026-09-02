@@ -208,23 +208,23 @@ function AuditContent() {
   return (
     <div className="max-w-7xl mx-auto space-y-7 pb-12">
       {/* ═══ 1. ÜST BAŞLIK & YENİLE BUTONU ═══ */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200/80">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
         <div className="flex items-center gap-3.5">
-          <div className="size-12 rounded-2xl bg-[#580619]/5 border border-[#c8a87c]/30 flex items-center justify-center text-[#580619] shadow-2xs">
-            <ShieldCheck className="size-6 text-[#580619]" />
+          <div className="size-12 rounded-2xl bg-[#580619]/5 dark:bg-sky-500/10 border border-[#c8a87c]/30 dark:border-sky-500/30 flex items-center justify-center text-[#580619] dark:text-sky-400 shadow-2xs">
+            <ShieldCheck className="size-6 text-[#580619] dark:text-sky-400" />
           </div>
           <div>
-            <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619]">
+            <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
               Denetim Günlüğü & Güvenlik İzleri
             </h1>
-            <p className="text-xs md:text-sm text-slate-500 font-sans mt-0.5">
+            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 font-sans mt-0.5">
               Panel üzerindeki tüm yönetimsel aktivitelerin ve kritik olayların kronolojik denetim kaydı.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200 font-mono text-xs font-bold text-slate-700 shadow-2xs">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono text-xs font-bold text-slate-700 dark:text-slate-300 shadow-2xs">
             <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
             {logs.length} Kayıt
           </span>
@@ -232,9 +232,9 @@ function AuditContent() {
           <Button
             onClick={load}
             disabled={loading}
-            className="bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs border border-slate-200 shadow-2xs hover:border-[#c8a87c] transition-all flex items-center gap-2 h-9.5 px-3.5 rounded-xl cursor-pointer"
+            className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs border border-slate-200 dark:border-slate-800 shadow-2xs hover:border-[#c8a87c] dark:hover:border-sky-500/50 transition-all flex items-center gap-2 h-9.5 px-3.5 rounded-xl cursor-pointer"
           >
-            <RefreshCw className={cn("size-3.5 text-[#580619]", loading && "animate-spin")} />
+            <RefreshCw className={cn("size-3.5 text-[#580619] dark:text-sky-400", loading && "animate-spin")} />
             Yenile
           </Button>
         </div>
@@ -242,49 +242,49 @@ function AuditContent() {
 
       {/* ═══ 2. İSTATİSTİK KARTLARI ═══ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs flex items-center gap-3.5">
-          <div className="size-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs flex items-center gap-3.5">
+          <div className="size-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
             <Activity className="size-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Toplam Olay</p>
-            <p className="font-heading text-xl font-extrabold text-slate-900 mt-0.5">{stats.total}</p>
+            <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Toplam Olay</p>
+            <p className="font-heading text-xl font-extrabold text-slate-900 dark:text-slate-100 mt-0.5">{stats.total}</p>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs flex items-center gap-3.5">
-          <div className="size-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs flex items-center gap-3.5">
+          <div className="size-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
             <CheckCircle2 className="size-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Başarılı İşlem</p>
-            <p className="font-heading text-xl font-extrabold text-slate-900 mt-0.5">{stats.success}</p>
+            <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Başarılı İşlem</p>
+            <p className="font-heading text-xl font-extrabold text-slate-900 dark:text-slate-100 mt-0.5">{stats.success}</p>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs flex items-center gap-3.5">
-          <div className="size-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 shrink-0">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs flex items-center gap-3.5">
+          <div className="size-10 rounded-xl bg-rose-50 dark:bg-rose-950/40 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
             <AlertTriangle className="size-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-rose-600 uppercase tracking-wider">Hata / Uyarı</p>
-            <p className="font-heading text-xl font-extrabold text-slate-900 mt-0.5">{stats.failed}</p>
+            <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">Hata / Uyarı</p>
+            <p className="font-heading text-xl font-extrabold text-slate-900 dark:text-slate-100 mt-0.5">{stats.failed}</p>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs flex items-center gap-3.5">
-          <div className="size-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs flex items-center gap-3.5">
+          <div className="size-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
             <Users className="size-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">Aktif Operatör</p>
-            <p className="font-heading text-xl font-extrabold text-slate-900 mt-0.5">{stats.uniqueUsers}</p>
+            <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Aktif Operatör</p>
+            <p className="font-heading text-xl font-extrabold text-slate-900 dark:text-slate-100 mt-0.5">{stats.uniqueUsers}</p>
           </div>
         </div>
       </div>
 
       {/* ═══ 3. ARAMA & KATEGORİ FİLTRELEME ÇUBUĞU ═══ */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs">
         {/* Arama Input */}
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
@@ -292,12 +292,12 @@ function AuditContent() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Kullanıcı adı, eylem (SITE_CREATE), hedef veya detay ara..."
-            className="pl-10 h-10 rounded-xl bg-slate-50 border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white transition-all"
+            className="pl-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-950 transition-all"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 size-5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 size-5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
             >
               <X className="size-3.5" />
             </button>
@@ -319,8 +319,8 @@ function AuditContent() {
               className={cn(
                 "px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer",
                 selectedCategory === cat.id
-                  ? "bg-[#580619] text-white shadow-xs"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200/80"
+                  ? "bg-[#580619] dark:bg-sky-600 text-white shadow-xs"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/80 dark:hover:bg-slate-700"
               )}
             >
               {cat.label}
@@ -330,30 +330,30 @@ function AuditContent() {
       </div>
 
       {/* ═══ 4. LÜKS DENETİM TABLOSU ═══ */}
-      <Card className="rounded-2xl border-slate-200 bg-white shadow-xs overflow-hidden">
+      <Card className="rounded-2xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
         <CardContent className="p-0">
           {loading ? (
             <div className="py-24 text-center space-y-3">
-              <RefreshCw className="size-6 text-[#580619] animate-spin mx-auto" />
-              <p className="text-xs font-mono text-slate-500">Denetim kayıtları yükleniyor...</p>
+              <RefreshCw className="size-6 text-[#580619] dark:text-sky-400 animate-spin mx-auto" />
+              <p className="text-xs font-mono text-slate-500 dark:text-slate-400">Denetim kayıtları yükleniyor...</p>
             </div>
           ) : error ? (
             <div className="p-8 text-center space-y-3">
-              <div className="size-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto">
+              <div className="size-12 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto">
                 <AlertTriangle className="size-6" />
               </div>
-              <p className="text-sm font-bold text-red-600">{error}</p>
+              <p className="text-sm font-bold text-red-600 dark:text-red-400">{error}</p>
               <Button variant="outline" size="sm" onClick={load} className="rounded-xl">
                 Tekrar Dene
               </Button>
             </div>
           ) : filteredLogs.length === 0 ? (
             <div className="py-20 text-center space-y-3">
-              <div className="size-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+              <div className="size-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400 dark:text-slate-500">
                 <Filter className="size-6" />
               </div>
-              <p className="font-heading font-bold text-base text-slate-800">Kayıt Bulunamadı</p>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              <p className="font-heading font-bold text-base text-slate-800 dark:text-slate-200">Kayıt Bulunamadı</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                 {searchQuery || selectedCategory !== "all"
                   ? "Seçtiğiniz filtrelere veya arama sorgusuna uygun herhangi bir denetim kaydı bulunamadı."
                   : "Sistemde henüz kaydedilmiş bir denetim olayı yok."}
@@ -376,7 +376,7 @@ function AuditContent() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold tracking-wider text-slate-500 uppercase select-none">
+                  <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/60 text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase select-none">
                     <th className="py-3 px-4 font-mono">ZAMAN DAMGASI</th>
                     <th className="py-3 px-4">OPERATÖR</th>
                     <th className="py-3 px-4">EYLEM</th>
@@ -385,7 +385,7 @@ function AuditContent() {
                     <th className="py-3 px-4 text-right">AYRINTI</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {filteredLogs.map((log) => {
                     const badge = getActionBadge(log.action)
                     const dateInfo = formatDate(log.createdAt)
@@ -397,16 +397,16 @@ function AuditContent() {
                       <tr
                         key={log.id}
                         onClick={() => setSelectedLog(log)}
-                        className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group cursor-pointer"
                       >
                         {/* 1. Zaman */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           <div className="flex flex-col">
-                            <span className="font-mono text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                              <Clock className="size-3 text-slate-400" />
+                            <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                              <Clock className="size-3 text-slate-400 dark:text-slate-500" />
                               {dateInfo.time}
                             </span>
-                            <span className="text-[10px] text-slate-400 font-sans mt-0.5">
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-sans mt-0.5">
                               {dateInfo.full} • {dateInfo.relative}
                             </span>
                           </div>
@@ -415,12 +415,12 @@ function AuditContent() {
                         {/* 2. Operatör */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           <div className="flex items-center gap-2.5">
-                            <div className="size-7 rounded-xl bg-[#580619]/10 border border-[#c8a87c]/30 flex items-center justify-center font-heading font-bold text-[11px] text-[#580619]">
+                            <div className="size-7 rounded-xl bg-[#580619]/10 dark:bg-sky-500/10 border border-[#c8a87c]/30 dark:border-sky-500/30 flex items-center justify-center font-heading font-bold text-[11px] text-[#580619] dark:text-sky-400">
                               {log.username.slice(0, 2).toUpperCase()}
                             </div>
                             <div>
-                              <p className="font-bold text-slate-900">{log.username}</p>
-                              <p className="text-[10px] text-slate-400 font-mono">
+                              <p className="font-bold text-slate-900 dark:text-slate-100">{log.username}</p>
+                              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                                 {log.userId ? log.userId.slice(0, 8) + "..." : "Sistem"}
                               </p>
                             </div>
@@ -444,11 +444,11 @@ function AuditContent() {
                         <td className="py-3.5 px-4 max-w-md">
                           <div className="space-y-1">
                             {log.targetType && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-[10px] font-mono text-slate-600 mr-2 border border-slate-200">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-300 mr-2 border border-slate-200 dark:border-slate-700">
                                 {log.targetType}: {log.targetId || "—"}
                               </span>
                             )}
-                            <p className="text-xs text-slate-700 font-sans truncate" title={log.detail || ""}>
+                            <p className="text-xs text-slate-700 dark:text-slate-300 font-sans truncate" title={log.detail || ""}>
                               {log.detail || "Ek ayrıntı yok"}
                             </p>
                           </div>
@@ -457,13 +457,13 @@ function AuditContent() {
                         {/* 5. Durum */}
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
                           {isFailed ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-bold text-[10px]">
-                              <AlertTriangle className="size-3 text-rose-600" />
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-red-900 font-bold text-[10px]">
+                              <AlertTriangle className="size-3 text-rose-600 dark:text-rose-400" />
                               BAŞARISIZ
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px]">
-                              <CheckCircle2 className="size-3 text-emerald-600" />
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 font-bold text-[10px]">
+                              <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400" />
                               BAŞARILI
                             </span>
                           )}
@@ -477,7 +477,7 @@ function AuditContent() {
                               e.stopPropagation()
                               setSelectedLog(log)
                             }}
-                            className="size-7 rounded-lg border border-slate-200 bg-white text-slate-400 group-hover:text-[#580619] group-hover:border-[#c8a87c] flex items-center justify-center transition-all cursor-pointer"
+                            className="size-7 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-400 group-hover:text-[#580619] dark:group-hover:text-sky-400 group-hover:border-[#c8a87c] dark:group-hover:border-sky-500 flex items-center justify-center transition-all cursor-pointer"
                           >
                             <ChevronRight className="size-3.5" />
                           </button>
@@ -494,75 +494,75 @@ function AuditContent() {
 
       {/* ═══ 5. AYRINTILI KAYIT DENETİM MODALI ═══ */}
       {selectedLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="size-9 rounded-xl bg-[#580619]/10 text-[#580619] flex items-center justify-center">
-                  <FileCode className="size-4.5 text-[#580619]" />
+                <div className="size-9 rounded-xl bg-[#580619]/10 dark:bg-sky-500/10 text-[#580619] dark:text-sky-400 flex items-center justify-center">
+                  <FileCode className="size-4.5 text-[#580619] dark:text-sky-400" />
                 </div>
                 <div>
-                  <h3 className="font-heading font-bold text-base text-slate-900">
+                  <h3 className="font-heading font-bold text-base text-slate-900 dark:text-slate-100">
                     Denetim Kaydı Detayları
                   </h3>
-                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">ID: {selectedLog.id}</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">ID: {selectedLog.id}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedLog(null)}
-                className="size-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center"
+                className="size-7 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center"
               >
                 <X className="size-4" />
               </button>
             </div>
 
             <div className="space-y-3.5 text-xs">
-              <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-950/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Operatör</p>
-                  <p className="font-bold text-slate-900 mt-0.5">{selectedLog.username}</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Operatör</p>
+                  <p className="font-bold text-slate-900 dark:text-slate-100 mt-0.5">{selectedLog.username}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Zaman Damgası</p>
-                  <p className="font-mono text-slate-900 mt-0.5">{formatDate(selectedLog.createdAt).full} {formatDate(selectedLog.createdAt).time}</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Zaman Damgası</p>
+                  <p className="font-mono text-slate-900 dark:text-slate-100 mt-0.5">{formatDate(selectedLog.createdAt).full} {formatDate(selectedLog.createdAt).time}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Eylem</p>
-                  <p className="font-mono font-bold text-emerald-700 mt-0.5">{selectedLog.action}</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Eylem</p>
+                  <p className="font-mono font-bold text-emerald-700 dark:text-emerald-400 mt-0.5">{selectedLog.action}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Hedef Türü</p>
-                  <p className="font-mono text-slate-900 mt-0.5">{selectedLog.targetType || "—"}</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Hedef Türü</p>
+                  <p className="font-mono text-slate-900 dark:text-slate-100 mt-0.5">{selectedLog.targetType || "—"}</p>
                 </div>
               </div>
 
               <div>
-                <p className="text-[11px] font-bold text-slate-500 mb-1">Açıklama ve Operasyon Detayı</p>
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 font-mono text-xs break-all leading-relaxed">
+                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Açıklama ve Operasyon Detayı</p>
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs break-all leading-relaxed">
                   {selectedLog.detail || "Detay bilgisi kaydedilmemiş."}
                 </div>
               </div>
 
               <div>
-                <p className="text-[11px] font-bold text-slate-500 mb-1">Kayıt Verisi (JSON)</p>
+                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Kayıt Verisi (JSON)</p>
                 <div className="relative">
-                  <pre className="p-3 rounded-xl bg-slate-50 text-slate-800 font-mono text-[11px] overflow-x-auto max-h-48 border border-slate-200">
+                  <pre className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 text-slate-800 dark:text-slate-200 font-mono text-[11px] overflow-x-auto max-h-48 border border-slate-200 dark:border-slate-800">
                     {JSON.stringify(selectedLog, null, 2)}
                   </pre>
                   <button
                     type="button"
                     onClick={() => copyToClipboard(JSON.stringify(selectedLog, null, 2), "modal-json")}
-                    className="absolute right-2.5 top-2.5 px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-mono text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                    className="absolute right-2.5 top-2.5 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-mono text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
                   >
-                    {copiedId === "modal-json" ? <Check className="size-3 text-emerald-600" /> : <Copy className="size-3 text-slate-500" />}
+                    {copiedId === "modal-json" ? <Check className="size-3 text-emerald-600 dark:text-emerald-400" /> : <Copy className="size-3 text-slate-500" />}
                     Kopyala
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-slate-100">
+            <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
               <Button
                 variant="outline"
                 size="sm"
