@@ -62,102 +62,149 @@ export function AppSidebar() {
     }
   }
 
+  const activeIdx = navItems.findIndex(item =>
+    item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
+  )
+
   return (
     <aside
       className={cn(
         "sticky top-0 flex h-screen shrink-0 flex-col z-30 relative select-none overflow-visible",
         "transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
-        collapsed ? "w-[76px]" : "w-[275px]"
+        collapsed ? "w-[78px]" : "w-[280px]"
       )}
     >
-      {/* ═══ ORGANİK YELKEN VE ALTIN KENAR ÇİZGİSİ (SVG GÖVDE) ═══ */}
+      {/* ═══ ORGANİK YELKEN VE KALIN ALTIN KENAR ÇİZGİSİ (SVG) ═══ */}
       <svg
-        className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-xl"
-        viewBox={collapsed ? "0 0 76 1000" : "0 0 275 1000"}
+        className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-2xl"
+        viewBox={collapsed ? "0 0 78 1000" : "0 0 280 1000"}
         preserveAspectRatio="none"
       >
         <defs>
-          {/* Zengin Bordo Degrade */}
+          {/* Zengin Bordo Degrade - Sol kenar tertemiz bordo */}
           <linearGradient id="sailBurgundyGrad" x1="0" y1="0" x2="0.8" y2="1">
-            <stop offset="0%" stopColor="#500412" />
+            <stop offset="0%" stopColor="#48030f" />
             <stop offset="35%" stopColor="#680b22" />
-            <stop offset="70%" stopColor="#580619" />
-            <stop offset="100%" stopColor="#38020b" />
+            <stop offset="70%" stopColor="#540516" />
+            <stop offset="100%" stopColor="#320108" />
           </linearGradient>
 
-          {/* Yelkeni Saran Parlak Altın Çizgi */}
+          {/* Kalın ve Parlak Altın Çizgi Degradesi (2. Görsel Kalınlığında) */}
           <linearGradient id="sailGoldStroke" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#d4b27d" />
-            <stop offset="20%" stopColor="#fae5bf" />
-            <stop offset="50%" stopColor="#dfc9a0" />
-            <stop offset="80%" stopColor="#c8a87c" />
-            <stop offset="100%" stopColor="#9a733e" />
+            <stop offset="0%" stopColor="#c5a059" />
+            <stop offset="20%" stopColor="#fbedd0" />
+            <stop offset="45%" stopColor="#dfc9a0" />
+            <stop offset="75%" stopColor="#c8a87c" />
+            <stop offset="100%" stopColor="#8e6425" />
           </linearGradient>
+
+          {/* İçeriklerin dışarı taşmasını %100 engelleyen tam yelken maskesi */}
+          <clipPath id="sailClip">
+            <path
+              d={
+                collapsed
+                  ? "M 0,0 L 64,0 C 72,0 78,15 78,35 C 78,200 80,500 80,500 C 80,500 78,800 78,965 C 78,985 72,1000 64,1000 L 0,1000 Z"
+                  : "M 0,0 L 208,0 C 230,0 244,16 248,45 C 262,160 280,380 280,520 C 280,680 260,860 238,950 C 228,985 210,1000 180,1000 L 0,1000 Z"
+              }
+            />
+          </clipPath>
         </defs>
 
-        {collapsed ? (
-          /* Dürülmüş Defter / Katlanmış Yelken Formu */
-          <path
-            d="M 0,0 L 62,0 C 70,0 76,15 76,35 C 76,200 78,500 78,500 C 78,500 76,800 76,965 C 76,985 70,1000 62,1000 L 0,1000 Z"
-            fill="url(#sailBurgundyGrad)"
-            stroke="url(#sailGoldStroke)"
-            strokeWidth="3.5"
-            vectorEffect="non-scaling-stroke"
-          />
-        ) : (
-          /* Görsel 3'teki Gibi Yayvan, Geniş Göbekli Organik Yelken Formu */
-          <path
-            d="M 0,0 L 205,0 C 228,0 242,16 246,45 C 258,160 275,380 275,520 C 275,680 256,860 236,950 C 226,985 208,1000 180,1000 L 0,1000 Z"
-            fill="url(#sailBurgundyGrad)"
-            stroke="url(#sailGoldStroke)"
-            strokeWidth="3.5"
-            vectorEffect="non-scaling-stroke"
-          />
-        )}
+        {/* 1. YELKEN GÖVDESİ (Stroke YOK - En soldaki çizgi tamamen silindi, sadece bordo kaldı) */}
+        <path
+          d={
+            collapsed
+              ? "M 0,0 L 64,0 C 72,0 78,15 78,35 C 78,200 80,500 80,500 C 80,500 78,800 78,965 C 78,985 72,1000 64,1000 L 0,1000 Z"
+              : "M 0,0 L 208,0 C 230,0 244,16 248,45 C 262,160 280,380 280,520 C 280,680 260,860 238,950 C 228,985 210,1000 180,1000 L 0,1000 Z"
+          }
+          fill="url(#sailBurgundyGrad)"
+        />
+
+        {/* 2. SADECE SAĞ KAVİSİ SARAN KALIN ALTIN ÇİZGİ (2. Görseldeki gibi 5px) */}
+        <path
+          d={
+            collapsed
+              ? "M 64,0 C 72,0 78,15 78,35 C 78,200 80,500 80,500 C 80,500 78,800 78,965 C 78,985 72,1000 64,1000"
+              : "M 208,0 C 230,0 244,16 248,45 C 262,160 280,380 280,520 C 280,680 260,860 238,950 C 228,985 210,1000 180,1000"
+          }
+          fill="none"
+          stroke="url(#sailGoldStroke)"
+          strokeWidth="5"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
       </svg>
 
-      {/* ═══ SAĞ ÜST AÇMA/KAPAMA BUTONU (< / > CHEVRON İKONLU ALTIN BUTON) ═══ */}
+      {/* ═══ 2. GÖRSELDEKİ GİBİ ALTIN ÇİZGİDEN ÇIKAN OK İMLECİ (ACTIVE INDICATOR) ═══ */}
+      {activeIdx >= 0 && !collapsed && (
+        <div
+          className="absolute right-0 z-40 transition-all duration-300 pointer-events-none"
+          style={{
+            top: `${114 + activeIdx * 54}px`,
+          }}
+        >
+          {/* Görsel 2'deki gibi altın şeritten içeri doğru uzanan üçgen altın ok */}
+          <div
+            className="w-0 h-0 border-solid"
+            style={{
+              borderTop: "8px solid transparent",
+              borderBottom: "8px solid transparent",
+              borderRight: "11px solid #dfc9a0",
+              filter: "drop-shadow(-2px 0 4px rgba(223, 201, 160, 0.6))",
+            }}
+          />
+        </div>
+      )}
+
+      {/* ═══ ELİT PİRİNÇ / ALTIN DENİZCİ AÇMA-KAPAMA BUTONU (LUXURY NAUTICAL TOGGLE) ═══ */}
       <button
         type="button"
         onClick={toggle}
-        title={collapsed ? "Menüyü Aç" : "Menüyü Kapat"}
+        title={collapsed ? "Yelkeni Aç" : "Yelkeni Kapat"}
         className={cn(
-          "absolute z-50 flex items-center justify-center cursor-pointer transition-all duration-300 shadow-lg",
-          "hover:scale-110 active:scale-95 border-2 border-[#500412]",
+          "absolute z-50 flex items-center justify-center cursor-pointer transition-all duration-300 group",
+          "hover:scale-110 active:scale-95",
           collapsed
-            ? "right-[-12px] top-20 size-7 rounded-full bg-[#dfc9a0] text-[#500412]"
-            : "right-[-12px] top-6 size-7 rounded-full bg-[#dfc9a0] text-[#500412]"
+            ? "right-[-13px] top-24 size-7.5 rounded-full"
+            : "right-[-13px] top-6 size-8 rounded-full"
         )}
         style={{
-          boxShadow: "0 2px 10px rgba(0,0,0,0.35)",
+          background: "radial-gradient(circle at 35% 35%, #fcedd2 0%, #dfc9a0 50%, #9e7535 100%)",
+          border: "2px solid #3d020a",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.8)",
         }}
       >
-        {collapsed ? (
-          <ChevronRight className="size-4 stroke-[3]" />
-        ) : (
-          <ChevronLeft className="size-4 stroke-[3]" />
-        )}
+        <div className="flex items-center justify-center size-full rounded-full bg-[#48030f]/15">
+          {collapsed ? (
+            <ChevronRight className="size-4 stroke-[3] text-[#48030f] transition-transform group-hover:translate-x-0.5" />
+          ) : (
+            <ChevronLeft className="size-4 stroke-[3] text-[#48030f] transition-transform group-hover:-translate-x-0.5" />
+          )}
+        </div>
       </button>
 
-      {/* ═══ İÇERİK KATMANI ═══ */}
-      <div className="relative z-10 flex flex-1 flex-col h-full overflow-hidden">
-
-        {/* ── 1. HEADER: BELİRGİN, BÜYÜK LOGO + ALTIN RUDDER YAZISI ── */}
+      {/* ═══ İÇERİK KATMANI (clip-path ile yelken sınırına kilitli, asla dışarı taşmaz) ═══ */}
+      <div
+        className="relative z-10 flex flex-1 flex-col h-full overflow-hidden"
+        style={{
+          clipPath: collapsed ? undefined : "polygon(0 0, 94% 0, 99% 10%, 100% 50%, 97% 90%, 88% 100%, 0 100%)",
+        }}
+      >
+        {/* ── 1. HEADER: BÜYÜK LOGO + ALTIN RUDDER YAZISI ── */}
         <div
           className={cn(
             "flex items-center shrink-0 transition-all duration-300",
             collapsed ? "h-20 justify-center px-0" : "h-24 px-5"
           )}
         >
-          <Link href="/" className="flex items-center gap-3.5 group outline-none">
-            {/* Büyük Belirgin Dümen Logosu */}
+          <Link href="/" className="flex items-center gap-3 group outline-none">
             <div className="relative shrink-0 flex items-center justify-center">
               <Image
                 src="/rudder-helm-transparent.png"
-                alt="Rudder Dümen"
+                alt="Rudder Logo"
                 width={collapsed ? 36 : 42}
                 height={collapsed ? 36 : 42}
-                className="object-contain drop-shadow-[0_3px_10px_rgba(0,0,0,0.6)] transition-transform duration-500 group-hover:rotate-90"
+                className="object-contain drop-shadow-[0_3px_12px_rgba(0,0,0,0.7)] transition-transform duration-500 group-hover:rotate-90"
                 priority
               />
             </div>
@@ -166,7 +213,7 @@ export function AppSidebar() {
               <span
                 className="font-heading font-extrabold text-[22px] tracking-[0.24em] uppercase text-[#dfc9a0] select-none leading-none"
                 style={{
-                  textShadow: "0 2px 8px rgba(0,0,0,0.6), 0 0 1px #fae5bf",
+                  textShadow: "0 2px 8px rgba(0,0,0,0.7), 0 0 2px rgba(251, 237, 208, 0.4)",
                 }}
               >
                 RUDDER
@@ -177,17 +224,17 @@ export function AppSidebar() {
 
         {/* İnce Ayırıcı Şerit */}
         <div
-          className={cn("h-px transition-all duration-300", collapsed ? "mx-3" : "mx-5")}
+          className={cn("h-px transition-all duration-300", collapsed ? "mx-3" : "mx-5 mr-8")}
           style={{
             background: "linear-gradient(to right, transparent, rgba(223,201,160,0.25), transparent)",
           }}
         />
 
-        {/* ── 2. NAVİGASYON LİNKLERİ ── */}
+        {/* ── 2. NAVİGASYON LİNKLERİ (Kavis içine tam oturtulmuş, taşma sıfır) ── */}
         <nav
           className={cn(
-            "flex flex-1 flex-col gap-2 pt-6 transition-all duration-300",
-            collapsed ? "items-center px-2" : "px-3.5"
+            "flex flex-1 flex-col gap-2 pt-5 transition-all duration-300",
+            collapsed ? "items-center px-2" : "px-3.5 pr-6"
           )}
         >
           {navItems.map((item) => {
@@ -202,9 +249,9 @@ export function AppSidebar() {
                   "relative flex items-center gap-3.5 font-medium transition-all duration-200 group",
                   collapsed
                     ? "justify-center rounded-xl p-3 size-12"
-                    : "rounded-r-2xl rounded-l-xl px-4 py-3",
+                    : "rounded-xl px-4 py-3",
                   active
-                    ? "text-white shadow-inner"
+                    ? "text-white"
                     : "text-white/80 hover:text-white hover:bg-white/[0.08]"
                 )}
                 style={
@@ -220,7 +267,7 @@ export function AppSidebar() {
                   className={cn(
                     "shrink-0 transition-all duration-200 group-hover:scale-110",
                     collapsed ? "size-5" : "size-[19px]",
-                    active ? "text-[#dfc9a0]" : "text-white/80"
+                    active ? "text-[#dfc9a0]" : "text-white/85"
                   )}
                 />
 
@@ -234,32 +281,20 @@ export function AppSidebar() {
                     {item.label}
                   </span>
                 )}
-
-                {/* Görsel 3'teki gibi aktif öğenin sağındaki imleç ucu */}
-                {active && !collapsed && (
-                  <div className="ml-auto flex items-center pr-1">
-                    <span
-                      className="size-2 rounded-full bg-[#dfc9a0]"
-                      style={{
-                        boxShadow: "0 0 8px #dfc9a0, 0 0 16px rgba(223,201,160,0.5)",
-                      }}
-                    />
-                  </div>
-                )}
               </Link>
             )
           })}
         </nav>
 
-        {/* ── 3. ALT PROFİL ALANI ── */}
-        <div className={cn("p-4 pb-6 transition-all duration-300", collapsed && "px-2 pb-4")}>
+        {/* ── 3. ALT PROFİL KARTI (Yelken kavisinin içinde, taşma sıfır) ── */}
+        <div className={cn("p-3.5 pb-6 transition-all duration-300", collapsed ? "px-2 pb-4" : "pr-7")}>
           <div
             className={cn(
               "flex items-center gap-2.5 rounded-2xl p-2.5 transition-all shadow-inner",
               collapsed ? "justify-center" : ""
             )}
             style={{
-              background: "rgba(0,0,0,0.22)",
+              background: "rgba(0,0,0,0.25)",
               border: "1px solid rgba(255,255,255,0.06)",
             }}
           >
