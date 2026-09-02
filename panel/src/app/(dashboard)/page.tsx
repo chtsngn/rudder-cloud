@@ -12,6 +12,13 @@ import {
   Server,
   Activity,
   CheckCircle2,
+  Terminal,
+  Network,
+  RotateCw,
+  Sparkles,
+  Layers,
+  ArrowUpRight,
+  Code2,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -52,54 +59,56 @@ function MetricCard({
   const isHigh = safePct >= 80
 
   return (
-    <div className="group rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-[#c8a87c]/70 flex flex-col justify-between">
+    <div className="group relative rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all duration-300 hover:shadow-[0_8px_24px_rgba(200,168,124,0.12)] hover:border-[#c8a87c]/70 flex flex-col justify-between overflow-hidden">
       {/* Top Header: Title & Relevant Tech Icon */}
       <div>
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-sans">
+        <div className="flex items-center justify-between gap-2 mb-3.5">
+          <span className="font-heading text-[12px] font-bold uppercase tracking-wider text-slate-600">
             {title}
           </span>
-          <div className="size-8 rounded-lg bg-[#6e0d25]/5 border border-[#6e0d25]/10 flex items-center justify-center text-[#6e0d25] group-hover:bg-[#6e0d25] group-hover:text-white transition-all">
-            <Icon className="size-4" />
+          <div className="size-9 rounded-xl bg-[#580619]/5 border border-[#c8a87c]/30 flex items-center justify-center text-[#580619] group-hover:bg-[#580619] group-hover:text-white group-hover:border-[#580619] transition-all duration-300 shadow-sm">
+            <Icon className="size-4.5" />
           </div>
         </div>
 
         {/* Main Metric Value */}
-        <div className="flex items-baseline gap-2 mb-1">
-          <span className="font-mono text-3xl font-bold tracking-tight text-slate-900">
+        <div className="flex items-baseline gap-2 mb-1.5">
+          <span className="font-mono text-3xl font-extrabold tracking-tight text-slate-900">
             {mainValue}
           </span>
         </div>
 
         {/* Subtext info */}
-        <p className="text-xs font-medium text-slate-500 truncate mb-4">
+        <p className="font-mono text-xs font-medium text-slate-500 truncate mb-5">
           {subValue}
         </p>
       </div>
 
-      {/* Progress Gauge */}
+      {/* Recessed Progress Gauge */}
       <div>
-        <div className="flex items-center justify-between text-xs font-semibold text-slate-600 mb-1.5 font-mono">
-          <span className="flex items-center gap-1.5">
+        <div className="flex items-center justify-between text-xs font-semibold mb-2 font-mono">
+          <span className="flex items-center gap-1.5 text-slate-600">
             <span
               className={cn(
                 "size-2 rounded-full",
-                isHigh ? "bg-red-500" : "bg-emerald-500"
+                isHigh ? "bg-red-500 animate-pulse" : "bg-emerald-500"
               )}
             />
             {isHigh ? "Yüksek Yük" : "Normal"}
           </span>
-          <span className={cn("font-bold", isHigh ? "text-red-600" : "text-slate-800")}>
+          <span className={cn("font-bold text-sm", isHigh ? "text-red-600" : "text-[#580619]")}>
             {safePct}%
           </span>
         </div>
-        <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden border border-slate-200/70 p-[1px]">
+
+        {/* Bar */}
+        <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden border border-slate-200/80 p-[1.5px] shadow-inner">
           <div
             className={cn(
-              "h-full rounded-full transition-all duration-500",
+              "h-full rounded-full transition-all duration-700",
               isHigh
-                ? "bg-gradient-to-r from-red-600 to-red-700"
-                : "bg-gradient-to-r from-[#6e0d25] via-[#86102e] to-[#c8a87c]"
+                ? "bg-gradient-to-r from-red-600 to-red-700 shadow-[0_0_8px_rgba(220,38,38,0.5)]"
+                : "bg-gradient-to-r from-[#580619] via-[#86102e] to-[#c8a87c]"
             )}
             style={{ width: `${safePct}%` }}
           />
@@ -112,48 +121,42 @@ function MetricCard({
 export default function DashboardPage() {
   const [stats, setStats] = useState<SystemStats | null>(null)
   const [sites, setSites] = useState<Site[] | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const loadStats = async () => {
+    try {
+      const res = await fetch("/api/system/stats", { cache: "no-store" })
+      if (!res.ok) return
+      const data = (await res.json()) as SystemStats
+      setStats(data)
+    } catch {
+      // ignore
+    }
+  }
+
+  const loadSites = async () => {
+    try {
+      const res = await fetch("/api/sites", { cache: "no-store" })
+      if (!res.ok) throw new Error("failed")
+      const data = (await res.json()) as ApiSite[]
+      setSites(data.map(apiSiteToUiSite))
+    } catch {
+      setSites([])
+    }
+  }
 
   useEffect(() => {
-    let cancelled = false
-
-    async function loadStats() {
-      try {
-        const res = await fetch("/api/system/stats", { cache: "no-store" })
-        if (!res.ok) return
-        const data = (await res.json()) as SystemStats
-        if (!cancelled) setStats(data)
-      } catch {
-        // ignore
-      }
-    }
-
     loadStats()
-    const interval = setInterval(loadStats, STATS_POLL_MS)
-    return () => {
-      cancelled = true
-      clearInterval(interval)
-    }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function loadSites() {
-      try {
-        const res = await fetch("/api/sites", { cache: "no-store" })
-        if (!res.ok) throw new Error("failed")
-        const data = (await res.json()) as ApiSite[]
-        if (!cancelled) setSites(data.map(apiSiteToUiSite))
-      } catch {
-        if (!cancelled) setSites([])
-      }
-    }
-
     loadSites()
-    return () => {
-      cancelled = true
-    }
+    const interval = setInterval(loadStats, STATS_POLL_MS)
+    return () => clearInterval(interval)
   }, [])
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true)
+    await Promise.all([loadStats(), loadSites()])
+    setTimeout(() => setRefreshing(false), 500)
+  }
 
   const serverInfo = [
     { label: "Sunucu Adı", value: stats?.host.hostname ?? "—" },
@@ -162,37 +165,59 @@ export default function DashboardPage() {
     { label: "IP Adresi", value: stats?.host.ip ?? "—" },
   ]
 
+  const quickStarters = [
+    { label: "WordPress", desc: "Tek tıkla hazır blog & CMS", href: "/sites/new?type=wordpress", icon: Globe },
+    { label: "Node.js / Next.js", desc: "Fullstack web uygulaması", href: "/sites/new?type=nodejs", icon: Code2 },
+    { label: "Python / FastAPI", desc: "Yüksek hızlı backend servisi", href: "/sites/new?type=python", icon: Layers },
+  ]
+
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200">
+    <div className="max-w-7xl mx-auto space-y-8 pb-12">
+      {/* ═══ 1. ÜST BAŞLIK & AKSİYON ALANI ═══ */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-200/80">
         <div>
-          <h1 className="font-heading text-2xl font-bold tracking-wide text-[#6e0d25]">
-            Anasayfa
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619]">
+              Anasayfa
+            </h1>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Canlı
+            </span>
+          </div>
           <p className="text-xs text-slate-500 mt-1 font-sans">
-            Sunucunuzun gerçek zamanlı telemetrisi ve barındırılan web siteleriniz.
+            Sunucunuzun gerçek zamanlı donanım telemetrisi ve barındırılan web siteleriniz.
           </p>
         </div>
 
+        {/* Hızlı Butonlar */}
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleManualRefresh}
+            title="Yenile"
+            className="size-9 rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-[#580619] hover:border-[#c8a87c] shadow-sm flex items-center justify-center transition-all cursor-pointer active:scale-95"
+          >
+            <RotateCw className={cn("size-4", refreshing && "animate-spin text-[#580619]")} />
+          </button>
+
           <Button
             asChild
-            className="bg-[#6e0d25] hover:bg-[#86102e] text-white font-semibold text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 h-10 border border-[#c8a87c]/30 hover:border-[#c8a87c]"
+            className="bg-[#580619] hover:bg-[#720a22] text-white font-semibold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-10 border border-[#c8a87c]/40 hover:border-[#c8a87c] hover:scale-[1.02] cursor-pointer"
           >
             <Link href="/sites/new">
-              <Plus className="size-4" />
+              <Plus className="size-4 text-[#dfc9a0]" />
               YENİ SİTE EKLE
             </Link>
           </Button>
         </div>
       </div>
 
-      {/* 4 Balanced Elite Metric Cards (No top gradient bar, holistic design) */}
+      {/* ═══ 2. ÜST 4 TELEMETRİ KARTI (KAPTAN KÖŞKÜ STANDARDI) ═══ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* CPU Card */}
         {stats === null ? (
-          <div className="h-44 rounded-xl border border-slate-200 bg-white p-5 animate-pulse" />
+          <div className="h-48 rounded-2xl border border-slate-200 bg-white p-6 animate-pulse" />
         ) : (
           <MetricCard
             icon={Cpu}
@@ -205,7 +230,7 @@ export default function DashboardPage() {
 
         {/* RAM Card */}
         {stats === null ? (
-          <div className="h-44 rounded-xl border border-slate-200 bg-white p-5 animate-pulse" />
+          <div className="h-48 rounded-2xl border border-slate-200 bg-white p-6 animate-pulse" />
         ) : (
           <MetricCard
             icon={MemoryStick}
@@ -218,7 +243,7 @@ export default function DashboardPage() {
 
         {/* Disk Card */}
         {stats === null ? (
-          <div className="h-44 rounded-xl border border-slate-200 bg-white p-5 animate-pulse" />
+          <div className="h-48 rounded-2xl border border-slate-200 bg-white p-6 animate-pulse" />
         ) : (
           <MetricCard
             icon={HardDrive}
@@ -231,16 +256,16 @@ export default function DashboardPage() {
 
         {/* Sunucu Bilgisi Card */}
         {stats === null ? (
-          <div className="h-44 rounded-xl border border-slate-200 bg-white p-5 animate-pulse" />
+          <div className="h-48 rounded-2xl border border-slate-200 bg-white p-6 animate-pulse" />
         ) : (
-          <div className="group rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-[#c8a87c]/70 flex flex-col justify-between">
+          <div className="group relative rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all duration-300 hover:shadow-[0_8px_24px_rgba(200,168,124,0.12)] hover:border-[#c8a87c]/70 flex flex-col justify-between overflow-hidden">
             <div>
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-sans">
+              <div className="flex items-center justify-between gap-2 mb-3.5">
+                <span className="font-heading text-[12px] font-bold uppercase tracking-wider text-slate-600">
                   Sunucu Bilgisi
                 </span>
-                <div className="size-8 rounded-lg bg-[#6e0d25]/5 border border-[#6e0d25]/10 flex items-center justify-center text-[#6e0d25] group-hover:bg-[#6e0d25] group-hover:text-white transition-all">
-                  <Server className="size-4" />
+                <div className="size-9 rounded-xl bg-[#580619]/5 border border-[#c8a87c]/30 flex items-center justify-center text-[#580619] group-hover:bg-[#580619] group-hover:text-white group-hover:border-[#580619] transition-all duration-300 shadow-sm">
+                  <Server className="size-4.5" />
                 </div>
               </div>
 
@@ -250,7 +275,7 @@ export default function DashboardPage() {
                     <span className="text-slate-500 text-[11px] shrink-0 font-medium">
                       {info.label}:
                     </span>
-                    <span className="font-mono text-slate-800 text-[11px] font-semibold truncate text-right">
+                    <span className="font-mono text-slate-800 text-[11px] font-bold truncate text-right">
                       {info.value}
                     </span>
                   </div>
@@ -258,66 +283,105 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-emerald-600 font-medium">
-              <CheckCircle2 className="size-3.5" />
-              <span>Sistem Çalışıyor</span>
+            <div className="pt-3.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-emerald-700 font-semibold">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="size-3.5 text-emerald-600" />
+                Sistem Aktif
+              </span>
+              <span className="font-mono text-[10px] text-slate-400">Port 3001</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Siteleriniz Section */}
-      <div className="space-y-4">
+      {/* ═══ 3. SİTELERİNİZ ALANI ═══ */}
+      <div className="space-y-5 pt-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <h2 className="font-heading text-lg font-bold text-[#6e0d25] tracking-wide">
+          <div className="flex items-center gap-3">
+            <h2 className="font-heading text-xl font-extrabold text-[#580619] tracking-tight">
               Siteleriniz
             </h2>
             {sites !== null && (
-              <span className="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700 font-mono">
+              <span className="rounded-full bg-[#580619]/10 border border-[#580619]/20 px-2.5 py-0.5 text-xs font-bold text-[#580619] font-mono">
                 {sites.length}
               </span>
             )}
           </div>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href="/ports"
+              className="text-xs font-semibold text-slate-500 hover:text-[#580619] flex items-center gap-1 transition-colors px-2.5 py-1 rounded-lg hover:bg-slate-100"
+            >
+              <Network className="size-3.5" />
+              Portları Görüntüle
+            </Link>
+          </div>
         </div>
 
-        {/* Sites Container */}
+        {/* Siteler Konteyneri */}
         {sites === null ? (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="h-32 animate-pulse rounded-xl border border-slate-200 bg-white"
+                className="h-36 animate-pulse rounded-2xl border border-slate-200 bg-white"
               />
             ))}
           </div>
         ) : sites.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-12 shadow-sm flex flex-col items-center justify-center text-center">
-            {/* Helm Watermark / Emblem Icon */}
-            <div className="size-16 rounded-2xl bg-[#6e0d25]/5 border border-[#6e0d25]/10 flex items-center justify-center p-3 mb-4 shadow-inner">
+          /* Zengin & Fonksiyonel Boş Durum Başlatıcısı (Nautical Launchpad) */
+          <div className="rounded-3xl border border-slate-200/90 bg-gradient-to-b from-white via-slate-50/50 to-white p-10 md:p-14 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden">
+            {/* Ortada Parlayan Dümen Amblemi */}
+            <div className="relative size-20 rounded-2xl bg-gradient-to-b from-[#580619]/10 to-[#580619]/5 border-2 border-[#c8a87c]/40 flex items-center justify-center p-4 mb-5 shadow-inner group">
               <Image
                 src="/rudder-helm-transparent.png"
-                alt="Rudder Helm"
-                width={40}
-                height={40}
-                className="object-contain"
+                alt="Rudder Dümen"
+                width={52}
+                height={52}
+                className="object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.25)] transition-transform duration-700 group-hover:rotate-180"
               />
             </div>
 
-            <h3 className="font-heading text-lg font-bold text-slate-800 mb-1">
+            <h3 className="font-heading text-xl md:text-2xl font-extrabold text-slate-800 mb-2 tracking-tight">
               Henüz bir site eklenmedi.
             </h3>
-            <p className="text-xs text-slate-500 max-w-md mb-6 font-sans">
-              Sunucunuzda yeni bir WordPress, Node.js, Python veya statik web sitesi yayına alarak self-hosting deneyiminizi başlatın.
+            <p className="text-xs md:text-sm text-slate-500 max-w-lg mb-8 font-sans leading-relaxed">
+              Sunucunuzda yeni bir WordPress blogu, Node.js servisi, Python backend veya statik web sitesi yayına alarak self-hosting deneyiminizi başlatın.
             </p>
+
+            {/* Hızlı Başlatıcı Şablon Kartları */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl mb-8">
+              {quickStarters.map((starter) => {
+                const Icon = starter.icon
+                return (
+                  <Link
+                    key={starter.label}
+                    href={starter.href}
+                    className="flex flex-col items-start p-4 rounded-2xl border border-slate-200 bg-white hover:border-[#c8a87c] hover:shadow-md transition-all duration-200 text-left group"
+                  >
+                    <div className="size-8 rounded-lg bg-[#580619]/5 flex items-center justify-center text-[#580619] mb-2.5 group-hover:bg-[#580619] group-hover:text-white transition-colors">
+                      <Icon className="size-4" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                      {starter.label}
+                      <ArrowUpRight className="size-3 text-slate-400 group-hover:text-[#580619] transition-colors" />
+                    </span>
+                    <span className="text-[11px] text-slate-500 mt-0.5">
+                      {starter.desc}
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
 
             <Button
               asChild
-              className="bg-[#6e0d25] hover:bg-[#86102e] text-white font-semibold text-xs tracking-wider px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 h-10 hover:scale-[1.02] border border-[#c8a87c]/40"
+              className="bg-[#580619] hover:bg-[#720a22] text-white font-bold text-xs uppercase tracking-wider px-8 py-3 rounded-xl shadow-lg transition-all flex items-center gap-2.5 h-12 hover:scale-[1.03] border border-[#c8a87c]/50"
             >
               <Link href="/sites/new">
-                <Plus className="size-4" />
-                İlk sitenizi ekleyin
+                <Plus className="size-4.5 text-[#dfc9a0]" />
+                İLK SİTENİZİ EKLEYİN
               </Link>
             </Button>
           </div>
