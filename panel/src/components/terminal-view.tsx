@@ -29,6 +29,8 @@ import {
   Activity,
   Shield,
   Check,
+  Pin,
+  PinOff,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -670,7 +672,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                   className="flex items-center gap-1.5 cursor-pointer pr-0.5 active:scale-95"
                 >
                   {isPinned ? (
-                    <span className="text-[10px]" title="Sabitlenmiş Komut">📌</span>
+                    <Pin className="size-3 text-[#dfc9a0] shrink-0 fill-[#dfc9a0]" />
                   ) : (
                     <ChevronRight className="size-3 text-slate-500 group-hover:text-[#c8a87c] transition-colors" />
                   )}
@@ -685,13 +687,13 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                       onClick={(e) => togglePinCommand(qc.id, e)}
                       title={isPinned ? "Sabitlemeyi Kaldır" : "Hızlı Bar'a Sabitle"}
                       className={cn(
-                        "size-4 rounded-full flex items-center justify-center text-[9px] transition-colors cursor-pointer",
+                        "size-4 rounded-full flex items-center justify-center transition-colors cursor-pointer",
                         isPinned
                           ? "text-[#dfc9a0] hover:text-white"
                           : "text-slate-500 hover:text-[#dfc9a0]"
                       )}
                     >
-                      📌
+                      <Pin className={cn("size-2.5", isPinned && "fill-current")} />
                     </button>
                     <button
                       type="button"
@@ -783,7 +785,8 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                   className="size-4 rounded accent-[#580619] cursor-pointer"
                 />
                 <Label htmlFor="cmd-pin" className="text-xs font-bold text-slate-800 cursor-pointer flex items-center gap-1.5 select-none">
-                  <span>📌 Hızlı Bar'a Sabitle (Her zaman en önde dursun)</span>
+                  <Pin className="size-3.5 text-[#580619] shrink-0" />
+                  <span>Hızlı Bar'a Sabitle (Her zaman en önde dursun)</span>
                 </Label>
               </div>
 
@@ -916,9 +919,9 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                           type="button"
                           onClick={() => handlePinFromLibrary(item)}
                           title="Hızlı Komut Barı'na Sabitle"
-                          className="h-7 px-2.5 rounded-lg bg-slate-100 hover:bg-[#580619]/10 text-slate-700 hover:text-[#580619] text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                          className="h-7 px-2.5 rounded-lg bg-slate-100 hover:bg-[#580619]/10 text-slate-700 hover:text-[#580619] text-[10px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                         >
-                          <span>📌</span>
+                          <Pin className="size-3 text-[#580619]" />
                           <span>Sabitle</span>
                         </button>
 

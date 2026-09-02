@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
-import { ShieldAlert, Terminal as TerminalIcon, Sparkles, PanelRightClose, ArrowRight } from "lucide-react"
+import { ShieldAlert, Terminal as TerminalIcon, Sparkles, Columns2, ArrowRight } from "lucide-react"
 
 import { useTerminalDock } from "@/components/terminal-dock-context"
 import { Button } from "@/components/ui/button"
@@ -57,7 +57,7 @@ export default function TerminalPage() {
             onClick={handleDockToRight}
             className="group inline-flex items-center gap-2 rounded-xl border border-[#c8a87c]/50 bg-[#580619] hover:bg-[#720a22] hover:border-[#dfc9a0] px-4 py-2 text-xs font-bold text-white shadow-2xs transition-all cursor-pointer hover:scale-102 active:scale-98 shrink-0"
           >
-            <PanelRightClose className="size-4 text-[#dfc9a0] transition-transform group-hover:translate-x-0.5" />
+            <Columns2 className="size-4 text-[#dfc9a0] transition-transform group-hover:scale-110" />
             <span className="font-heading tracking-wide">Sağa Tuttur</span>
           </button>
         </div>

@@ -27,13 +27,13 @@
 - [x] **Sunucu Terminali (\/terminal\) Lüks Kaptan Köşkü Konsoluna Dönüştürüldü.**
 - [x] **Terminal Akıllı Komut Sistemi:**
   - **En Sık Kullanılan Komutlar Algoritması:** Çalıştırılan her komutun frekansı yerel olarak izlenip hızlı komut barında en çok kullanılanlar otomatik olarak öne çıkarılıyor.
-  - **Sabitleme Sistemi (Pinning):** Yeni komut ekleme formuna \📌 Hızlı Bar'a Sabitle\ seçeneği eklendi; sabitlenen komutlar her zaman en önde kalıyor. Ayrıca Komut Kitaplığı'ndaki herhangi bir komut tek tıkla hızlı bara sabitlenebiliyor.
+  - **Sabitleme Sistemi (Pinning):** Yeni komut ekleme formuna \Pin\ ikonu eklendi; sabitlenen komutlar her zaman en önde kalıyor. Tüm emoji karakterleri temizlenip Lucide \Pin\ vektör ikonlarıyla değiştirildi.
   - **Tam Oval Hızlı Komut Barı:** Alt komut barı dış kasası ve butonları tam oval (\ounded-full\) estetik kapsüle dönüştürüldü.
   - **Dengeli & Canlı Arama Destekli Komut Kitaplığı:** Renk dengesizlikleri giderildi, lüks kartlar ve anlık arama / filtreleme çubuğu ile kategori hapları eklendi.
   - **Spotlight Komut Paleti Kapatma Butonu:** Statik ESC rozeti yerine tıklanabilir zarif kapatma (\X\) butonu ve arka plan tıklamasıyla kapatma desteği eklendi.
-  - **Sağa Tuttur Butonu:** Terminal üst başlığındaki buton neon ışıktan arındırılıp sade ve lüks **\Sağa Tuttur\** butonuna revize edildi.
+  - **Sağa Tuttur Butonu:** Karmaşık pencere ikonu yerine çok daha anlaşılır, modern \Columns2\ ikonu yerleştirildi.
 - [x] **Tüm Dropdown ve Seçim Menülerinin Temaya Uygun Olarak Yenilenmesi (\CustomSelect\):**
-  - Tarayıcının varsayılan ham ve kaba gri HTML \<select>\ menüleri projedeki tüm sayfalardan (\/sites\, \/users\, \/sites/[id]\, \/sites/[id]/files\, \SiteBackupCard\) tamamen kaldırıldı.
+  - Tarayıcının varsayılan ham ve kaba gri HTML \<select>\ menüleri projedeki tüm sayfalardan tamamen kaldırıldı.
   - Yerine yumuşak açılış animasyonlu (\ade-in zoom-in-95\), kavisli oval köşeli (\ounded-2xl\), altın kenarlıklı (\#c8a87c\) ve aktif seçeneklerde bordo-altın onay ikonlu lüks \<CustomSelect>\ bileşeni entegre edildi.
 - [x] **Sistem Ayarları (\/settings\) Sayfası Temaya Uygun Olarak Yenilendi.**
 - [x] **Kullanıcı Yönetimi (\/users\) Sayfası Lüks Tablo & Arama/Filtre Sistemiyle Yenilendi.**
@@ -58,3 +58,4 @@ px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 | 2026-09-02 | Bordo/Altın Minimalist Terminal Rozeti ve \/audit\ Aydınlık Kart Uyarlaması | \side-terminal-dock.tsx\, \udit/page.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | Oval Hızlı Komut Barı, En Sık Kullanılanlar Sıralaması, Sabitleme (Pin) ve Arama Destekli Komut Kitaplığı | \	erminal-view.tsx\, \	erminal/page.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | Projedeki tüm native \<select>\ menüleri \<CustomSelect>\ ile lüks animasyonlu menülere dönüştürüldü | \custom-select.tsx\, \sites/page.tsx\, \users/page.tsx\, \sites/[id]/page.tsx\, \site-backup-card.tsx\, \sites/[id]/files/page.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | Emojiler temizlenip Lucide \Pin\ vektör ikonuyla değiştirildi, Sağa Tuttur ikonu \Columns2\ yapıldı | \	erminal-view.tsx\, \	erminal/page.tsx\ | Başarılı (TypeScript 0 hata) |
