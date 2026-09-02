@@ -19,8 +19,13 @@ import "./globals.css";
 // other change is needed.
 
 export const metadata: Metadata = {
-  title: "Sunucu Yönetim Paneli",
-  description: "Sunucularınızı ve sitelerinizi tek panelden yönetin.",
+  title: "Rudder Cloud — Sunucu Yönetim Paneli",
+  description: "Modern, güçlü ve kendi sunucunuzda barındırılan sunucu yönetim paneli.",
+  icons: {
+    icon: "/rudder-icon.png",
+    shortcut: "/rudder-icon.png",
+    apple: "/rudder-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
+import { RudderLogo } from "@/components/rudder-logo"
 import { useCurrentUser } from "@/hooks/use-current-user"
 import { cn } from "@/lib/utils"
 
@@ -109,15 +110,13 @@ export function AppSidebar() {
         collapsed ? "w-16" : "w-64"
       )}
     >
-      <div className={cn("flex h-16 items-center gap-2 px-5", collapsed && "justify-center px-0")}>
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Server className="size-4" />
-        </div>
-        {!collapsed && (
-          <span className="truncate font-heading text-sm font-semibold text-foreground">
-            Sunucu Paneli
-          </span>
-        )}
+      <div className={cn("flex h-16 items-center px-4", collapsed ? "justify-center px-0" : "justify-start")}>
+        <RudderLogo
+          size={collapsed ? "sm" : "sm"}
+          iconOnly={collapsed}
+          href="/"
+          className={collapsed ? "justify-center" : ""}
+        />
       </div>
 
       <Separator />

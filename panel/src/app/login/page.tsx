@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, Server } from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { RudderLogo } from "@/components/rudder-logo"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -50,18 +51,25 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Server className="size-6" />
-          </div>
-          <div>
-            <h1 className="font-heading text-lg font-semibold text-foreground">
-              Sunucu Yönetim Paneli
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Devam etmek için süper admin hesabınızla giriş yapın.
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-background px-4 overflow-hidden">
+      {/* Subtle Background Radial Glow */}
+      <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 size-[600px] rounded-full bg-red-600/10 blur-[120px]" />
+      
+      <div className="relative z-10 w-full max-w-sm space-y-7">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <RudderLogo size="xl" showText={false} />
+          
+          <div className="space-y-1">
+            <div className="flex items-center justify-center gap-2">
+              <span className="font-heading text-2xl font-black tracking-[0.2em] bg-gradient-to-r from-red-500 via-rose-500 to-red-400 bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(225,29,72,0.35)]">
+                RUDDER
+              </span>
+              <span className="font-heading text-lg font-semibold tracking-widest text-foreground/80">
+                CLOUD
+              </span>
+            </div>
+            <p className="font-mono text-xs tracking-wider text-muted-foreground">
+              Sunucu Yönetim ve Dağıtım Paneli
             </p>
           </div>
         </div>
