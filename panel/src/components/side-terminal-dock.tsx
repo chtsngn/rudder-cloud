@@ -114,31 +114,25 @@ export function SideTerminalDock() {
         </aside>
       )}
 
-      {/* ═══ 2. KÜÇÜLTÜLMÜŞ / SABİT LÜKS BORDO & ALTIN TERMİNAL BUTONU (NO TEXT) ═══ */}
+      {/* ═══ 2. KÜÇÜLTÜLMÜŞ / SABİT LÜKS BORDO & ALTIN TERMİNAL BUTONU (NO TEXT, NO NATIVE TITLE) ═══ */}
       {(!isOpen || isMinimized) && (
-        <div className="fixed bottom-5 right-5 z-40 group animate-in fade-in slide-in-from-bottom-3 duration-200">
-          {/* Hover Kısayol Tooltipi */}
-          <div className="absolute -top-9 left-1/2 -translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 whitespace-nowrap">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/95 text-white text-[11px] font-mono shadow-xl border border-slate-700/80 backdrop-blur-xs">
+        <div className="fixed bottom-8 right-8 z-40 group animate-in fade-in slide-in-from-bottom-3 duration-200">
+          {/* Hover Kısayol Tooltipi (Sağa hizalı, taşmaz) */}
+          <div className="absolute -top-9.5 right-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200 -translate-y-1 group-hover:translate-y-0 whitespace-nowrap z-50">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900 text-white text-[11px] font-mono shadow-xl border border-slate-700/80 backdrop-blur-xs">
               <span className="text-[#dfc9a0]">Terminal</span>
-              <kbd className="text-[10px] text-slate-400 bg-black/50 px-1 py-0.5 rounded">Ctrl+`</kbd>
+              <kbd className="text-[10px] text-slate-400 bg-black/50 px-1.5 py-0.5 rounded border border-slate-700">Ctrl+`</kbd>
             </span>
           </div>
 
           <button
             type="button"
             onClick={openDock}
-            title="Terminal Konsolunu Aç (Ctrl + `)"
-            className="relative size-11 rounded-2xl border border-[#c8a87c]/60 bg-[#2b040d] hover:bg-[#420614] text-[#dfc9a0] shadow-[0_6px_20px_rgba(43,4,13,0.45)] hover:shadow-[0_8px_25px_rgba(200,168,124,0.35)] hover:border-[#dfc9a0] flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95"
+            aria-label="Terminal Konsolunu Aç"
+            className="relative size-12 rounded-2xl border border-[#c8a87c]/60 bg-[#2b040d] hover:bg-[#420614] text-[#dfc9a0] shadow-[0_8px_24px_rgba(43,4,13,0.5)] hover:shadow-[0_10px_30px_rgba(200,168,124,0.4)] hover:border-[#dfc9a0] flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95"
           >
             {/* Terminal Prompt Icon */}
-            <TerminalIcon className="size-4.5 text-[#dfc9a0]" />
-
-            {/* Subtle Warm Gold Indicator Dot */}
-            <span className="absolute -top-1 -right-1 flex size-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#c8a87c] opacity-60" />
-              <span className="relative inline-flex rounded-full size-2.5 bg-[#c8a87c] border-2 border-[#2b040d]" />
-            </span>
+            <TerminalIcon className="size-5 text-[#dfc9a0]" />
           </button>
         </div>
       )}

@@ -29,12 +29,12 @@
 - [x] **Sistem Ayarları (\/settings\) Sayfası Temaya Uygun Olarak Yenilendi.**
 - [x] **Kullanıcı Yönetimi (\/users\) Sayfası Lüks Tablo & Arama/Filtre Sistemiyle Yenilendi.**
 - [x] **Kalıcı Sağ Yan Terminal Dock'u & Rekürsif Sayfa Uyumlanması (Adaptive Split Screen).**
-- [x] **Terminal Sabit Launcher Butonu Lüks Bordo/Altın Minimalist Rozete Dönüştürüldü:**
-  - Parlak neon renkler ve buton üzeri metinler kaldırıldı.
-  - Derin bordo (\#2b040d\) gövde, fırçalanmış altın (\#c8a87c\) çerçeve ve altın terminal ikonu ile kompakt karemsi kapsül (\size-11 rounded-2xl\) haline getirildi.
-  - Kısayol bilgisi butonun üstünde yalnızca hover esnasında beliren zarif bir tooltip'e (\Terminal Ctrl+\\) taşındı.
+- [x] **Terminal Sabit Launcher Butonu Bordo/Altın İkon Kapsülüne Dönüştürüldü:**
+  - Konumu sağ ve alt kenardan içeriye çekildi (\ottom-8 right-8\), görev çubuğu ve ekran kenarından ferah bir mesafe bırakıldı.
+  - Sağ üstteki gereksiz nokta kaldırıldı.
+  - Kısayol tooltipi sağa hizalandı (\ight-0 -top-9.5\), ekran dışına taşma sorunu çözüldü; tarayıcının varsayılan kaba tooltipi engellendi.
 - [x] **Denetim Günlüğü (\/audit\) Sayfası & Kart Tasarımı Beyaz Temaya Tam Uyumlandı:**
-  - Koyu/siyah kutular ve göze batan koyu alanlar tamamen kaldırıldı; sayfanın aydınlık lüks tasarımına tam uyumlu yumuşak açık gri (\g-slate-50\) ve altın kenarlıklı kartlara dönüştürüldü.
+  - Koyu kutular kaldırılarak yumuşak açık gri (\g-slate-50\) ve altın kenarlıklı kartlara dönüştürüldü.
 - [x] **Test & Doğrulama:** TypeScript typecheck (\
 px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 
@@ -52,3 +52,4 @@ px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 | 2026-09-02 | \/users\ sayfası lüks tablo, arama/filtre çubuğu ve avatar sistemiyle yenilendi | \users/page.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | Kalıcı Yan Terminal, Rekürsif Sayfa Uyumlanması (\DashboardMain\) ve Obsidian Komut Barı | \dashboard-main.tsx\, \layout.tsx\, \	erminal-dock-context.tsx\, \	erminal-view.tsx\, \side-terminal-dock.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | Bordo/Altın Minimalist Terminal Rozeti ve \/audit\ Aydınlık Kart Uyarlaması | \side-terminal-dock.tsx\, \udit/page.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | Terminal butonu konumu içeri çekildi (\ottom-8 right-8\), sağ üst nokta kaldırıldı, tooltip hizalandı | \side-terminal-dock.tsx\ | Başarılı (TypeScript 0 hata) |
