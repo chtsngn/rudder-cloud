@@ -12,13 +12,7 @@ import {
   Server,
   Activity,
   CheckCircle2,
-  Terminal,
-  Network,
   RotateCw,
-  Sparkles,
-  Layers,
-  ArrowUpRight,
-  Code2,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -165,26 +159,14 @@ export default function DashboardPage() {
     { label: "IP Adresi", value: stats?.host.ip ?? "—" },
   ]
 
-  const quickStarters = [
-    { label: "WordPress", desc: "Tek tıkla hazır blog & CMS", href: "/sites/new?type=wordpress", icon: Globe },
-    { label: "Node.js / Next.js", desc: "Fullstack web uygulaması", href: "/sites/new?type=nodejs", icon: Code2 },
-    { label: "Python / FastAPI", desc: "Yüksek hızlı backend servisi", href: "/sites/new?type=python", icon: Layers },
-  ]
-
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
       {/* ═══ 1. ÜST BAŞLIK & AKSİYON ALANI ═══ */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-200/80">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619]">
-              Anasayfa
-            </h1>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Canlı
-            </span>
-          </div>
+          <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619]">
+            Anasayfa
+          </h1>
           <p className="text-xs text-slate-500 mt-1 font-sans">
             Sunucunuzun gerçek zamanlı donanım telemetrisi ve barındırılan web siteleriniz.
           </p>
@@ -213,7 +195,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ═══ 2. ÜST 4 TELEMETRİ KARTI (KAPTAN KÖŞKÜ STANDARDI) ═══ */}
+      {/* ═══ 2. ÜST 4 TELEMETRİ KARTI ═══ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* CPU Card */}
         {stats === null ? (
@@ -307,16 +289,6 @@ export default function DashboardPage() {
               </span>
             )}
           </div>
-
-          <div className="flex items-center gap-2">
-            <Link
-              href="/ports"
-              className="text-xs font-semibold text-slate-500 hover:text-[#580619] flex items-center gap-1 transition-colors px-2.5 py-1 rounded-lg hover:bg-slate-100"
-            >
-              <Network className="size-3.5" />
-              Portları Görüntüle
-            </Link>
-          </div>
         </div>
 
         {/* Siteler Konteyneri */}
@@ -330,8 +302,8 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : sites.length === 0 ? (
-          /* Zengin & Fonksiyonel Boş Durum Başlatıcısı (Nautical Launchpad) */
-          <div className="rounded-3xl border border-slate-200/90 bg-gradient-to-b from-white via-slate-50/50 to-white p-10 md:p-14 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden">
+          /* Sade & Şık Boş Durum Alanı */
+          <div className="rounded-3xl border border-slate-200/90 bg-gradient-to-b from-white via-slate-50/40 to-white p-10 md:p-14 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden">
             {/* Ortada Parlayan Dümen Amblemi */}
             <div className="relative size-20 rounded-2xl bg-gradient-to-b from-[#580619]/10 to-[#580619]/5 border-2 border-[#c8a87c]/40 flex items-center justify-center p-4 mb-5 shadow-inner group">
               <Image
@@ -346,34 +318,9 @@ export default function DashboardPage() {
             <h3 className="font-heading text-xl md:text-2xl font-extrabold text-slate-800 mb-2 tracking-tight">
               Henüz bir site eklenmedi.
             </h3>
-            <p className="text-xs md:text-sm text-slate-500 max-w-lg mb-8 font-sans leading-relaxed">
-              Sunucunuzda yeni bir WordPress blogu, Node.js servisi, Python backend veya statik web sitesi yayına alarak self-hosting deneyiminizi başlatın.
+            <p className="text-xs md:text-sm text-slate-500 max-w-md mb-7 font-sans leading-relaxed">
+              Sunucunuzda yeni bir WordPress, Node.js, Python veya statik web sitesi yayına alarak self-hosting deneyiminizi başlatın.
             </p>
-
-            {/* Hızlı Başlatıcı Şablon Kartları */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl mb-8">
-              {quickStarters.map((starter) => {
-                const Icon = starter.icon
-                return (
-                  <Link
-                    key={starter.label}
-                    href={starter.href}
-                    className="flex flex-col items-start p-4 rounded-2xl border border-slate-200 bg-white hover:border-[#c8a87c] hover:shadow-md transition-all duration-200 text-left group"
-                  >
-                    <div className="size-8 rounded-lg bg-[#580619]/5 flex items-center justify-center text-[#580619] mb-2.5 group-hover:bg-[#580619] group-hover:text-white transition-colors">
-                      <Icon className="size-4" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
-                      {starter.label}
-                      <ArrowUpRight className="size-3 text-slate-400 group-hover:text-[#580619] transition-colors" />
-                    </span>
-                    <span className="text-[11px] text-slate-500 mt-0.5">
-                      {starter.desc}
-                    </span>
-                  </Link>
-                )
-              })}
-            </div>
 
             <Button
               asChild
