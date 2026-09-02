@@ -27,10 +27,12 @@
 - [x] **Sunucu Terminali (\/terminal\) Lüks Kaptan Köşkü Konsoluna Dönüştürüldü.**
 - [x] **Terminal Akıllı Komut Sistemi (Spotlight Paleti, Özel Komut Ekleme, Komut Kitaplığı).**
 - [x] **Sistem Ayarları (\/settings\) Sayfası Temaya Uygun Olarak Yenilendi.**
-- [x] **Kullanıcı Yönetimi (\/users\) Sayfası Lüks Tablo & Arama/Filtre Sistemiyle Yenilendi:**
-  - **Üst Başlık:** \Cinzel\ bordo başlık, kullanıcı sayacı ve \+ Yeni Kullanıcı Ekle\ butonu.
-  - **Arama & Rol Filtresi:** Kullanıcı adına göre anlık filtreleme ve \Tümü / Süper Admin / Üye\ sekmeleri.
-  - **Lüks Kullanıcı Tablosu:** Özel harf avatarları, \Siz\ durum rozeti, dinamik rol değiştirme seçicisi, formatlı kayıt tarihi, satır içi parola sıfırlama çekmecesi ve korumalı silme işlemleri.
+- [x] **Kullanıcı Yönetimi (\/users\) Sayfası Lüks Tablo & Arama/Filtre Sistemiyle Yenilendi.**
+- [x] **Antigravity IDE Tarzı Kalıcı Sağ Yan Terminal Penceresi (Side Terminal Dock):**
+  - **Kalıcı Durum (Persistent Shell):** Sayfalar arasında (\/sites\, \/settings\, \/users\ vb.) gezinirken bağlantısı kopmayan ve oturumu korunan React Context tabanlı mimari.
+  - **Genişlik Ayarlama (Draggable Resize):** Sol kenardaki tutamaç ile fareyle sürükleyerek terminal pencere genişliğini anlık ayarlayabilme (\380px - 1200px\).
+  - **Açma/Kapatma & Kısayol:** \Ctrl + \\ (veya \Ctrl + J\) klavye kısayolu, ekranın sağ altındaki şık bordo/altın launcher butonu veya \/terminal\ sayfasındaki "Sağ Yan Pencereye Al" butonu ile tek tıkla açıp kapatabilme.
+  - **Pencere Kontrolleri:** macOS trafik ışıkları, tam sayfa büyütme (\Maximize\), simge durumuna küçültme (\Minimize\) ve kapatma (\Close\).
 - [x] **Test & Doğrulama:** TypeScript typecheck (\
 px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 
@@ -46,3 +48,4 @@ px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 | 2026-09-02 | \/terminal\ sayfası ve akıllı komut sistemi (\Ctrl+K\, özel komutlar, kitaplık) kuruldu | \	erminal/page.tsx\, \	erminal-view.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | \/settings\ sayfası (Alan Adı/SSL ve S3 Depolama) lüks tasarımla yenilendi | \settings/page.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | \/users\ sayfası lüks tablo, arama/filtre çubuğu ve avatar sistemiyle yenilendi | \users/page.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | Kalıcı Sağ Yan Terminal Dock'u (\Ctrl+\\, sürükle-bırak genişlik) geliştirildi | \layout.tsx\, \side-terminal-dock.tsx\, \	erminal-dock-context.tsx\, \	erminal/page.tsx\ | Başarılı (TypeScript 0 hata) |

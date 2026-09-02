@@ -1,7 +1,11 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { ShieldAlert, Terminal as TerminalIcon, Sparkles } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ShieldAlert, Terminal as TerminalIcon, Sparkles, PanelRightClose, ArrowRight } from "lucide-react"
+
+import { useTerminalDock } from "@/components/terminal-dock-context"
+import { Button } from "@/components/ui/button"
 
 // xterm.js tarayıcı-özel API'ler kullanıyor (WebSocket, `document`) — Monaco
 // editörle (Aşama C) aynı desen: `ssr: false` ile yalnızca istemcide yüklenir.
@@ -21,6 +25,14 @@ const TerminalView = dynamic(
 )
 
 export default function TerminalPage() {
+  const router = useRouter()
+  const { openDock } = useTerminalDock()
+
+  const handleDockToRight = () => {
+    openDock()
+    router.push("/")
+  }
+
   return (
     <div className="max-w-7xl mx-auto flex h-full flex-col space-y-6 pb-8">
       {/* ═══ 1. ÜST BAŞLIK & GÜVENLİK UYARISI ═══ */}
@@ -39,6 +51,14 @@ export default function TerminalPage() {
               </p>
             </div>
           </div>
+
+          <Button
+            onClick={handleDockToRight}
+            className="bg-[#580619] hover:bg-[#720a22] text-white font-semibold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 h-10 border border-[#c8a87c]/40 hover:border-[#c8a87c] shrink-0 cursor-pointer"
+          >
+            <PanelRightClose className="size-4 text-[#dfc9a0]" />
+            Sağ Yan Pencereye Al
+          </Button>
         </div>
 
         {/* Güvenlik & Yetki Bilgilendirme Bandı */}
