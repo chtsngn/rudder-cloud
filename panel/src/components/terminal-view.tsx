@@ -243,7 +243,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
     term.loadAddon(fitAddon)
     term.open(container)
 
-    term.writeln("\x1b[38;2;223;201;160m⛵ Rudder Cloud • Sunucu Web Terminali\x1b[0m")
+    term.writeln("\x1b[38;2;223;201;160m>_ Rudder Cloud • Sunucu Web Terminali\x1b[0m")
     term.writeln("\x1b[90mBağlantı kuruluyor, lütfen bekleyin...\x1b[0m\r\n")
 
     setTimeout(() => {
@@ -532,14 +532,14 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
         />
       </div>
 
-      {/* ═══ 2. HIZLI KOMUT ÇİPLERİ & YÖNETİM BAR (TEMİz BEYAZ/ALTIN KART TASARIMI) ═══ */}
-      <div className="flex items-center justify-between gap-2 overflow-x-auto py-1 text-xs shrink-0 scrollbar-none">
+      {/* ═══ 2. HIZLI KOMUT ÇİPLERİ & YÖNETİM BAR (PREMIUM OBSIDIAN & ALTIN KART TASARIMI) ═══ */}
+      <div className="flex items-center justify-between gap-2 overflow-x-auto py-1.5 px-2 bg-[#0d121f]/90 border-t border-slate-800/90 rounded-b-2xl text-xs shrink-0 scrollbar-none">
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Komut Ekle Butonu */}
           <button
             type="button"
             onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-[#c8a87c] bg-[#580619] px-3 py-1.5 font-bold text-[11px] text-white shadow-xs hover:bg-[#720a22] transition-all cursor-pointer shrink-0 active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[#c8a87c]/80 bg-[#580619] px-3 py-1.5 font-bold text-[11px] text-white shadow-xs hover:bg-[#720a22] hover:border-[#dfc9a0] transition-all cursor-pointer shrink-0 active:scale-95"
           >
             <Plus className="size-3.5 text-[#dfc9a0]" />
             Komut Ekle
@@ -549,9 +549,9 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
           <button
             type="button"
             onClick={() => setIsLibraryOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 font-bold text-[11px] text-slate-700 shadow-2xs hover:border-[#c8a87c] hover:bg-slate-50 transition-all cursor-pointer shrink-0 active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700/80 bg-[#161d2d] px-3 py-1.5 font-bold text-[11px] text-[#dfc9a0] shadow-2xs hover:border-[#c8a87c] hover:text-white hover:bg-[#1f283d] transition-all cursor-pointer shrink-0 active:scale-95"
           >
-            <BookOpen className="size-3.5 text-[#580619]" />
+            <BookOpen className="size-3.5 text-[#c8a87c]" />
             Komut Kitaplığı
           </button>
         </div>
@@ -561,7 +561,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
           {customCommands.map((qc) => (
             <div
               key={qc.id}
-              className="group relative inline-flex items-center rounded-xl border border-[#c8a87c]/70 bg-[#580619]/5 pl-2.5 pr-1.5 py-1 text-[11px] font-mono font-bold text-[#580619] shadow-2xs hover:border-[#c8a87c] hover:bg-[#580619]/10 transition-all shrink-0"
+              className="group relative inline-flex items-center rounded-xl border border-[#c8a87c]/70 bg-[#580619]/40 pl-2.5 pr-1.5 py-1 text-[11px] font-mono font-bold text-[#dfc9a0] hover:text-white hover:border-[#dfc9a0] hover:bg-[#580619]/60 shadow-2xs transition-all shrink-0"
             >
               <button
                 type="button"
@@ -576,7 +576,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                 type="button"
                 onClick={(e) => handleDeleteCustomCommand(qc.id, e)}
                 title="Özel komutu sil"
-                className="size-4 rounded-md flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                className="size-4 rounded-md flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-950/50 transition-colors cursor-pointer"
               >
                 <X className="size-2.5" />
               </button>
@@ -589,10 +589,10 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
               type="button"
               onClick={() => handleExecuteCommand(qc.cmd)}
               title={`${qc.desc} (Çalıştırmak için tıkla)`}
-              className="group inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 font-mono text-[11px] font-bold text-slate-700 shadow-2xs hover:border-[#c8a87c] hover:bg-[#580619]/5 hover:text-[#580619] transition-all cursor-pointer shrink-0 active:scale-95"
+              className="group inline-flex items-center gap-1.5 rounded-xl border border-slate-700/80 bg-[#111622] hover:bg-[#1a2336] px-3 py-1.5 font-mono text-[11px] font-bold text-slate-300 hover:text-white hover:border-[#c8a87c] shadow-2xs transition-all cursor-pointer shrink-0 active:scale-95"
             >
-              <ChevronRight className="size-3 text-slate-400 group-hover:text-[#c8a87c]" />
-              {qc.label}
+              <ChevronRight className="size-3 text-slate-500 group-hover:text-[#c8a87c] transition-colors" />
+              <span>{qc.label}</span>
             </button>
           ))}
         </div>

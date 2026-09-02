@@ -12,6 +12,8 @@ interface TerminalDockContextType {
   setWidth: (width: number) => void
   isMinimized: boolean
   setIsMinimized: (minimized: boolean) => void
+  isDragging: boolean
+  setIsDragging: (dragging: boolean) => void
 }
 
 const TerminalDockContext = createContext<TerminalDockContextType | null>(null)
@@ -23,6 +25,7 @@ export function TerminalDockProvider({ children }: { children: React.ReactNode }
   const [isOpen, setIsOpenState] = useState(false)
   const [width, setWidthState] = useState(520)
   const [isMinimized, setIsMinimized] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
 
   useEffect(() => {
     try {
@@ -99,6 +102,8 @@ export function TerminalDockProvider({ children }: { children: React.ReactNode }
         setWidth,
         isMinimized,
         setIsMinimized,
+        isDragging,
+        setIsDragging,
       }}
     >
       {children}

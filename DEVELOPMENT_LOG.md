@@ -28,10 +28,11 @@
 - [x] **Terminal Akıllı Komut Sistemi (Spotlight Paleti, Özel Komut Ekleme, Komut Kitaplığı).**
 - [x] **Sistem Ayarları (\/settings\) Sayfası Temaya Uygun Olarak Yenilendi.**
 - [x] **Kullanıcı Yönetimi (\/users\) Sayfası Lüks Tablo & Arama/Filtre Sistemiyle Yenilendi.**
-- [x] **Kalıcı Sağ Yan Terminal Dock'u & Özel Oval Yelken Tasarımı (Custom Nautical Arch):**
-  - **Alt Komut Çipleri Eski Sevilen Temiz Beyaz/Altın Kart Tasarımına Döndürüldü:** \+ Komut Ekle\ ve \📖 Komut Kitaplığı\ butonları ile beyaz arka planlı şık komut çipleri restore edildi.
-  - **Sağdaki Mükerrer Kontroller Kaldırıldı:** Başlığın solundaki macOS trafik ışıkları (🔴 Kapat, 🟡 Küçült, 🟢 Tam Ekran) korunup, sağdaki gereksiz çift butonlar temizlendi; sadece arama, font ve yenileme araçları bırakıldı.
-  - **Sol Tarafı Oval / Yelken Kavisli & Altın Bordürlü Tasarım:** Sağ terminal penceresinin sol kenarı \ounded-l-[28px]\ kavis ve \#c8a87c\ altın kenarlık ile sol bordo menümüzün yelken eğrisiyle mükemmel bir ahenk yakalayacak şekilde özelleştirildi; altın tutamaç rozeti yerleştirildi.
+- [x] **Sağa Tutturulabilir Kalıcı Terminal Dock'u & Rekürsif Sayfa Uyumlanması (Adaptive Split Layout):**
+  - **Dinamik Sayfa Daralma / Sola Kayma (Responsive Main Margin):** Terminal açıldığında ana sayfa (\DashboardMain\) sağ kenar boşluğunu (\marginRight\) anlık olarak terminal genişliği kadar daraltır. Arkadaki siteler, tablolar, grafikler ve ayar kartları terminalin arkasında kalmaz; otomatik yeniden boyutlanıp %100 görünür ve tıklanabilir kalır.
+  - **Sürüklemede Anlık Eşzamanlı Boyutlandırma:** Sürükleme tutamacı hareket ettirildikçe hem terminal hem de ana sayfa sıfır gecikmeyle eşzamanlı boyutlanır.
+  - **Premium Obsidian & Altın Hızlı Komut Barı:** Terminal altındaki komut barı koyu obsidian ve altın parıltılı lüks kartlara dönüştürüldü. Üzerine gelindiğinde metin kaybolma hatası tamamen giderildi.
+  - **Gemi Emojisi Kaldırıldı:** Terminal karşılama metnindeki gemi emojisi kaldırılarak profesyonel \>_ Rudder Cloud\ metnine geçirildi.
 - [x] **Test & Doğrulama:** TypeScript typecheck (\
 px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 
@@ -47,4 +48,4 @@ px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 | 2026-09-02 | \/terminal\ sayfası ve akıllı komut sistemi (\Ctrl+K\, özel komutlar, kitaplık) kuruldu | \	erminal/page.tsx\, \	erminal-view.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | \/settings\ sayfası (Alan Adı/SSL ve S3 Depolama) lüks tasarımla yenilendi | \settings/page.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | \/users\ sayfası lüks tablo, arama/filtre çubuğu ve avatar sistemiyle yenilendi | \users/page.tsx\ | Başarılı (TypeScript 0 hata) |
-| 2026-09-02 | Sağ terminal dock'u sol oval kavis (\ounded-l-[28px]\), temiz beyaz çipler ve sadeleştirilmiş kontrollerle yenilendi | \side-terminal-dock.tsx\, \	erminal-view.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | Kalıcı Yan Terminal, Rekürsif Sayfa Uyumlanması (\DashboardMain\) ve Obsidian Komut Barı | \dashboard-main.tsx\, \layout.tsx\, \	erminal-dock-context.tsx\, \	erminal-view.tsx\, \side-terminal-dock.tsx\ | Başarılı (TypeScript 0 hata) |

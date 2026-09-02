@@ -36,9 +36,10 @@ export function SideTerminalDock() {
     setWidth,
     isMinimized,
     setIsMinimized,
+    isDragging,
+    setIsDragging,
   } = useTerminalDock()
 
-  const [isDragging, setIsDragging] = useState(false)
   const dragStartX = useRef(0)
   const dragStartWidth = useRef(0)
 
@@ -70,7 +71,7 @@ export function SideTerminalDock() {
       window.removeEventListener("mousemove", handleMouseMove)
       window.removeEventListener("mouseup", handleMouseUp)
     }
-  }, [isDragging, setWidth])
+  }, [isDragging, setWidth, setIsDragging])
 
   // /terminal sayfasındayken dock'u gizle
   const isTerminalPage = pathname === "/terminal"
