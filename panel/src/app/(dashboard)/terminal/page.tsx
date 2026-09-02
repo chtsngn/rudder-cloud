@@ -55,15 +55,10 @@ export default function TerminalPage() {
           <button
             type="button"
             onClick={handleDockToRight}
-            className="group relative inline-flex items-center gap-2.5 rounded-full border border-[#c8a87c]/60 bg-gradient-to-r from-[#580619] via-[#720a22] to-[#580619] px-5 py-2.5 text-xs font-bold text-white shadow-[0_4px_16px_rgba(88,6,25,0.35)] hover:shadow-[0_8px_25px_rgba(200,168,124,0.4)] hover:border-[#dfc9a0] transition-all cursor-pointer hover:scale-102 active:scale-98 shrink-0"
+            className="group inline-flex items-center gap-2 rounded-xl border border-[#c8a87c]/50 bg-[#580619] hover:bg-[#720a22] hover:border-[#dfc9a0] px-4 py-2 text-xs font-bold text-white shadow-2xs transition-all cursor-pointer hover:scale-102 active:scale-98 shrink-0"
           >
             <PanelRightClose className="size-4 text-[#dfc9a0] transition-transform group-hover:translate-x-0.5" />
-            <span className="font-heading tracking-wider font-extrabold text-[11px]">
-              YAN PENCEREYE TUTTUR
-            </span>
-            <span className="text-[10px] font-mono bg-black/40 text-[#dfc9a0] px-2 py-0.5 rounded-full border border-[#c8a87c]/30 shadow-inner">
-              Dock ↗
-            </span>
+            <span className="font-heading tracking-wide">Sağa Tuttur</span>
           </button>
         </div>
 

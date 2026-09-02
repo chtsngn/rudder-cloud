@@ -45,6 +45,7 @@ export interface QuickCommandItem {
   desc?: string
   category: "custom" | "system" | "docker" | "nginx" | "network"
   isCustom?: boolean
+  isPinned?: boolean
 }
 
 const DEFAULT_PRESETS: QuickCommandItem[] = [
@@ -76,6 +77,7 @@ const LIBRARY_PRESETS: QuickCommandItem[] = [
 ]
 
 const STORAGE_KEY = "rudder:terminal:custom-commands"
+const USAGE_STORAGE_KEY = "rudder:terminal:command-usage"
 
 export interface TerminalViewProps {
   isDocked?: boolean
@@ -96,8 +98,9 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
   const [fontSize, setFontSize] = useState(13)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
-  // Özel Komutlar Listesi
+  // Özel Komutlar & Kullanım Sayıları
   const [customCommands, setCustomCommands] = useState<QuickCommandItem[]>([])
+  const [commandUsage, setCommandUsage] = useState<Record<string, number>>({})
   
   // Modallar
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -106,20 +109,29 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
   const [paletteQuery, setPaletteQuery] = useState("")
   const [paletteSelectedIndex, setPaletteSelectedIndex] = useState(0)
 
+  // Kitaplık Arama & Kategori
+  const [librarySearchQuery, setLibrarySearchQuery] = useState("")
+  const [libraryCategory, setLibraryCategory] = useState<string>("all")
+
   // Yeni Komut Ekleme Form Alanları
   const [newLabel, setNewLabel] = useState("")
   const [newCmd, setNewCmd] = useState("")
   const [newDesc, setNewDesc] = useState("")
+  const [newIsPinned, setNewIsPinned] = useState(false)
 
   // Kopyalandı geribildirimi
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
-  // localStorage'dan özel komutları oku
+  // localStorage'dan özel komutları ve kullanım sıklıklarını oku
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
         setCustomCommands(JSON.parse(saved))
+      }
+      const savedUsage = localStorage.getItem(USAGE_STORAGE_KEY)
+      if (savedUsage) {
+        setCommandUsage(JSON.parse(savedUsage))
       }
     } catch {}
   }, [])
@@ -144,6 +156,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
       desc: newDesc.trim() || undefined,
       category: "custom",
       isCustom: true,
+      isPinned: newIsPinned,
     }
 
     const updated = [...customCommands, item]
@@ -151,7 +164,17 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
     setNewLabel("")
     setNewCmd("")
     setNewDesc("")
+    setNewIsPinned(false)
     setIsAddModalOpen(false)
+  }
+
+  // Özel komut sabitleme durumunu değiştir (Pin / Unpin)
+  const togglePinCommand = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const updated = customCommands.map((c) =>
+      c.id === id ? { ...c, isPinned: !c.isPinned } : c
+    )
+    saveCustomCommands(updated)
   }
 
   // Özel komut sil
@@ -161,10 +184,61 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
     saveCustomCommands(updated)
   }
 
+  // Kitaplıktan hızlı bara sabitle
+  const handlePinFromLibrary = (item: QuickCommandItem) => {
+    const existing = customCommands.find((c) => c.cmd === item.cmd)
+    if (existing) {
+      togglePinCommand(existing.id, { stopPropagation: () => {} } as React.MouseEvent)
+    } else {
+      const newCustom: QuickCommandItem = {
+        id: `lib-pinned-${Date.now()}`,
+        label: item.label,
+        cmd: item.cmd,
+        desc: item.desc,
+        category: "custom",
+        isCustom: true,
+        isPinned: true,
+      }
+      saveCustomCommands([...customCommands, newCustom])
+    }
+  }
+
   // Tüm komutlar (Presets + Custom + Library)
   const allCommands = useMemo(() => {
     return [...customCommands, ...DEFAULT_PRESETS, ...LIBRARY_PRESETS]
   }, [customCommands])
+
+  // Hızlı Komut Barı Sıralaması:
+  // 1. Sabitlenmiş Komutlar (isPinned = true)
+  // 2. En Sık Kullanılan Komutlar (kullanım sıklığına göre azalan)
+  const sortedQuickCommands = useMemo(() => {
+    const all = [...customCommands, ...DEFAULT_PRESETS]
+    return all.sort((a, b) => {
+      const aPinned = a.isPinned ? 1 : 0
+      const bPinned = b.isPinned ? 1 : 0
+      if (aPinned !== bPinned) return bPinned - aPinned
+
+      const aCount = commandUsage[a.id] || 0
+      const bCount = commandUsage[b.id] || 0
+      return bCount - aCount
+    })
+  }, [customCommands, commandUsage])
+
+  // Filtrelenmiş Kitaplık Komutları
+  const filteredLibraryCommands = useMemo(() => {
+    return LIBRARY_PRESETS.filter((item) => {
+      if (libraryCategory !== "all" && item.category !== libraryCategory) return false
+      if (librarySearchQuery.trim()) {
+        const q = librarySearchQuery.toLowerCase()
+        return (
+          item.label.toLowerCase().includes(q) ||
+          item.cmd.toLowerCase().includes(q) ||
+          (item.desc && item.desc.toLowerCase().includes(q))
+        )
+      }
+      return true
+    })
+  }, [libraryCategory, librarySearchQuery])
 
   // Palette için filtrelenmiş komutlar
   const filteredPaletteCommands = useMemo(() => {
@@ -345,11 +419,22 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
     }
   }
 
-  // Komut çalıştırma (Execute with Enter)
-  const handleExecuteCommand = (cmd: string) => {
+  // Komut çalıştırma (Execute with Enter + Usage count update)
+  const handleExecuteCommand = (cmd: string, commandId?: string) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: "input", data: cmd + "\r" }))
       termRef.current?.focus()
+
+      const targetId = commandId || allCommands.find((c) => c.cmd === cmd)?.id
+      if (targetId) {
+        setCommandUsage((prev) => {
+          const updated = { ...prev, [targetId]: (prev[targetId] || 0) + 1 }
+          try {
+            localStorage.setItem(USAGE_STORAGE_KEY, JSON.stringify(updated))
+          } catch {}
+          return updated
+        })
+      }
     }
   }
 
@@ -460,7 +545,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
             )}
           </div>
 
-          {/* Sağ: Terminal Kontrol Araçları (Yalnızca yardımcı araçlar, soldaki pencerelerle çakışmaz) */}
+          {/* Sağ: Terminal Kontrol Araçları */}
           <div className="flex items-center gap-1 shrink-0">
             {/* Komut Paleti Butonu */}
             <button
@@ -532,14 +617,14 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
         />
       </div>
 
-      {/* ═══ 2. HIZLI KOMUT ÇİPLERİ & YÖNETİM BAR (PREMIUM OBSIDIAN & ALTIN KART TASARIMI) ═══ */}
-      <div className="flex items-center justify-between gap-2 overflow-x-auto py-1.5 px-2 bg-[#0d121f]/90 border-t border-slate-800/90 rounded-b-2xl text-xs shrink-0 scrollbar-none">
+      {/* ═══ 2. HIZLI KOMUT ÇİPLERİ & YÖNETİM BAR (TAM OVAL / ROUNDED-FULL KART TASARIMI) ═══ */}
+      <div className="flex items-center justify-between gap-2 overflow-x-auto py-1.5 px-3 bg-[#0d121f]/95 border border-slate-700/80 rounded-full shadow-lg text-xs shrink-0 scrollbar-none">
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Komut Ekle Butonu */}
           <button
             type="button"
             onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-[#c8a87c]/80 bg-[#580619] px-3 py-1.5 font-bold text-[11px] text-white shadow-xs hover:bg-[#720a22] hover:border-[#dfc9a0] transition-all cursor-pointer shrink-0 active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#c8a87c]/80 bg-[#580619] px-3 py-1.5 font-bold text-[11px] text-white shadow-xs hover:bg-[#720a22] hover:border-[#dfc9a0] transition-all cursor-pointer shrink-0 active:scale-95"
           >
             <Plus className="size-3.5 text-[#dfc9a0]" />
             Komut Ekle
@@ -548,57 +633,83 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
           {/* Kitaplık Butonu */}
           <button
             type="button"
-            onClick={() => setIsLibraryOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700/80 bg-[#161d2d] px-3 py-1.5 font-bold text-[11px] text-[#dfc9a0] shadow-2xs hover:border-[#c8a87c] hover:text-white hover:bg-[#1f283d] transition-all cursor-pointer shrink-0 active:scale-95"
+            onClick={() => {
+              setIsLibraryOpen(true)
+              setLibrarySearchQuery("")
+              setLibraryCategory("all")
+            }}
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-700/80 bg-[#161d2d] px-3 py-1.5 font-bold text-[11px] text-[#dfc9a0] shadow-2xs hover:border-[#c8a87c] hover:text-white hover:bg-[#1f283d] transition-all cursor-pointer shrink-0 active:scale-95"
           >
             <BookOpen className="size-3.5 text-[#c8a87c]" />
             Komut Kitaplığı
           </button>
         </div>
 
-        {/* Aktif Komut Çipleri */}
+        {/* Aktif Komut Çipleri (Sabitlenenler ve En Sık Kullanılanlar Önde) */}
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
-          {customCommands.map((qc) => (
-            <div
-              key={qc.id}
-              className="group relative inline-flex items-center rounded-xl border border-[#c8a87c]/70 bg-[#580619]/40 pl-2.5 pr-1.5 py-1 text-[11px] font-mono font-bold text-[#dfc9a0] hover:text-white hover:border-[#dfc9a0] hover:bg-[#580619]/60 shadow-2xs transition-all shrink-0"
-            >
-              <button
-                type="button"
-                onClick={() => handleExecuteCommand(qc.cmd)}
-                title={`${qc.desc || qc.label} (Çalıştırmak için tıkla)`}
-                className="flex items-center gap-1 cursor-pointer pr-1"
-              >
-                <Sparkles className="size-3 text-[#c8a87c]" />
-                <span>{qc.label}</span>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => handleDeleteCustomCommand(qc.id, e)}
-                title="Özel komutu sil"
-                className="size-4 rounded-md flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-950/50 transition-colors cursor-pointer"
-              >
-                <X className="size-2.5" />
-              </button>
-            </div>
-          ))}
+          {sortedQuickCommands.map((qc) => {
+            const isCustom = qc.isCustom
+            const isPinned = qc.isPinned
 
-          {DEFAULT_PRESETS.map((qc) => (
-            <button
-              key={qc.id}
-              type="button"
-              onClick={() => handleExecuteCommand(qc.cmd)}
-              title={`${qc.desc} (Çalıştırmak için tıkla)`}
-              className="group inline-flex items-center gap-1.5 rounded-xl border border-slate-700/80 bg-[#111622] hover:bg-[#1a2336] px-3 py-1.5 font-mono text-[11px] font-bold text-slate-300 hover:text-white hover:border-[#c8a87c] shadow-2xs transition-all cursor-pointer shrink-0 active:scale-95"
-            >
-              <ChevronRight className="size-3 text-slate-500 group-hover:text-[#c8a87c] transition-colors" />
-              <span>{qc.label}</span>
-            </button>
-          ))}
+            return (
+              <div
+                key={qc.id}
+                className={cn(
+                  "group relative inline-flex items-center rounded-full border transition-all shrink-0",
+                  isPinned
+                    ? "border-[#c8a87c] bg-[#580619]/50 text-[#dfc9a0] hover:bg-[#580619]/70 pl-2.5 pr-1.5 py-1 text-[11px] font-mono font-bold shadow-xs"
+                    : isCustom
+                    ? "border-slate-700/80 bg-[#161d2d] text-slate-300 hover:text-white hover:border-[#c8a87c] pl-2.5 pr-1.5 py-1 text-[11px] font-mono font-semibold"
+                    : "border-slate-700/80 bg-[#111622] hover:bg-[#1a2336] text-slate-300 hover:text-white hover:border-[#c8a87c] px-3 py-1.5 text-[11px] font-mono font-semibold cursor-pointer"
+                )}
+              >
+                <button
+                  type="button"
+                  onClick={() => handleExecuteCommand(qc.cmd, qc.id)}
+                  title={`${qc.desc || qc.label} (${commandUsage[qc.id] || 0} kez çalıştırıldı)`}
+                  className="flex items-center gap-1.5 cursor-pointer pr-0.5 active:scale-95"
+                >
+                  {isPinned ? (
+                    <span className="text-[10px]" title="Sabitlenmiş Komut">📌</span>
+                  ) : (
+                    <ChevronRight className="size-3 text-slate-500 group-hover:text-[#c8a87c] transition-colors" />
+                  )}
+                  <span>{qc.label}</span>
+                </button>
+
+                {/* Özel komutlar için Sabitleme & Silme İkonları */}
+                {isCustom && (
+                  <div className="flex items-center gap-0.5 ml-1">
+                    <button
+                      type="button"
+                      onClick={(e) => togglePinCommand(qc.id, e)}
+                      title={isPinned ? "Sabitlemeyi Kaldır" : "Hızlı Bar'a Sabitle"}
+                      className={cn(
+                        "size-4 rounded-full flex items-center justify-center text-[9px] transition-colors cursor-pointer",
+                        isPinned
+                          ? "text-[#dfc9a0] hover:text-white"
+                          : "text-slate-500 hover:text-[#dfc9a0]"
+                      )}
+                    >
+                      📌
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteCustomCommand(qc.id, e)}
+                      title="Özel komutu sil"
+                      className="size-4 rounded-full flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-950/50 transition-colors cursor-pointer"
+                    >
+                      <X className="size-2.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
 
-      {/* ═══ 3. ÖZEL KOMUT EKLEME MODALI ═══ */}
+      {/* ═══ 3. ÖZEL KOMUT EKLEME MODALI (SABİTLEME SEÇENEKLİ) ═══ */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
@@ -662,6 +773,20 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                 />
               </div>
 
+              {/* Sabitleme Seçeneği */}
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <input
+                  type="checkbox"
+                  id="cmd-pin"
+                  checked={newIsPinned}
+                  onChange={(e) => setNewIsPinned(e.target.checked)}
+                  className="size-4 rounded accent-[#580619] cursor-pointer"
+                />
+                <Label htmlFor="cmd-pin" className="text-xs font-bold text-slate-800 cursor-pointer flex items-center gap-1.5 select-none">
+                  <span>📌 Hızlı Bar'a Sabitle (Her zaman en önde dursun)</span>
+                </Label>
+              </div>
+
               <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
                 <Button
                   type="button"
@@ -683,21 +808,21 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
         </div>
       )}
 
-      {/* ═══ 4. KOMUT KİTAPLIĞI MODALI (LIBRARY) ═══ */}
+      {/* ═══ 4. KOMUT KİTAPLIĞI MODALI (ARAMA & SABİTLEME & DENGELİ LÜKS TASARIM) ═══ */}
       {isLibraryOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
           <div className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
             {/* Başlık */}
-            <div className="flex items-center justify-between border-b border-slate-100 p-5 bg-slate-50/50">
-              <div className="flex items-center gap-2.5">
-                <div className="size-9 rounded-xl bg-[#580619]/10 text-[#580619] flex items-center justify-center">
-                  <BookOpen className="size-5" />
+            <div className="flex items-center justify-between border-b border-slate-100 p-5 bg-slate-50/60 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-2xl bg-[#580619]/10 text-[#580619] border border-[#c8a87c]/30 flex items-center justify-center shadow-2xs">
+                  <BookOpen className="size-5 text-[#580619]" />
                 </div>
                 <div>
-                  <h3 className="font-heading font-bold text-base text-slate-900">
+                  <h3 className="font-heading font-extrabold text-lg text-slate-900">
                     Sunucu Komut Kitaplığı
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     Sık kullanılan DevOps &amp; Sistem Yöneticisi hazır komut reçeteleri.
                   </p>
                 </div>
@@ -705,169 +830,128 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
               <button
                 type="button"
                 onClick={() => setIsLibraryOpen(false)}
-                className="size-8 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 flex items-center justify-center"
+                className="size-8 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 flex items-center justify-center cursor-pointer transition-colors"
               >
                 <X className="size-4" />
               </button>
             </div>
 
-            {/* İçerik */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-6">
-              {/* Docker */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  <Layers className="size-3.5 text-blue-600" />
-                  <span>Docker &amp; Konteynerler</span>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {LIBRARY_PRESETS.filter((c) => c.category === "docker").map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex flex-col justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/40 hover:bg-slate-50 transition-colors"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-xs font-bold text-slate-900">{item.label}</span>
-                          <span className="text-[10px] text-blue-600 font-bold uppercase bg-blue-50 px-1.5 py-0.5 rounded">Docker</span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">{item.desc}</p>
-                        <code className="block mt-2 font-mono text-[10px] text-slate-700 bg-white p-1.5 rounded-lg border border-slate-200 select-all truncate">
-                          {item.cmd}
-                        </code>
-                      </div>
-                      <div className="flex items-center justify-end gap-2 mt-3 pt-2 border-t border-slate-200/60">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            handlePasteCommand(item.cmd)
-                            setIsLibraryOpen(false)
-                          }}
-                          className="h-7 text-[11px] px-2"
-                        >
-                          <Copy className="size-3 mr-1" />
-                          Yapıştır
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            handleExecuteCommand(item.cmd)
-                            setIsLibraryOpen(false)
-                          }}
-                          className="h-7 text-[11px] px-3 bg-[#580619] hover:bg-[#720a22] text-white"
-                        >
-                          <CornerDownLeft className="size-3 mr-1 text-[#dfc9a0]" />
-                          Çalıştır
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            {/* Arama ve Kategori Filtresi Barı */}
+            <div className="p-4 border-b border-slate-100 bg-white space-y-3 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                <Input
+                  value={librarySearchQuery}
+                  onChange={(e) => setLibrarySearchQuery(e.target.value)}
+                  placeholder="Kitaplıkta komut veya açıklama ara (örn: logs, prune, port, ssl)..."
+                  className="pl-10 h-10 rounded-xl bg-slate-50 border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white transition-all"
+                />
+                {librarySearchQuery && (
+                  <button
+                    onClick={() => setLibrarySearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-slate-400 hover:text-slate-700 cursor-pointer"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
               </div>
 
-              {/* Nginx */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  <Server className="size-3.5 text-emerald-600" />
-                  <span>Nginx &amp; Web Sunucusu</span>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {LIBRARY_PRESETS.filter((c) => c.category === "nginx").map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex flex-col justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/40 hover:bg-slate-50 transition-colors"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-xs font-bold text-slate-900">{item.label}</span>
-                          <span className="text-[10px] text-emerald-600 font-bold uppercase bg-emerald-50 px-1.5 py-0.5 rounded">Nginx</span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">{item.desc}</p>
-                        <code className="block mt-2 font-mono text-[10px] text-slate-700 bg-white p-1.5 rounded-lg border border-slate-200 select-all truncate">
-                          {item.cmd}
-                        </code>
-                      </div>
-                      <div className="flex items-center justify-end gap-2 mt-3 pt-2 border-t border-slate-200/60">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            handlePasteCommand(item.cmd)
-                            setIsLibraryOpen(false)
-                          }}
-                          className="h-7 text-[11px] px-2"
-                        >
-                          <Copy className="size-3 mr-1" />
-                          Yapıştır
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            handleExecuteCommand(item.cmd)
-                            setIsLibraryOpen(false)
-                          }}
-                          className="h-7 text-[11px] px-3 bg-[#580619] hover:bg-[#720a22] text-white"
-                        >
-                          <CornerDownLeft className="size-3 mr-1 text-[#dfc9a0]" />
-                          Çalıştır
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              {/* Kategori Seçim Butonları */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                {[
+                  { id: "all", label: "Tümü" },
+                  { id: "docker", label: "Docker" },
+                  { id: "nginx", label: "Nginx" },
+                  { id: "network", label: "Ağ & Portlar" },
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setLibraryCategory(cat.id)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer",
+                      libraryCategory === cat.id
+                        ? "bg-[#580619] text-white shadow-2xs"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200/80"
+                    )}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
               </div>
+            </div>
 
-              {/* Ağ & Güvenlik */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  <Shield className="size-3.5 text-amber-600" />
-                  <span>Ağ, Portlar &amp; Güvenlik</span>
+            {/* Reçeteler Listesi */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-3">
+              {filteredLibraryCommands.length === 0 ? (
+                <div className="py-16 text-center space-y-2">
+                  <div className="size-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                    <Search className="size-5" />
+                  </div>
+                  <p className="font-heading font-bold text-sm text-slate-800">Eşleşen Komut Bulunamadı</p>
+                  <p className="text-xs text-slate-500">Farklı bir anahtar kelime ile aramayı deneyebilirsiniz.</p>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {LIBRARY_PRESETS.filter((c) => c.category === "network").map((item) => (
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {filteredLibraryCommands.map((item) => (
                     <div
                       key={item.id}
-                      className="flex flex-col justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/40 hover:bg-slate-50 transition-colors"
+                      className="flex flex-col justify-between p-4 rounded-2xl border border-slate-200/90 bg-slate-50/50 hover:bg-white hover:border-[#c8a87c]/80 hover:shadow-xs transition-all space-y-3"
                     >
                       <div>
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-xs font-bold text-slate-900">{item.label}</span>
-                          <span className="text-[10px] text-amber-600 font-bold uppercase bg-amber-50 px-1.5 py-0.5 rounded">Ağ</span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono text-xs font-bold text-slate-900 truncate">{item.label}</span>
+                          <span className="text-[10px] font-bold uppercase bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded-md shrink-0 border border-slate-300/60">
+                            {item.category}
+                          </span>
                         </div>
                         <p className="text-[11px] text-slate-500 mt-1 leading-snug">{item.desc}</p>
-                        <code className="block mt-2 font-mono text-[10px] text-slate-700 bg-white p-1.5 rounded-lg border border-slate-200 select-all truncate">
+                        <code className="block mt-2 font-mono text-[10px] text-slate-800 bg-white p-2 rounded-xl border border-slate-200/80 select-all truncate">
                           {item.cmd}
                         </code>
                       </div>
-                      <div className="flex items-center justify-end gap-2 mt-3 pt-2 border-t border-slate-200/60">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            handlePasteCommand(item.cmd)
-                            setIsLibraryOpen(false)
-                          }}
-                          className="h-7 text-[11px] px-2"
+
+                      <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-slate-200/60">
+                        {/* Hızlı Bara Sabitle Butonu */}
+                        <button
+                          type="button"
+                          onClick={() => handlePinFromLibrary(item)}
+                          title="Hızlı Komut Barı'na Sabitle"
+                          className="h-7 px-2.5 rounded-lg bg-slate-100 hover:bg-[#580619]/10 text-slate-700 hover:text-[#580619] text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
                         >
-                          <Copy className="size-3 mr-1" />
-                          Yapıştır
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            handleExecuteCommand(item.cmd)
-                            setIsLibraryOpen(false)
-                          }}
-                          className="h-7 text-[11px] px-3 bg-[#580619] hover:bg-[#720a22] text-white"
-                        >
-                          <CornerDownLeft className="size-3 mr-1 text-[#dfc9a0]" />
-                          Çalıştır
-                        </Button>
+                          <span>📌</span>
+                          <span>Sabitle</span>
+                        </button>
+
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              handlePasteCommand(item.cmd)
+                              setIsLibraryOpen(false)
+                            }}
+                            className="h-7 text-[11px] px-2.5 rounded-lg border-slate-200 bg-white hover:bg-slate-100 text-slate-700"
+                          >
+                            <Copy className="size-3 mr-1 text-slate-400" />
+                            Yapıştır
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              handleExecuteCommand(item.cmd, item.id)
+                              setIsLibraryOpen(false)
+                            }}
+                            className="h-7 text-[11px] px-3 rounded-lg bg-[#580619] hover:bg-[#720a22] text-white font-bold border border-[#c8a87c]/40 cursor-pointer"
+                          >
+                            <CornerDownLeft className="size-3 mr-1 text-[#dfc9a0]" />
+                            Çalıştır
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

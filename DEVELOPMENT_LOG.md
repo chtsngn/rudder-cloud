@@ -25,16 +25,16 @@
 - [x] **Site Detay & Yönetim Sayfası (\/sites/[id]\) Tablı Elit Tasarıma Dönüştürüldü.**
 - [x] **Navigasyon Erişimi Güçlendirildi (Sidebar & Anasayfa Siteler Linki).**
 - [x] **Sunucu Terminali (\/terminal\) Lüks Kaptan Köşkü Konsoluna Dönüştürüldü.**
-- [x] **Terminal Akıllı Komut Sistemi (Spotlight Paleti, Özel Komut Ekleme, Komut Kitaplığı).**
+- [x] **Terminal Akıllı Komut Sistemi:**
+  - **En Sık Kullanılan Komutlar Algoritması:** Çalıştırılan her komutun frekansı yerel olarak izlenip hızlı komut barında en çok kullanılanlar otomatik olarak öne çıkarılıyor.
+  - **Sabitleme Sistemi (Pinning):** Yeni komut ekleme formuna \📌 Hızlı Bar'a Sabitle\ seçeneği eklendi; sabitlenen komutlar her zaman en önde kalıyor. Ayrıca Komut Kitaplığı'ndaki herhangi bir komut tek tıkla hızlı bara sabitlenebiliyor.
+  - **Tam Oval Hızlı Komut Barı:** Alt komut barı dış kasası ve butonları tam oval (\ounded-full\) estetik kapsüle dönüştürüldü.
+  - **Dengeli & Canlı Arama Destekli Komut Kitaplığı:** Renk dengesizlikleri giderildi, lüks kartlar ve anlık arama / filtreleme çubuğu ile kategori hapları eklendi.
+  - **Sağa Tuttur Butonu:** Terminal üst başlığındaki buton neon ışıktan arındırılıp sade ve lüks **\Sağa Tuttur\** butonuna revize edildi.
 - [x] **Sistem Ayarları (\/settings\) Sayfası Temaya Uygun Olarak Yenilendi.**
 - [x] **Kullanıcı Yönetimi (\/users\) Sayfası Lüks Tablo & Arama/Filtre Sistemiyle Yenilendi.**
 - [x] **Kalıcı Sağ Yan Terminal Dock'u & Rekürsif Sayfa Uyumlanması (Adaptive Split Screen).**
-- [x] **Terminal Sabit Launcher Butonu Bordo/Altın İkon Kapsülüne Dönüştürüldü:**
-  - Konumu sağ ve alt kenardan içeriye çekildi (\ottom-8 right-8\), görev çubuğu ve ekran kenarından ferah bir mesafe bırakıldı.
-  - Sağ üstteki gereksiz nokta kaldırıldı.
-  - Kısayol tooltipi sağa hizalandı (\ight-0 -top-9.5\), ekran dışına taşma sorunu çözüldü; tarayıcının varsayılan kaba tooltipi engellendi.
-- [x] **Denetim Günlüğü (\/audit\) Sayfası & Kart Tasarımı Beyaz Temaya Tam Uyumlandı:**
-  - Koyu kutular kaldırılarak yumuşak açık gri (\g-slate-50\) ve altın kenarlıklı kartlara dönüştürüldü.
+- [x] **Denetim Günlüğü (\/audit\) Sayfası & Kart Tasarımı Beyaz Temaya Tam Uyumlandı.**
 - [x] **Test & Doğrulama:** TypeScript typecheck (\
 px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 
@@ -52,4 +52,4 @@ px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 | 2026-09-02 | \/users\ sayfası lüks tablo, arama/filtre çubuğu ve avatar sistemiyle yenilendi | \users/page.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | Kalıcı Yan Terminal, Rekürsif Sayfa Uyumlanması (\DashboardMain\) ve Obsidian Komut Barı | \dashboard-main.tsx\, \layout.tsx\, \	erminal-dock-context.tsx\, \	erminal-view.tsx\, \side-terminal-dock.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | Bordo/Altın Minimalist Terminal Rozeti ve \/audit\ Aydınlık Kart Uyarlaması | \side-terminal-dock.tsx\, \udit/page.tsx\ | Başarılı (TypeScript 0 hata) |
-| 2026-09-02 | Terminal butonu konumu içeri çekildi (\ottom-8 right-8\), sağ üst nokta kaldırıldı, tooltip hizalandı | \side-terminal-dock.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | Oval Hızlı Komut Barı, En Sık Kullanılanlar Sıralaması, Sabitleme (Pin) ve Arama Destekli Komut Kitaplığı | \	erminal-view.tsx\, \	erminal/page.tsx\ | Başarılı (TypeScript 0 hata) |
