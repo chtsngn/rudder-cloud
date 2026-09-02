@@ -77,7 +77,16 @@ model Site {
   domain     String     @unique
   type       SiteType
   status     SiteStatus @default(PROVISIONING)
-  sslEnabled Boolean    @default(false)
+  // `sslEnabled`: kullanıcının bu site için SSL İSTEDİĞİ (site oluşturma
+  // sihirbazındaki anahtar) — gerçekleşip gerçekleşmediğini YANSITMAZ.
+  // Gerçek sonuç `sslStatus`/`sslLastError`'da: SSL isteği (certbot) DNS
+  // henüz yönlendirilmemiş gibi nedenlerle başarısız olsa bile site
+  // provisioning'i (vhost/systemd/db) BAŞARILI kabul edilir ve site ACTIVE
+  // kalır — SSL ayrı, tekrar denenebilir bir alt durum (bkz.
+  // /api/sites/[id]/ssl route.ts). sslStatus: none | active | error.
+  sslEnabled    Boolean @default(false)
+  sslStatus     String  @default("none")
+  sslLastError  String?
   config     Json
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt

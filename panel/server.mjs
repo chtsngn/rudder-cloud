@@ -120,6 +120,21 @@ function resolveShell() {
   return existsSync("/bin/bash") ? "/bin/bash" : "/bin/sh"
 }
 
+/**
+ * Web terminali ROOT olarak çalışır (bkz. doctor.sh → "Panel sudoers" adım 2
+ * — panel kullanıcısına yalnızca bu amaçla şifresiz `sudo /bin/bash`/`/bin/sh`
+ * izni verilir). `-n` (non-interactive): sudoers izni eksik/bozuksa
+ * parolayı SESSİZCE bekleyip pty'yi asılı bırakmak yerine hemen hata ile
+ * döner — `panel` kullanıcısının zaten bir parolası yok (`adduser
+ * --disabled-password`), bu yüzden parola tabanlı sudo bu hesapta hiçbir
+ * zaman çalışamaz, NOPASSWD tek yoldur. Terminal SADECE SUPER_ADMIN'e açık
+ * olduğundan (bkz. isAuthorizedTerminalRequest) bu root erişimi doğrudan
+ * panelin en yetkili insan operatörüne devrediliyor.
+ */
+function resolveTerminalCommand() {
+  return { command: "sudo", args: ["-n", resolveShell()] }
+}
+
 const httpServer = createServer()
 const app = next({ dev, httpServer, port })
 const handle = app.getRequestHandler()
@@ -158,7 +173,8 @@ httpServer.on("upgrade", (req, socket, head) => {
 wss.on("connection", (ws) => {
   let ptyProcess
   try {
-    ptyProcess = pty.spawn(resolveShell(), [], {
+    const { command, args } = resolveTerminalCommand()
+    ptyProcess = pty.spawn(command, args, {
       name: "xterm-256color",
       cols: 80,
       rows: 24,

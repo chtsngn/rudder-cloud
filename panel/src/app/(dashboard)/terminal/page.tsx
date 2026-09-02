@@ -25,9 +25,10 @@ export default function TerminalPage() {
           <TerminalIcon className="size-5" />
           Sunucu Terminali
         </h1>
-        <p className="text-sm text-muted-foreground">
-          <span className="font-mono">panel</span> kullanıcısının kendi kabuğu — root DEĞİL. Sekme
-          kapatılır veya bağlantı koparsa çalışan kabuk süreci sonlandırılır.
+        <p className="text-sm text-destructive">
+          Bu kabuk <span className="font-semibold">root</span> yetkisiyle çalışır — burada
+          çalıştırılan her komut tüm sunucuyu etkileyebilir. Sekme kapatılır veya bağlantı koparsa
+          çalışan kabuk süreci sonlandırılır.
         </p>
       </div>
       <div className="h-[70vh]">

@@ -348,39 +348,58 @@ EOF
 fi
 
 # ------------------------------------------------------------
-# 6) Panel sudoers — SADECE provision-site.sh için şifresiz sudo
+# 6) Panel sudoers — provision-site.sh + web terminali için şifresiz sudo
 #
 # Güvenlik modeli: panel süreci root olarak ÇALIŞMIYOR (User=panel).
-# nginx/systemd/certbot/mysql gibi kök yetkisi gerektiren tüm işlemler
-# TEK bir betik üzerinden yapılır; panel kullanıcısına başka HİÇBİR
-# komuta genel sudo izni verilmez. Dosya `visudo -c` ile doğrulanmadan
-# asla kurulmaz (bozuk bir sudoers dosyası tüm sunucuda sudo'yu
-# kilitleyebilir).
+# nginx/systemd/certbot/mysql gibi kök yetkisi gerektiren TÜM otomatik
+# provisioning işlemleri TEK bir betik üzerinden yapılır (SUDOERS_LINE).
+#
+# İKİNCİ satır (TERMINAL_SUDOERS_LINE) BİLİNÇLİ bir istisna: panelin web
+# terminali (SADECE SUPER_ADMIN'e açık, bkz. server.mjs) artık gerçek bir
+# ROOT kabuğu açıyor — bu, "tek betik dışında hiçbir şeye sudo yok" ilkesini
+# gerçek anlamda genişletir (root bash içinde herhangi bir komut
+# çalıştırılabilir). Bilinçli bir tercih: panel zaten bir sunucu yönetim
+# paneli ve SUPER_ADMIN operatörün fiilen sunucunun tam kontrolüne ihtiyacı
+# var (provision-site.sh'ın kapsamadığı işlemler için). Dosya `visudo -c` ile
+# doğrulanmadan asla kurulmaz (bozuk bir sudoers dosyası tüm sunucuda
+# sudo'yu kilitleyebilir).
 # ------------------------------------------------------------
 hr
-info "Panel provisioning sudoers izni hazırlanıyor..."
+info "Panel sudoers izinleri hazırlanıyor..."
 PROVISION_SCRIPT="${PANEL_DIR}/scripts/provision-site.sh"
 SUDOERS_FILE="/etc/sudoers.d/panel-provisioning"
 SUDOERS_LINE="${PANEL_USER} ALL=(root) NOPASSWD: ${PROVISION_SCRIPT}"
+TERMINAL_SUDOERS_LINE="${PANEL_USER} ALL=(root) NOPASSWD: /bin/bash, /bin/sh"
 
-if [[ -f "${SUDOERS_FILE}" ]] && grep -qF "${SUDOERS_LINE}" "${SUDOERS_FILE}" 2>/dev/null; then
-  msg "Sudoers izni zaten mevcut: ${SUDOERS_FILE}"
+if [[ -f "${SUDOERS_FILE}" ]] \
+  && grep -qF "${SUDOERS_LINE}" "${SUDOERS_FILE}" 2>/dev/null \
+  && grep -qF "${TERMINAL_SUDOERS_LINE}" "${SUDOERS_FILE}" 2>/dev/null; then
+  msg "Sudoers izinleri zaten mevcut: ${SUDOERS_FILE}"
 else
   TMP_SUDOERS="$(mktemp)"
   cat > "${TMP_SUDOERS}" <<EOF
 # Sunucu Yönetim Paneli — otomatik oluşturuldu (doctor.sh). Elle düzenlemeyin;
 # değişiklikler doctor.sh'ın bir sonraki çalıştırmasında algılanmayabilir.
 #
-# ${PANEL_USER} kullanıcısına SADECE aşağıdaki TEK betiği şifresiz (NOPASSWD)
-# çalıştırma izni verir. Başka hiçbir komuta genel sudo izni YOK — nginx/
-# systemd/certbot/mysql gibi kök gerektiren tüm işlemler bu betiğin kendi
-# argüman doğrulamasından geçmek zorunda (bkz. panel/scripts/provision-site.sh).
+# 1) ${PANEL_USER} kullanıcısına aşağıdaki TEK betiği şifresiz (NOPASSWD)
+#    çalıştırma izni verir — nginx/systemd/certbot/mysql gibi kök gerektiren
+#    OTOMATİK provisioning işlemleri buradan geçer, betiğin kendi argüman
+#    doğrulamasından geçmek zorundadır (bkz. panel/scripts/provision-site.sh).
 ${SUDOERS_LINE}
+#
+# 2) ${PANEL_USER} kullanıcısına web terminali (SADECE SUPER_ADMIN'e açık,
+#    bkz. server.mjs) için şifresiz ROOT kabuk izni verir. Bu, betik #1'in
+#    aksine SINIRSIZ bir yetki genişletmesidir — terminal aracılığıyla root
+#    olarak HERHANGİ bir komut çalıştırılabilir. Bilinçli bir tasarım
+#    kararı: panel SUPER_ADMIN'in kendisi zaten sunucunun tam sahibi/
+#    yöneticisi, terminal ona provision-site.sh'ın kapsamadığı işler için
+#    tam kontrol veriyor.
+${TERMINAL_SUDOERS_LINE}
 EOF
   if visudo -c -f "${TMP_SUDOERS}" >/dev/null 2>&1; then
     install -o root -g root -m 0440 "${TMP_SUDOERS}" "${SUDOERS_FILE}"
     rm -f "${TMP_SUDOERS}"
-    msg "Sudoers izni kuruldu: ${SUDOERS_FILE} (${PANEL_USER} -> ${PROVISION_SCRIPT}, şifresiz)"
+    msg "Sudoers izinleri kuruldu: ${SUDOERS_FILE} (${PANEL_USER} -> ${PROVISION_SCRIPT} + root terminal, şifresiz)"
   else
     rm -f "${TMP_SUDOERS}"
     die "sudoers dosyası doğrulanamadı (visudo -c başarısız) — güvenlik nedeniyle kurulum durduruldu, hiçbir şey değiştirilmedi."

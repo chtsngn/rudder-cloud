@@ -1,8 +1,11 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
+  ChevronLeft,
+  ChevronRight,
   ChevronsUpDown,
   ClipboardList,
   Home,
@@ -25,6 +28,10 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { useCurrentUser } from "@/hooks/use-current-user"
 import { cn } from "@/lib/utils"
+
+// Acik/kapali (daraltilmis) tercihi tarayicida saklanir -- sunucu tarafinda
+// bir karsiligi yok, yalnizca bu cihaz/tarayici icin bir kolaylik.
+const SIDEBAR_COLLAPSED_STORAGE_KEY = "panel:sidebar-collapsed"
 
 const BASE_NAV_ITEMS = [{ href: "/", label: "Anasayfa", icon: Home }]
 
@@ -55,6 +62,35 @@ export function AppSidebar() {
   const router = useRouter()
   const { user } = useCurrentUser()
 
+  // Varsayilan acik -- localStorage okunana kadar (ilk render, SSR dahil)
+  // her zaman genis halde gosterilir, boylece layout kaymasi (flash) olmaz.
+  const [collapsed, setCollapsed] = useState(false)
+
+  useEffect(() => {
+    // setTimeout ile bir sonraki makrotaska erteleniyor -- ayni "setState-in-effect"
+    // kacinma deseni sites/[id]/page.tsx ve settings/page.tsx'te de kullaniliyor.
+    const timer = setTimeout(() => {
+      try {
+        setCollapsed(window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "1")
+      } catch {
+        // localStorage kapaliysa (gizli sekme vb.) sessizce yoksay, varsayilan acik kalir
+      }
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [])
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev
+      try {
+        window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, next ? "1" : "0")
+      } catch {
+        // yoksay -- yalnizca bu oturum icin tercih kaybolur, islevi etkilemez
+      }
+      return next
+    })
+  }
+
   const navItems = user?.role === "SUPER_ADMIN" ? [...BASE_NAV_ITEMS, ...SUPER_ADMIN_NAV_ITEMS] : BASE_NAV_ITEMS
 
   async function handleLogout() {
@@ -67,19 +103,26 @@ export function AppSidebar() {
   }
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-card">
-      <div className="flex h-16 items-center gap-2 px-5">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+    <aside
+      className={cn(
+        "sticky top-0 flex h-screen shrink-0 flex-col border-r border-border bg-card transition-[width] duration-150",
+        collapsed ? "w-16" : "w-64"
+      )}
+    >
+      <div className={cn("flex h-16 items-center gap-2 px-5", collapsed && "justify-center px-0")}>
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <Server className="size-4" />
         </div>
-        <span className="font-heading text-sm font-semibold text-foreground">
-          Sunucu Paneli
-        </span>
+        {!collapsed && (
+          <span className="truncate font-heading text-sm font-semibold text-foreground">
+            Sunucu Paneli
+          </span>
+        )}
       </div>
 
       <Separator />
 
-      <nav className="flex flex-1 flex-col gap-1 p-3">
+      <nav className={cn("flex flex-1 flex-col gap-1 p-3", collapsed && "items-center px-2")}>
         {navItems.map((item) => {
           const active =
             item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
@@ -88,15 +131,17 @@ export function AppSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              title={collapsed ? item.label : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-md text-sm font-medium transition-colors",
+                collapsed ? "justify-center p-2.5" : "px-3 py-2",
                 active
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
             >
-              <Icon className="size-4" />
-              {item.label}
+              <Icon className="size-4 shrink-0" />
+              {!collapsed && item.label}
             </Link>
           )
         })}
@@ -104,23 +149,47 @@ export function AppSidebar() {
 
       <Separator />
 
-      <div className="p-3">
+      <button
+        type="button"
+        onClick={toggleCollapsed}
+        title={collapsed ? "Menüyü genişlet" : "Menüyü daralt"}
+        className={cn(
+          "flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
+          collapsed && "justify-center px-0"
+        )}
+      >
+        {collapsed ? <ChevronRight className="size-4 shrink-0" /> : <ChevronLeft className="size-4 shrink-0" />}
+        {!collapsed && "Daralt"}
+      </button>
+
+      <Separator />
+
+      <div className={cn("p-3", collapsed && "px-2")}>
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left outline-none hover:bg-accent">
-            <Avatar className="size-8">
+          <DropdownMenuTrigger
+            className={cn(
+              "flex w-full items-center gap-3 rounded-md text-left outline-none hover:bg-accent",
+              collapsed ? "justify-center p-2" : "px-2 py-2"
+            )}
+          >
+            <Avatar className="size-8 shrink-0">
               <AvatarFallback className="bg-secondary text-xs font-medium">
                 {user ? initialsFor(user.username) : "?"}
               </AvatarFallback>
             </Avatar>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-foreground">
-                {user?.username ?? "..."}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {user ? (ROLE_LABELS[user.role] ?? user.role) : ""}
-              </p>
-            </div>
-            <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
+            {!collapsed && (
+              <>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {user?.username ?? "..."}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {user ? (ROLE_LABELS[user.role] ?? user.role) : ""}
+                  </p>
+                </div>
+                <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
+              </>
+            )}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
             {user?.role === "SUPER_ADMIN" && (

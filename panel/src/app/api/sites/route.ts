@@ -153,13 +153,17 @@ function buildPlan(
   }
 }
 
-async function runProvisioning(
-  domain: string,
-  www: boolean,
-  sslEnabled: boolean,
-  sslEmail: string,
-  plan: ProvisionPlan
-): Promise<void> {
+/**
+ * SADECE vhost/systemd/db oluşturmayı kapsar — SSL isteği KASITLI olarak
+ * burada DEĞİL, ayrı ve bağımsız bir adımda (bkz. POST altında). Sebep: SSL
+ * (certbot) alan adının DNS'inin bu sunucuya yönlendirilmiş olmasını
+ * gerektirir — bu genelde site oluşturma anında henüz gerçekleşmemiş olur
+ * (kullanıcı DNS'i sonradan ayarlar). Eskiden requestSsl() burada çağrılıp
+ * hata fırlatırsa TÜM site FAILED işaretleniyordu — vhost'un kendisi
+ * başarıyla kurulmuş olsa bile. Artık vhost/servis/db adımı bu fonksiyonun
+ * sorumluluğu, SSL ayrı bir "best-effort" adım (bkz. Site.sslStatus notu).
+ */
+async function runProvisioning(domain: string, www: boolean, plan: ProvisionPlan): Promise<void> {
   switch (plan.type) {
     case "STATIC":
       await createVhost({
@@ -207,10 +211,6 @@ async function runProvisioning(
     case "REVERSE_PROXY":
       await createVhost({ domain, type: "REVERSE_PROXY", www, upstreamUrl: plan.upstreamUrl })
       break
-  }
-
-  if (sslEnabled) {
-    await requestSsl(domain, sslEmail, www)
   }
 }
 
@@ -304,7 +304,7 @@ export async function POST(request: Request) {
   let status: "ACTIVE" | "FAILED" = "ACTIVE"
   let provisionError: string | null = null
   try {
-    await runProvisioning(domainValue, www, sslEnabledBool, sslEmail, plan)
+    await runProvisioning(domainValue, www, plan)
   } catch (error) {
     status = "FAILED"
     provisionError =
@@ -321,9 +321,28 @@ export async function POST(request: Request) {
     finalConfig.provisionError = provisionError
   }
 
+  // SSL, vhost/servis başarıyla kurulduysa ve kullanıcı istediyse AYRI ve
+  // BAĞIMSIZ bir adım olarak denenir — başarısız olsa bile site FAILED
+  // olmaz (bkz. runProvisioning'in üzerindeki not). DNS henüz bu sunucuya
+  // yönlendirilmemişse bu beklenen bir durumdur; kullanıcı DNS'i düzelttikten
+  // sonra site detay sayfasından yeniden deneyebilir (bkz. /api/sites/[id]/ssl).
+  let sslStatus: "none" | "active" | "error" = "none"
+  let sslLastError: string | null = null
+  if (status === "ACTIVE" && sslEnabledBool) {
+    try {
+      await requestSsl(domainValue, sslEmail, www)
+      sslStatus = "active"
+    } catch (error) {
+      sslStatus = "error"
+      sslLastError =
+        error instanceof ProvisionError ? error.message : "SSL sertifikası alınamadı."
+      console.error(`SSL isteği başarısız (${domainValue}), site yine de ACTIVE kalıyor:`, error)
+    }
+  }
+
   const updated = await prisma.site.update({
     where: { id: site.id },
-    data: { status, config: finalConfig as Prisma.InputJsonValue },
+    data: { status, sslStatus, sslLastError, config: finalConfig as Prisma.InputJsonValue },
   })
 
   await logAudit({

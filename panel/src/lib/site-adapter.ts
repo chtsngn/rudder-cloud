@@ -81,6 +81,8 @@ export interface ApiSite {
   type: string
   status: string
   sslEnabled: boolean
+  sslStatus: string
+  sslLastError: string | null
   config: Record<string, unknown> | null
   repoUrl: string | null
   gitBranch: string

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, FolderOpen, Loader2, Play, RotateCw, Square, Trash2 } from "lucide-react"
+import { ArrowLeft, FolderOpen, Loader2, Play, RotateCw, ShieldAlert, Square, Trash2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -42,6 +42,13 @@ export default function SiteDetailPage() {
 
   const [site, setSite] = useState<Site | null>(null)
   const [config, setConfig] = useState<Record<string, unknown>>({})
+  const [sslInfo, setSslInfo] = useState<{
+    sslEnabled: boolean
+    sslStatus: string
+    sslLastError: string | null
+  } | null>(null)
+  const [sslRetrying, setSslRetrying] = useState(false)
+  const [sslRetryError, setSslRetryError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -95,6 +102,7 @@ export default function SiteDetailPage() {
         if (!cancelled) {
           setSite(apiSiteToUiSite(data))
           setConfig((data.config ?? {}) as Record<string, unknown>)
+          setSslInfo({ sslEnabled: data.sslEnabled, sslStatus: data.sslStatus, sslLastError: data.sslLastError })
           setGitForm({
             repoUrl: data.repoUrl ?? "",
             gitBranch: data.gitBranch || "main",
@@ -172,6 +180,7 @@ export default function SiteDetailPage() {
       }
       setSite(apiSiteToUiSite(data))
       setConfig((data.config ?? {}) as Record<string, unknown>)
+      setSslInfo({ sslEnabled: data.sslEnabled, sslStatus: data.sslStatus, sslLastError: data.sslLastError })
       loadLogs()
     } catch {
       setActionError("Sunucuya bağlanılamadı.")
@@ -277,6 +286,28 @@ export default function SiteDetailPage() {
     }
   }
 
+  async function handleRetrySsl() {
+    if (!site) return
+    setSslRetrying(true)
+    setSslRetryError(null)
+    try {
+      const res = await fetch(`/api/sites/${site.id}/ssl`, { method: "POST" })
+      const data = (await res.json().catch(() => null)) as (ApiSite & { error?: string }) | null
+      if (!data) {
+        setSslRetryError("Sunucuya bağlanılamadı.")
+        return
+      }
+      setSslInfo({ sslEnabled: data.sslEnabled, sslStatus: data.sslStatus, sslLastError: data.sslLastError })
+      if (!res.ok) {
+        setSslRetryError(data.error ?? "SSL sertifikası alınamadı.")
+      }
+    } catch {
+      setSslRetryError("Sunucuya bağlanılamadı.")
+    } finally {
+      setSslRetrying(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
@@ -325,7 +356,13 @@ export default function SiteDetailPage() {
     },
     {
       label: "SSL",
-      value: config.sslEnabled === false ? "Pasif" : "Aktif (Let's Encrypt)",
+      value: !sslInfo || !sslInfo.sslEnabled
+        ? "Pasif"
+        : sslInfo.sslStatus === "active"
+          ? "Aktif (Let's Encrypt)"
+          : sslInfo.sslStatus === "error"
+            ? "Hata — aşağıya bakın"
+            : "Bekliyor",
     },
     ...(isManaged
       ? [
@@ -425,6 +462,29 @@ export default function SiteDetailPage() {
         <p className="text-sm text-destructive" role="alert">
           {actionError}
         </p>
+      )}
+
+      {sslInfo?.sslStatus === "error" && (
+        <div className="flex flex-col gap-3 rounded-lg border border-warning/40 bg-warning/5 p-3 text-sm sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-2 text-warning">
+            <ShieldAlert className="mt-0.5 size-4 shrink-0" />
+            <div>
+              <p className="font-medium">SSL sertifikası alınamadı, site yine de yayında.</p>
+              {sslInfo.sslLastError && (
+                <p className="mt-1 text-xs text-muted-foreground">{sslInfo.sslLastError}</p>
+              )}
+              <p className="mt-1 text-xs text-muted-foreground">
+                Genelde alan adının DNS A kaydı bu sunucuya henüz yönlendirilmemiştir — DNS&apos;i
+                düzelttikten sonra tekrar deneyin.
+              </p>
+              {sslRetryError && <p className="mt-1 text-xs text-destructive">{sslRetryError}</p>}
+            </div>
+          </div>
+          <Button size="sm" variant="outline" disabled={sslRetrying} onClick={handleRetrySsl} className="shrink-0">
+            {sslRetrying && <Loader2 className="size-3.5 animate-spin" />}
+            Tekrar Dene
+          </Button>
+        </div>
       )}
 
       {isManaged ? (

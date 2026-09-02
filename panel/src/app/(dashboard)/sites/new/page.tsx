@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, Loader2, XCircle } from "lucide-react"
@@ -131,6 +131,10 @@ export default function NewSitePage() {
         return
       }
 
+      // Site (vhost/servis) başarıyla kuruldu — SSL istenmiş ama başarısız
+      // olmuş olabilir (ör. DNS henüz yönlendirilmemiş); bu artık site
+      // kurulumunu BAŞARISIZ saymıyor (bkz. /api/sites/route.ts), site detay
+      // sayfasında ayrı bir uyarı + "Tekrar Dene" olarak gösteriliyor.
       setResult({ ok: true, site: data })
     } catch {
       setResult({ ok: false, message: "Sunucuya bağlanılamadı. Lütfen tekrar deneyin." })
@@ -310,8 +314,11 @@ export default function NewSitePage() {
                 <div className="flex items-start gap-2 rounded-lg border border-success/40 bg-success/5 p-3 text-sm text-success">
                   <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
                   <span>
-                    Nginx{typeInfo.managed ? ", systemd servisi" : ""}
-                    {useSsl ? " ve SSL sertifikası" : ""} yapılandırıldı.
+                    Nginx{typeInfo.managed ? ", systemd servisi" : ""} yapılandırıldı.
+                    {useSsl &&
+                      (result.site.sslStatus === "active"
+                        ? " SSL sertifikası alındı."
+                        : " SSL sertifikası henüz alınamadı (bkz. site sayfasındaki uyarı) — site yine de yayında.")}
                   </span>
                 </div>
               )}
@@ -487,11 +494,112 @@ function TypeSpecificFields({ type, domain }: { type: SiteType; domain: string }
         </div>
       )
     case "proxy":
-      return (
-        <div className="space-y-2">
-          <Label htmlFor="target-url">Hedef adres</Label>
-          <Input id="target-url" placeholder="http://127.0.0.1:4000" className="font-mono" />
-        </div>
-      )
+      return <ReverseProxyFields />
   }
+}
+
+// ------------------------------------------------------------
+// Reverse proxy: hedef port önerisi
+// ------------------------------------------------------------
+interface SystemUsedPort {
+  port: number
+  process: string | null
+  source: "site" | "docker" | "system"
+  label: string | null
+}
+
+interface SystemPortsResponse {
+  used: SystemUsedPort[]
+  suggestions: number[]
+}
+
+const OCCUPIED_PORTS_DISPLAY_LIMIT = 24
+const SUGGESTED_PORTS_DISPLAY_LIMIT = 8
+
+function ReverseProxyFields() {
+  const [ports, setPorts] = useState<SystemPortsResponse | null>(null)
+  const [loadingPorts, setLoadingPorts] = useState(true)
+  const [value, setValue] = useState("")
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      try {
+        const res = await fetch("/api/system/ports", { cache: "no-store" })
+        if (!res.ok) return
+        const data = (await res.json()) as SystemPortsResponse
+        if (cancelled) return
+        setPorts(data)
+        // Kullanıcı henüz bir şey yazmadıysa, bulunan en yakın müsait porta
+        // otomatik ayarla (3000, 3001, 3003 doluysa -> 3004 gibi).
+        setValue((current) => (current === "" && data.suggestions[0] ? `http://127.0.0.1:${data.suggestions[0]}` : current))
+      } catch {
+        // sessizce yoksay — port listesi yalnızca bir kolaylık, formu bloklamaz
+      } finally {
+        if (!cancelled) setLoadingPorts(false)
+      }
+    }
+
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const occupiedPorts = ports?.used.map((u) => u.port).sort((a, b) => a - b) ?? []
+  const shownOccupied = occupiedPorts.slice(0, OCCUPIED_PORTS_DISPLAY_LIMIT)
+  const hiddenOccupiedCount = occupiedPorts.length - shownOccupied.length
+
+  function pickPort(port: number) {
+    setValue(`http://127.0.0.1:${port}`)
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <Label htmlFor="target-url">Hedef adres</Label>
+        <Input
+          id="target-url"
+          placeholder="http://127.0.0.1:4000"
+          className="font-mono"
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+        />
+      </div>
+
+      {!loadingPorts && occupiedPorts.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">Meşgul portlar:</span>{" "}
+          <span className="font-mono">
+            {shownOccupied.join(", ")}
+            {hiddenOccupiedCount > 0 ? ` (+${hiddenOccupiedCount} tane daha)` : ""}
+          </span>
+        </p>
+      )}
+
+      {!loadingPorts && (ports?.suggestions.length ?? 0) > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium text-foreground">Müsait port öner:</p>
+          <div className="flex flex-wrap gap-1.5">
+            {ports!.suggestions.slice(0, SUGGESTED_PORTS_DISPLAY_LIMIT).map((port) => (
+              <button
+                key={port}
+                type="button"
+                onClick={() => pickPort(port)}
+                className={cn(
+                  "rounded-md border px-2 py-1 font-mono text-xs transition-colors",
+                  value === `http://127.0.0.1:${port}`
+                    ? "border-ring bg-secondary text-foreground ring-1 ring-ring/40"
+                    : "border-border text-muted-foreground hover:border-ring/40 hover:text-foreground"
+                )}
+              >
+                {port}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
