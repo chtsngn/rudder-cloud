@@ -182,3 +182,21 @@ model AuditLog {
   @@index([createdAt])
   @@index([userId])
 }
+
+// Panelin kendi alan adını (opsiyonel) ve gerçek Let's Encrypt SSL sertifikası
+// bağlama durumunu tutan TEK satırlık singleton — `id` her zaman sabit
+// "panel" değeridir (bkz. src/app/api/settings/domain/route.ts). `domain` null ise panel
+// yalnızca IP:port (varsayılan :24428, bkz. install.sh) üzerinden erişilir;
+// bu durum HİÇBİR ZAMAN devre dışı bırakılmaz — alan adı bağlansa bile
+// :24428 her zaman yedek erişim yolu olarak çalışmaya devam eder (bkz.
+// scripts/provision-site.sh → configure-panel-domain notu, panel.conf'a hiç
+// dokunulmaz). `sslStatus`: none | pending | active | error.
+model PanelSettings {
+  id          String   @id @default("panel")
+  domain      String?
+  domainEmail String?
+  sslEnabled  Boolean  @default(false)
+  sslStatus   String   @default("none")
+  lastError   String?
+  updatedAt   DateTime @updatedAt
+}

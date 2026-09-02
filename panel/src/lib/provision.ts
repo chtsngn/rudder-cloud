@@ -308,6 +308,26 @@ export async function requestSsl(domain: string, email: string, www: boolean): P
 }
 
 // ------------------------------------------------------------
+// Panelin kendi alan adı + SSL bağlama (settings sayfası → PanelSettings)
+// ------------------------------------------------------------
+export async function configurePanelDomain(domain: string): Promise<void> {
+  requireDomain(domain)
+  await runProvisionScript(["configure-panel-domain", domain])
+}
+
+export async function requestPanelSsl(domain: string, email: string): Promise<void> {
+  requireDomain(domain)
+  if (!isValidEmail(email)) {
+    throw new ProvisionError(`Geçersiz e-posta adresi: ${email}`)
+  }
+  await runProvisionScript(["request-panel-ssl", domain, email], SSL_TIMEOUT_MS)
+}
+
+export async function removePanelDomain(): Promise<void> {
+  await runProvisionScript(["remove-panel-domain"])
+}
+
+// ------------------------------------------------------------
 // systemd servis yönetimi (nodejs / python)
 // ------------------------------------------------------------
 export async function createService(params: {
