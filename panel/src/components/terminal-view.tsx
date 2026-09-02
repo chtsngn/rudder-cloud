@@ -77,7 +77,13 @@ const LIBRARY_PRESETS: QuickCommandItem[] = [
 
 const STORAGE_KEY = "rudder:terminal:custom-commands"
 
-export function TerminalView() {
+export interface TerminalViewProps {
+  isDocked?: boolean
+  onClose?: () => void
+  onMinimize?: () => void
+}
+
+export function TerminalView({ isDocked = false, onClose, onMinimize }: TerminalViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
@@ -180,13 +186,17 @@ export function TerminalView() {
         setIsPaletteOpen((prev) => !prev)
         setPaletteQuery("")
         setPaletteSelectedIndex(0)
-      } else if (e.key === "Escape" && isPaletteOpen) {
-        setIsPaletteOpen(false)
+      } else if (e.key === "Escape") {
+        if (isPaletteOpen) {
+          setIsPaletteOpen(false)
+        } else if (isFullscreen) {
+          setIsFullscreen(false)
+        }
       }
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isPaletteOpen])
+  }, [isPaletteOpen, isFullscreen])
 
   useEffect(() => {
     const container = containerRef.current
@@ -357,68 +367,101 @@ export function TerminalView() {
     termRef.current?.focus()
   }
 
-  // Tam ekran toggle
+  // Tam ekran toggle (sayfa değiştirmeden modal fullscreen yapar)
   const toggleFullscreen = () => {
-    setIsFullscreen((prev) => !prev)
-    setTimeout(() => {
-      try {
-        fitAddonRef.current?.fit()
-      } catch {}
-    }, 150)
+    setIsFullscreen((prev) => {
+      const next = !prev
+      setTimeout(() => {
+        try {
+          fitAddonRef.current?.fit()
+          if (wsRef.current?.readyState === WebSocket.OPEN && termRef.current) {
+            wsRef.current.send(
+              JSON.stringify({
+                type: "resize",
+                cols: termRef.current.cols,
+                rows: termRef.current.rows,
+              })
+            )
+          }
+        } catch {}
+      }, 120)
+      return next
+    })
   }
 
   return (
     <div
       ref={wrapperRef}
       className={cn(
-        "flex flex-col gap-3 transition-all relative",
-        isFullscreen
-          ? "fixed inset-0 z-50 bg-slate-950/95 p-4 backdrop-blur-md h-screen w-screen"
-          : "h-full"
+        "flex flex-col gap-2.5 transition-all relative w-full h-full",
+        isFullscreen &&
+          "fixed inset-0 z-50 bg-[#0a0d14] p-4 h-screen w-screen backdrop-blur-md"
       )}
     >
       {/* ═══ 1. WORKSTATION PENCERE KASASI ═══ */}
-      <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-700/60 bg-[#0a0d14] shadow-[0_12px_36px_rgba(0,0,0,0.35)]">
+      <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-800 bg-[#0a0d14] shadow-[0_12px_36px_rgba(0,0,0,0.4)]">
         {/* Başlık Çubuğu (Workstation Titlebar) */}
-        <div className="flex items-center justify-between border-b border-slate-800/80 bg-[#111622] px-4 py-2.5 select-none">
+        <div className="flex items-center justify-between border-b border-slate-800/90 bg-[#111622] px-3.5 py-2 select-none shrink-0 min-h-[42px]">
           {/* Sol: macOS Trafik Işıkları & Host Etiketi */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 shrink-0">
             <div className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-[#ff5f56] border border-[#e0443e] block" />
-              <span className="size-3 rounded-full bg-[#ffbd2e] border border-[#dea123] block" />
-              <span className="size-3 rounded-full bg-[#27c93f] border border-[#1aab29] block" />
+              <button
+                type="button"
+                onClick={onClose || (() => {})}
+                title={isDocked ? "Terminal Penceresini Kapat" : "Kapat"}
+                className={cn(
+                  "size-3 rounded-full bg-[#ff5f56] border border-[#e0443e] block",
+                  isDocked ? "hover:opacity-80 cursor-pointer" : "cursor-default"
+                )}
+              />
+              <button
+                type="button"
+                onClick={onMinimize || (() => {})}
+                title={isDocked ? "Simge Durumuna Küçült" : "Küçült"}
+                className={cn(
+                  "size-3 rounded-full bg-[#ffbd2e] border border-[#dea123] block",
+                  isDocked ? "hover:opacity-80 cursor-pointer" : "cursor-default"
+                )}
+              />
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                title={isFullscreen ? "Pencereyi Küçült" : "Tam Ekran Yap"}
+                className="size-3 rounded-full bg-[#27c93f] border border-[#1aab29] block hover:opacity-80 cursor-pointer"
+              />
             </div>
 
             <div className="flex items-center gap-1.5 font-mono text-xs font-semibold text-[#dfc9a0]">
-              <TerminalIcon className="size-3.5 text-[#c8a87c]" />
-              <span>root@rudder-cloud:~ (bash)</span>
+              <TerminalIcon className="size-3.5 text-[#c8a87c] shrink-0" />
+              <span className="truncate max-w-[140px] sm:max-w-none">
+                root@rudder-cloud:~
+              </span>
             </div>
           </div>
 
-          {/* Orta: Canlı Bağlantı Durumu */}
-          <div className="hidden sm:flex items-center gap-2">
-            {state === "connecting" && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 text-[11px] font-mono font-bold text-amber-400">
-                <Loader2 className="size-3 animate-spin text-amber-400" />
-                Bağlanıyor...
+          {/* Orta: Canlı Durum Noktası */}
+          <div className="flex items-center gap-1.5 shrink-0 px-1">
+            {state === "connected" && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-400">
+                <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
+                <span className="hidden sm:inline">Online</span>
               </span>
             )}
-            {state === "connected" && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-mono font-bold text-emerald-400">
-                <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
-                Bağlantı Aktif (Online)
+            {state === "connecting" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-[10px] font-mono text-amber-400">
+                <Loader2 className="size-2.5 animate-spin" />
               </span>
             )}
             {(state === "closed" || state === "error") && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 border border-red-500/30 px-2.5 py-0.5 text-[11px] font-mono font-bold text-red-400">
-                <span className="size-1.5 rounded-full bg-red-400 shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
-                {exitMessage ?? "Bağlantı Kesildi"}
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 border border-red-500/30 px-2 py-0.5 text-[10px] font-mono text-red-400">
+                <span className="size-1.5 rounded-full bg-red-400" />
+                <span className="hidden sm:inline">Offline</span>
               </span>
             )}
           </div>
 
           {/* Sağ: Terminal Kontrol Araçları */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 shrink-0">
             {/* Komut Paleti Butonu */}
             <button
               type="button"
@@ -427,33 +470,30 @@ export function TerminalView() {
                 setPaletteQuery("")
               }}
               title="Komut Paletini Aç (Ctrl + K)"
-              className="h-7 px-2 flex items-center gap-1.5 rounded-lg border border-slate-700/60 bg-slate-900/90 text-slate-300 hover:text-white hover:border-[#c8a87c] transition-all cursor-pointer text-xs"
+              className="h-6.5 px-2 flex items-center gap-1 rounded-md border border-slate-700/60 bg-slate-900/90 text-slate-300 hover:text-white hover:border-[#c8a87c] transition-all cursor-pointer text-xs"
             >
-              <Command className="size-3.5 text-[#c8a87c]" />
-              <span className="hidden md:inline font-sans text-[11px]">Komutlar</span>
-              <kbd className="hidden lg:inline bg-slate-800 text-[10px] px-1 py-0.5 rounded text-slate-400 font-mono">
-                Ctrl+K
-              </kbd>
+              <Command className="size-3 text-[#c8a87c]" />
+              <kbd className="text-[9px] font-mono text-slate-400">Ctrl+K</kbd>
             </button>
 
             {/* Yazı Boyutu */}
-            <div className="flex items-center bg-slate-900/90 rounded-lg border border-slate-700/60 p-0.5">
+            <div className="hidden xs:flex items-center bg-slate-900/90 rounded-md border border-slate-700/60 p-0.5">
               <button
                 type="button"
                 onClick={() => handleZoom(-1)}
                 title="Yazıyı Küçült"
-                className="size-6 flex items-center justify-center text-slate-400 hover:text-white rounded transition-colors cursor-pointer"
+                className="size-5 flex items-center justify-center text-slate-400 hover:text-white rounded transition-colors cursor-pointer"
               >
-                <ZoomOut className="size-3.5" />
+                <ZoomOut className="size-3" />
               </button>
-              <span className="font-mono text-[10px] text-slate-300 px-1.5">{fontSize}px</span>
+              <span className="font-mono text-[9px] text-slate-300 px-1">{fontSize}px</span>
               <button
                 type="button"
                 onClick={() => handleZoom(1)}
                 title="Yazıyı Büyüt"
-                className="size-6 flex items-center justify-center text-slate-400 hover:text-white rounded transition-colors cursor-pointer"
+                className="size-5 flex items-center justify-center text-slate-400 hover:text-white rounded transition-colors cursor-pointer"
               >
-                <ZoomIn className="size-3.5" />
+                <ZoomIn className="size-3" />
               </button>
             </div>
 
@@ -462,9 +502,9 @@ export function TerminalView() {
               type="button"
               onClick={handleClear}
               title="Konsolu Temizle"
-              className="size-7 flex items-center justify-center rounded-lg border border-slate-700/60 bg-slate-900/90 text-slate-400 hover:text-white hover:border-slate-600 transition-all cursor-pointer"
+              className="size-6.5 flex items-center justify-center rounded-md border border-slate-700/60 bg-slate-900/90 text-slate-400 hover:text-white hover:border-slate-600 transition-all cursor-pointer"
             >
-              <Eraser className="size-3.5" />
+              <Eraser className="size-3" />
             </button>
 
             {/* Yeniden Bağlan Butonu */}
@@ -473,105 +513,112 @@ export function TerminalView() {
               onClick={() => setReconnectKey((k) => k + 1)}
               title="Yeniden Bağlan"
               className={cn(
-                "h-7 px-2.5 flex items-center gap-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer",
+                "size-6.5 flex items-center justify-center rounded-md border text-xs font-semibold transition-all cursor-pointer",
                 state === "closed" || state === "error"
-                  ? "bg-[#580619] border-[#c8a87c] text-white hover:bg-[#720a22] shadow-sm animate-pulse"
+                  ? "bg-[#580619] border-[#c8a87c] text-white hover:bg-[#720a22] animate-pulse"
                   : "border-slate-700/60 bg-slate-900/90 text-slate-400 hover:text-white hover:border-slate-600"
               )}
             >
-              <RotateCw className={cn("size-3.5", state === "connecting" && "animate-spin")} />
-              <span className="hidden md:inline">Yeniden Bağlan</span>
+              <RotateCw className={cn("size-3", state === "connecting" && "animate-spin")} />
             </button>
 
-            {/* Tam Ekran */}
+            {/* Tam Ekran Toggle */}
             <button
               type="button"
               onClick={toggleFullscreen}
-              title={isFullscreen ? "Tam Ekrandan Çık" : "Tam Ekran Yap"}
-              className="size-7 flex items-center justify-center rounded-lg border border-slate-700/60 bg-slate-900/90 text-slate-400 hover:text-white hover:border-slate-600 transition-all cursor-pointer"
+              title={isFullscreen ? "Pencereye Dön" : "Tam Ekran Yap"}
+              className="size-6.5 flex items-center justify-center rounded-md border border-slate-700/60 bg-slate-900/90 text-slate-400 hover:text-white hover:border-slate-600 transition-all cursor-pointer"
             >
-              {isFullscreen ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+              {isFullscreen ? <Minimize2 className="size-3" /> : <Maximize2 className="size-3" />}
             </button>
+
+            {/* Eğer Dock modundaysa kapat butonu */}
+            {isDocked && onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                title="Pencereyi Kapat"
+                className="size-6.5 flex items-center justify-center rounded-md border border-slate-700/60 bg-slate-900/90 text-slate-400 hover:text-red-400 hover:border-red-500/50 transition-all cursor-pointer"
+              >
+                <X className="size-3" />
+              </button>
+            )}
           </div>
         </div>
 
         {/* ── 2. XTERM EKRAN ALANI ── */}
         <div
           ref={containerRef}
-          className="min-h-0 flex-1 overflow-hidden p-3 focus:outline-none"
+          className="min-h-0 flex-1 overflow-hidden p-2.5 focus:outline-none"
           onClick={() => termRef.current?.focus()}
         />
       </div>
 
       {/* ═══ 2. HIZLI KOMUT ÇİPLERİ & YÖNETİM BAR ═══ */}
-      {!isFullscreen && (
-        <div className="flex items-center justify-between gap-3 overflow-x-auto py-1 text-xs">
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* Komut Ekle Butonu */}
-            <button
-              type="button"
-              onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[#c8a87c] bg-[#580619] px-3 py-1.5 font-bold text-[11px] text-white shadow-xs hover:bg-[#720a22] transition-all cursor-pointer shrink-0 active:scale-95"
+      <div className="flex items-center justify-between gap-2 overflow-x-auto py-1 text-xs shrink-0 scrollbar-none">
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Komut Ekle Butonu */}
+          <button
+            type="button"
+            onClick={() => setIsAddModalOpen(true)}
+            className="inline-flex items-center gap-1 rounded-xl border border-[#c8a87c] bg-[#580619] px-2.5 py-1 font-bold text-[10px] text-white shadow-xs hover:bg-[#720a22] transition-all cursor-pointer shrink-0 active:scale-95"
+          >
+            <Plus className="size-3 text-[#dfc9a0]" />
+            Ekle
+          </button>
+
+          {/* Kitaplık Butonu */}
+          <button
+            type="button"
+            onClick={() => setIsLibraryOpen(true)}
+            className="inline-flex items-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900 px-2.5 py-1 font-bold text-[10px] text-slate-300 shadow-2xs hover:border-[#c8a87c] hover:text-white transition-all cursor-pointer shrink-0 active:scale-95"
+          >
+            <BookOpen className="size-3 text-[#dfc9a0]" />
+            Kitaplık
+          </button>
+        </div>
+
+        {/* Aktif Komut Çipleri */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+          {customCommands.map((qc) => (
+            <div
+              key={qc.id}
+              className="group relative inline-flex items-center rounded-xl border border-[#c8a87c]/70 bg-[#580619]/20 pl-2 pr-1 py-0.5 text-[10px] font-mono font-bold text-[#dfc9a0] shadow-2xs hover:border-[#c8a87c] hover:bg-[#580619]/30 transition-all shrink-0"
             >
-              <Plus className="size-3.5 text-[#dfc9a0]" />
-              Komut Ekle
-            </button>
-
-            {/* Kitaplık Butonu */}
-            <button
-              type="button"
-              onClick={() => setIsLibraryOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 font-bold text-[11px] text-slate-700 shadow-2xs hover:border-[#c8a87c] hover:bg-slate-50 transition-all cursor-pointer shrink-0 active:scale-95"
-            >
-              <BookOpen className="size-3.5 text-[#580619]" />
-              Komut Kitaplığı
-            </button>
-          </div>
-
-          {/* Aktif Komut Çipleri */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
-            {/* Kullanıcının Özel Eklediği Komutlar */}
-            {customCommands.map((qc) => (
-              <div
-                key={qc.id}
-                className="group relative inline-flex items-center rounded-xl border border-[#c8a87c]/70 bg-[#580619]/5 pl-2.5 pr-1.5 py-1 text-[11px] font-mono font-bold text-[#580619] shadow-2xs hover:border-[#c8a87c] hover:bg-[#580619]/10 transition-all shrink-0"
-              >
-                <button
-                  type="button"
-                  onClick={() => handleExecuteCommand(qc.cmd)}
-                  title={`${qc.desc || qc.label} (Çalıştırmak için tıkla)`}
-                  className="flex items-center gap-1 cursor-pointer pr-1"
-                >
-                  <Sparkles className="size-3 text-[#c8a87c]" />
-                  <span>{qc.label}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => handleDeleteCustomCommand(qc.id, e)}
-                  title="Özel komutu sil"
-                  className="size-4 rounded-md flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                >
-                  <X className="size-2.5" />
-                </button>
-              </div>
-            ))}
-
-            {/* Standart Hazır Komutlar */}
-            {DEFAULT_PRESETS.map((qc) => (
               <button
-                key={qc.id}
                 type="button"
                 onClick={() => handleExecuteCommand(qc.cmd)}
-                title={`${qc.desc} (Çalıştırmak için tıkla)`}
-                className="group inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 font-mono text-[11px] font-bold text-slate-700 shadow-2xs hover:border-[#c8a87c] hover:bg-[#580619]/5 hover:text-[#580619] transition-all cursor-pointer shrink-0 active:scale-95"
+                title={`${qc.desc || qc.label} (Çalıştırmak için tıkla)`}
+                className="flex items-center gap-1 cursor-pointer pr-1"
               >
-                <ChevronRight className="size-3 text-slate-400 group-hover:text-[#c8a87c]" />
-                {qc.label}
+                <Sparkles className="size-2.5 text-[#c8a87c]" />
+                <span>{qc.label}</span>
               </button>
-            ))}
-          </div>
+              <button
+                type="button"
+                onClick={(e) => handleDeleteCustomCommand(qc.id, e)}
+                title="Özel komutu sil"
+                className="size-3.5 rounded flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-950/50 transition-colors cursor-pointer"
+              >
+                <X className="size-2" />
+              </button>
+            </div>
+          ))}
+
+          {DEFAULT_PRESETS.map((qc) => (
+            <button
+              key={qc.id}
+              type="button"
+              onClick={() => handleExecuteCommand(qc.cmd)}
+              title={`${qc.desc} (Çalıştırmak için tıkla)`}
+              className="group inline-flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-900/90 px-2.5 py-1 font-mono text-[10px] font-bold text-slate-300 shadow-2xs hover:border-[#c8a87c] hover:bg-slate-800 hover:text-white transition-all cursor-pointer shrink-0 active:scale-95"
+            >
+              <ChevronRight className="size-2.5 text-slate-500 group-hover:text-[#c8a87c]" />
+              {qc.label}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* ═══ 3. ÖZEL KOMUT EKLEME MODALI ═══ */}
       {isAddModalOpen && (
