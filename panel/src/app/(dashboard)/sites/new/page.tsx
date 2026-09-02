@@ -3,7 +3,19 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, Loader2, XCircle } from "lucide-react"
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Loader2,
+  XCircle,
+  Globe,
+  Code2,
+  Layers,
+  Server,
+  Sparkles,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -65,13 +77,6 @@ function buildConfig(type: SiteType, useWww: boolean, useSsl: boolean, sslEmail:
   return config
 }
 
-/**
- * Bu, gerçek canlı bir kurulum logu DEĞİL — provisioning tek bir senkron
- * istekte gerçekleştiği için adım adım ilerleme bilgisi yok (bkz. proje
- * notları). Kullanıcıya bu site türü için tipik olarak neler yapıldığını
- * gösteren statik bir referans listesi; hepsi aynı anda "beklemede"
- * gösterilir, istek bitince tek bir sonuç ekranına geçilir.
- */
 function typeChecklist(type: SiteType, managed: boolean, hasSsl: boolean): string[] {
   const items: string[] = []
   if (type === "wordpress") items.push("Veritabanı oluşturuluyor", "WordPress indiriliyor")
@@ -84,6 +89,22 @@ function typeChecklist(type: SiteType, managed: boolean, hasSsl: boolean): strin
 type ProvisionResult =
   | { ok: true; site: ApiSite }
   | { ok: false; message: string; siteId?: string }
+
+function getTypeIcon(type: SiteType) {
+  switch (type) {
+    case "wordpress":
+    case "php":
+      return Globe
+    case "nodejs":
+      return Code2
+    case "python":
+      return Layers
+    case "proxy":
+      return Server
+    default:
+      return Globe
+  }
+}
 
 export default function NewSitePage() {
   const router = useRouter()
@@ -131,10 +152,6 @@ export default function NewSitePage() {
         return
       }
 
-      // Site (vhost/servis) başarıyla kuruldu — SSL istenmiş ama başarısız
-      // olmuş olabilir (ör. DNS henüz yönlendirilmemiş); bu artık site
-      // kurulumunu BAŞARISIZ saymıyor (bkz. /api/sites/route.ts), site detay
-      // sayfasında ayrı bir uyarı + "Tekrar Dene" olarak gösteriliyor.
       setResult({ ok: true, site: data })
     } catch {
       setResult({ ok: false, message: "Sunucuya bağlanılamadı. Lütfen tekrar deneyin." })
@@ -144,118 +161,178 @@ export default function NewSitePage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div>
+    <div className="mx-auto max-w-4xl space-y-8 pb-12">
+      {/* ═══ 1. ÜST BAŞLIK & GERİ DÖNÜŞ ═══ */}
+      <div className="space-y-3 pb-5 border-b border-slate-200/80">
         <Link
-          href="/"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          href="/sites"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#580619] transition-colors"
         >
-          <ArrowLeft className="size-4" />
-          Anasayfaya dön
+          <ArrowLeft className="size-3.5" />
+          Siteler listesine dön
         </Link>
-        <h1 className="mt-2 font-heading text-2xl font-semibold text-foreground">
-          Yeni Site Ekle
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Adım {step} / 3 —{" "}
-          {step === 1
-            ? "Site türünü seçin"
-            : step === 2
-              ? "Site ayarlarını girin"
-              : "Kurulum"}
-        </p>
-      </div>
-
-      {step === 1 && (
-        <div className="space-y-6">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {SITE_TYPES.map((t) => (
-              <button
-                key={t.type}
-                type="button"
-                onClick={() => setSelectedType(t.type)}
-                className={cn(
-                  "flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors",
-                  selectedType === t.type
-                    ? "border-ring bg-secondary ring-2 ring-ring/40"
-                    : "border-border bg-card hover:border-ring/40"
-                )}
-              >
-                <div className="flex w-full items-center justify-between">
-                  <span className="flex size-9 items-center justify-center rounded-md bg-muted font-mono text-[11px] font-semibold text-foreground">
-                    {t.abbr}
-                  </span>
-                  {selectedType === t.type && (
-                    <Check className="size-4 text-primary" />
-                  )}
-                </div>
-                <p className="font-medium text-foreground">{t.label}</p>
-                <p className="text-xs text-muted-foreground">{t.description}</p>
-              </button>
-            ))}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619]">
+              Yeni Site Ekle
+            </h1>
+            <p className="text-xs text-slate-500 mt-1 font-sans">
+              Sunucunuzda yeni bir web sitesi veya uygulama dağıtımı başlatın.
+            </p>
           </div>
 
-          <div className="flex justify-end">
-            <Button disabled={!selectedType} onClick={() => setStep(2)}>
+          {/* Adım Göstergesi */}
+          <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200/80 text-xs font-semibold">
+            <span
+              className={cn(
+                "px-3 py-1 rounded-lg transition-all",
+                step === 1 ? "bg-[#580619] text-white shadow-xs" : "text-slate-500"
+              )}
+            >
+              1. Tür Seçimi
+            </span>
+            <span
+              className={cn(
+                "px-3 py-1 rounded-lg transition-all",
+                step === 2 ? "bg-[#580619] text-white shadow-xs" : "text-slate-500"
+              )}
+            >
+              2. Ayarlar
+            </span>
+            <span
+              className={cn(
+                "px-3 py-1 rounded-lg transition-all",
+                step === 3 ? "bg-[#580619] text-white shadow-xs" : "text-slate-500"
+              )}
+            >
+              3. Kurulum
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ 2. ADIM 1: TÜR SEÇİMİ ═══ */}
+      {step === 1 && (
+        <div className="space-y-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {SITE_TYPES.map((t) => {
+              const TypeIcon = getTypeIcon(t.type)
+              const isSelected = selectedType === t.type
+              return (
+                <button
+                  key={t.type}
+                  type="button"
+                  onClick={() => setSelectedType(t.type)}
+                  className={cn(
+                    "group relative flex flex-col items-start gap-3 rounded-2xl border p-5 text-left transition-all duration-200 cursor-pointer",
+                    isSelected
+                      ? "border-[#c8a87c] bg-[#580619]/5 shadow-md ring-2 ring-[#c8a87c]/50"
+                      : "border-slate-200/90 bg-white hover:border-[#c8a87c]/70 hover:shadow-sm"
+                  )}
+                >
+                  <div className="flex w-full items-center justify-between">
+                    <div
+                      className={cn(
+                        "size-10 rounded-xl flex items-center justify-center font-mono text-xs font-black transition-colors",
+                        isSelected
+                          ? "bg-[#580619] text-white"
+                          : "bg-[#580619]/5 text-[#580619] border border-[#c8a87c]/30 group-hover:bg-[#580619] group-hover:text-white"
+                      )}
+                    >
+                      <TypeIcon className="size-5" />
+                    </div>
+                    {isSelected && (
+                      <div className="size-6 rounded-full bg-[#580619] text-white flex items-center justify-center">
+                        <Check className="size-3.5 stroke-[3]" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="font-heading font-bold text-slate-900 text-sm">{t.label}</p>
+                    <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                      {t.description}
+                    </p>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <Button
+              disabled={!selectedType}
+              onClick={() => setStep(2)}
+              className="bg-[#580619] hover:bg-[#720a22] text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 hover:border-[#c8a87c] disabled:opacity-40 cursor-pointer"
+            >
               İleri
-              <ArrowRight className="size-4" />
+              <ArrowRight className="size-4 text-[#dfc9a0]" />
             </Button>
           </div>
         </div>
       )}
 
+      {/* ═══ 3. ADIM 2: AYARLAR ═══ */}
       {step === 2 && typeInfo && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>{typeInfo.label} sitesi ayarları</CardTitle>
-              <CardDescription>
-                Bu bilgiler daha sonra site ayrıntıları sayfasından değiştirilebilir.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-6 md:p-8 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-6">
+            <div className="border-b border-slate-100 pb-4">
+              <h2 className="font-heading text-lg font-bold text-slate-900">
+                {typeInfo.label} Sitesi Ayarları
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5 font-sans">
+                Bu bilgiler daha sonra site ayrıntıları sayfasından kolayca değiştirilebilir.
+              </p>
+            </div>
+
+            <div className="space-y-5">
+              {/* Domain Input */}
               <div className="space-y-2">
-                <Label htmlFor="domain">Alan adı</Label>
+                <Label htmlFor="domain" className="text-xs font-bold text-slate-700">
+                  Alan Adı (Domain)
+                </Label>
                 <Input
                   id="domain"
                   placeholder="ornek.com"
-                  className="font-mono"
+                  className="font-mono h-11 rounded-xl border-slate-200 focus-visible:ring-[#580619]/20"
                   value={domain}
                   onChange={(event) => setDomain(event.target.value)}
                 />
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    www yönlendirmesi
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    www.{domain || "ornek.com"} adresini de kapsar
-                  </p>
+              {/* WWW & SSL Switches */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4 bg-slate-50/50">
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">WWW Yönlendirmesi</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      www.{domain || "ornek.com"} adresini kapsar
+                    </p>
+                  </div>
+                  <Switch checked={useWww} onCheckedChange={setUseWww} />
                 </div>
-                <Switch checked={useWww} onCheckedChange={setUseWww} />
-              </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    SSL sertifikası (Let&apos;s Encrypt)
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Otomatik SSL kurulumu ve yenileme
-                  </p>
+                <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4 bg-slate-50/50">
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">Otomatik SSL (Let&apos;s Encrypt)</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Ücretsiz HTTPS kurulumu ve yenileme
+                    </p>
+                  </div>
+                  <Switch checked={useSsl} onCheckedChange={setUseSsl} />
                 </div>
-                <Switch checked={useSsl} onCheckedChange={setUseSsl} />
               </div>
 
               {useSsl && (
                 <div className="space-y-2">
-                  <Label htmlFor="ssl-email">SSL bildirim e-postası</Label>
+                  <Label htmlFor="ssl-email" className="text-xs font-bold text-slate-700">
+                    SSL Bildirim E-postası
+                  </Label>
                   <Input
                     id="ssl-email"
                     type="email"
                     placeholder="admin@ornek.com"
+                    className="h-11 rounded-xl border-slate-200 focus-visible:ring-[#580619]/20"
                     value={sslEmail}
                     onChange={(event) => setSslEmail(event.target.value)}
                   />
@@ -263,120 +340,100 @@ export default function NewSitePage() {
               )}
 
               <TypeSpecificFields type={typeInfo.type} domain={domain} />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setStep(1)} disabled={submitting}>
+          <div className="flex justify-between items-center pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setStep(1)}
+              disabled={submitting}
+              className="h-11 px-5 rounded-xl border-slate-200 text-xs font-semibold"
+            >
               <ArrowLeft className="size-4" />
               Geri
             </Button>
-            <Button onClick={handleCreate} disabled={!domain.trim() || submitting}>
-              {submitting ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+            <Button
+              onClick={handleCreate}
+              disabled={!domain.trim() || submitting}
+              className="bg-[#580619] hover:bg-[#720a22] text-white font-semibold text-xs uppercase tracking-wider px-7 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 hover:border-[#c8a87c] disabled:opacity-40 cursor-pointer"
+            >
+              {submitting ? (
+                <Loader2 className="size-4 animate-spin text-[#dfc9a0]" />
+              ) : (
+                <Check className="size-4 text-[#dfc9a0]" />
+              )}
               Siteyi Oluştur
             </Button>
           </div>
-        </>
+        </div>
       )}
 
+      {/* ═══ 4. ADIM 3: KURULUM DURUMU ═══ */}
       {step === 3 && typeInfo && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-8 shadow-sm space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
+            {result === null ? (
+              <Loader2 className="size-6 animate-spin text-[#580619]" />
+            ) : result.ok ? (
+              <CheckCircle2 className="size-6 text-emerald-600" />
+            ) : (
+              <XCircle className="size-6 text-red-600" />
+            )}
+            <div>
+              <h2 className="font-heading text-xl font-bold text-slate-900">
                 {result === null
-                  ? "Site kuruluyor…"
+                  ? "Site Kuruluyor..."
                   : result.ok
-                    ? "Site oluşturuldu"
-                    : "Kurulum başarısız"}
-              </CardTitle>
-              <CardDescription>
+                  ? "Site Başarıyla Oluşturuldu!"
+                  : "Kurulum Başarısız"}
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
                 {result === null
-                  ? "Bu işlem WordPress indirme veya SSL doğrulaması nedeniyle birkaç dakika sürebilir. Bu pencereyi kapatabilirsiniz, kurulum arka planda devam eder."
+                  ? "Nginx, SSL ve servis yapılandırması uygulanıyor..."
                   : result.ok
-                    ? `${domain} artık Nginx üzerinden sunuluyor.`
-                    : "Aşağıdaki hatayı inceleyip tekrar deneyebilir ya da site kaydını inceleyebilirsiniz."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {result === null && (
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  {typeChecklist(typeInfo.type, typeInfo.managed, useSsl).map((item) => (
-                    <li key={item} className="flex items-center gap-2">
-                      <Loader2 className="size-3.5 shrink-0 animate-spin" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              )}
+                  ? `${domain} artık aktif ve yayında.`
+                  : result.message}
+              </p>
+            </div>
+          </div>
 
-              {result?.ok === true && (
-                <div className="flex items-start gap-2 rounded-lg border border-success/40 bg-success/5 p-3 text-sm text-success">
-                  <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
-                  <span>
-                    Nginx{typeInfo.managed ? ", systemd servisi" : ""} yapılandırıldı.
-                    {useSsl &&
-                      (result.site.sslStatus === "active"
-                        ? " SSL sertifikası alındı."
-                        : " SSL sertifikası henüz alınamadı (bkz. site sayfasındaki uyarı) — site yine de yayında.")}
-                  </span>
+          {result === null ? (
+            <div className="space-y-3 py-4">
+              {typeChecklist(typeInfo.type, typeInfo.managed, useSsl).map((item, index) => (
+                <div key={index} className="flex items-center gap-3 text-xs text-slate-600 font-medium">
+                  <span className="size-2 rounded-full bg-[#580619] animate-pulse" />
+                  {item}
                 </div>
-              )}
-
-              {result?.ok === false && (
-                <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive" role="alert">
-                  <XCircle className="mt-0.5 size-4 shrink-0" />
-                  <span>{result.message}</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {result !== null && (
-            <div className="flex justify-between">
-              {result.ok ? (
-                <>
-                  <Button variant="outline" onClick={() => router.push("/")}>
-                    Site listesine dön
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      router.push(`/sites/${result.site.id}`)
-                      router.refresh()
-                    }}
-                  >
-                    Siteye git
-                    <ArrowRight className="size-4" />
-                  </Button>
-                </>
-              ) : (
-                <>
-                  {result.siteId ? (
-                    <Button variant="outline" onClick={() => router.push("/")}>
-                      Site listesine dön
-                    </Button>
-                  ) : (
-                    <Button variant="outline" onClick={() => setStep(2)}>
-                      <ArrowLeft className="size-4" />
-                      Geri dön
-                    </Button>
-                  )}
-                  {result.siteId && (
-                    <Button
-                      onClick={() => {
-                        router.push(`/sites/${result.siteId}`)
-                        router.refresh()
-                      }}
-                    >
-                      Site kaydını incele
-                      <ArrowRight className="size-4" />
-                    </Button>
-                  )}
-                </>
-              )}
+              ))}
+            </div>
+          ) : result.ok ? (
+            <div className="space-y-5 pt-2">
+              <div className="rounded-xl bg-emerald-50 border border-emerald-200/80 p-4 text-xs text-emerald-800">
+                Tebrikler! <strong>{result.site.domain}</strong> başarıyla yapılandırıldı ve sunucunuzda çalışıyor.
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button asChild variant="outline" className="h-10 rounded-xl text-xs font-semibold">
+                  <Link href="/sites">Siteler Listesi</Link>
+                </Button>
+                <Button asChild className="bg-[#580619] hover:bg-[#720a22] text-white h-10 rounded-xl text-xs font-semibold px-5">
+                  <Link href={`/sites/${result.site.id}`}>Site Yönetimine Git</Link>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 pt-2">
+              <div className="rounded-xl bg-red-50 border border-red-200/80 p-4 text-xs text-red-800 font-mono">
+                {result.message}
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setStep(2)} className="h-10 rounded-xl text-xs font-semibold">
+                  Ayarlara Dön
+                </Button>
+              </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   )
@@ -388,218 +445,96 @@ function TypeSpecificFields({ type, domain }: { type: SiteType; domain: string }
   switch (type) {
     case "nodejs":
       return (
-        <div className="space-y-3">
+        <div className="space-y-4 pt-2 border-t border-slate-100">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="node-version">Node.js sürümü (bilgi amaçlı)</Label>
-              <Input id="node-version" defaultValue="20.x" className="font-mono" />
+              <Label htmlFor="node-version" className="text-xs font-bold text-slate-700">Node.js Sürümü</Label>
+              <Input id="node-version" defaultValue="20.x" className="font-mono h-10 rounded-xl" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="start-cmd">Başlatma komutu</Label>
-              <Input id="start-cmd" defaultValue="npm run start" className="font-mono" />
+              <Label htmlFor="start-cmd" className="text-xs font-bold text-slate-700">Başlatma Komutu</Label>
+              <Input id="start-cmd" defaultValue="npm run start" className="font-mono h-10 rounded-xl" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="port">Uygulama portu</Label>
-              <Input id="port" defaultValue="3000" className="font-mono" />
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="port" className="text-xs font-bold text-slate-700">Uygulama Portu</Label>
+              <Input id="port" defaultValue="3000" className="font-mono h-10 rounded-xl" />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Uygulama kodunun sunucuda önceden <code className="font-mono">{rootPlaceholder}</code>{" "}
-            dizinine yüklenmiş olması gerekir; panel systemd servisini bu dizinde{" "}
-            <code className="font-mono">panel</code> kullanıcısıyla çalıştırır.
+          <p className="text-[11px] text-slate-500 font-sans">
+            Uygulama kodunuz <code className="font-mono text-slate-800">{rootPlaceholder}</code> dizininde barındırılır.
           </p>
         </div>
       )
     case "python":
       return (
-        <div className="space-y-3">
+        <div className="space-y-4 pt-2 border-t border-slate-100">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="python-version">Python sürümü (bilgi amaçlı)</Label>
-              <Input id="python-version" defaultValue="3.12" className="font-mono" />
+              <Label htmlFor="python-version" className="text-xs font-bold text-slate-700">Python Sürümü</Label>
+              <Input id="python-version" defaultValue="3.12" className="font-mono h-10 rounded-xl" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="start-cmd">Başlatma komutu</Label>
-              <Input id="start-cmd" defaultValue="gunicorn app:app --bind 127.0.0.1:$PORT" className="font-mono" />
+              <Label htmlFor="start-cmd" className="text-xs font-bold text-slate-700">Başlatma Komutu</Label>
+              <Input id="start-cmd" defaultValue="gunicorn app:app --bind 127.0.0.1:$PORT" className="font-mono h-10 rounded-xl" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="port">Uygulama portu</Label>
-              <Input id="port" defaultValue="8000" className="font-mono" />
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="port" className="text-xs font-bold text-slate-700">Uygulama Portu</Label>
+              <Input id="port" defaultValue="8000" className="font-mono h-10 rounded-xl" />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Uygulama kodunun sunucuda önceden <code className="font-mono">{rootPlaceholder}</code>{" "}
-            dizinine yüklenmiş olması gerekir; panel systemd servisini bu dizinde{" "}
-            <code className="font-mono">panel</code> kullanıcısıyla çalıştırır.
-          </p>
         </div>
       )
     case "wordpress":
       return (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-slate-100">
           <div className="space-y-2">
-            <Label htmlFor="php-version">PHP sürümü</Label>
-            <Input id="php-version" defaultValue="8.3" className="font-mono" />
+            <Label htmlFor="php-version" className="text-xs font-bold text-slate-700">PHP Sürümü</Label>
+            <Input id="php-version" defaultValue="8.3" className="font-mono h-10 rounded-xl" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="site-root">Site kök dizini</Label>
-            <Input id="site-root" placeholder={rootPlaceholder} className="font-mono" />
+            <Label htmlFor="site-root" className="text-xs font-bold text-slate-700">Site Kök Dizini</Label>
+            <Input id="site-root" placeholder={rootPlaceholder} className="font-mono h-10 rounded-xl" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="linux-user">Linux kullanıcısı (opsiyonel)</Label>
-            <Input id="linux-user" placeholder="boş bırakılırsa oluşturulmaz" className="font-mono" />
+            <Label htmlFor="db-name" className="text-xs font-bold text-slate-700">Veritabanı Adı</Label>
+            <Input id="db-name" placeholder={domain.replace(/[^a-zA-Z0-9]/g, "_") || "wp_db"} className="font-mono h-10 rounded-xl" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="db-name">Veritabanı adı</Label>
-            <Input id="db-name" defaultValue="wp_site" className="font-mono" />
+            <Label htmlFor="db-user" className="text-xs font-bold text-slate-700">Veritabanı Kullanıcısı</Label>
+            <Input id="db-user" placeholder="wp_user" className="font-mono h-10 rounded-xl" />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="db-user">Veritabanı kullanıcısı</Label>
-            <Input id="db-user" defaultValue="wp_site_u" className="font-mono" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="db-password">Veritabanı şifresi</Label>
-            <Input id="db-password" type="password" className="font-mono" />
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="db-password" className="text-xs font-bold text-slate-700">Veritabanı Şifresi</Label>
+            <Input id="db-password" type="password" placeholder="Güçlü şifre girin" className="font-mono h-10 rounded-xl" />
           </div>
         </div>
       )
     case "php":
       return (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-slate-100">
           <div className="space-y-2">
-            <Label htmlFor="php-version">PHP sürümü</Label>
-            <Input id="php-version" defaultValue="8.3" className="font-mono" />
+            <Label htmlFor="php-version" className="text-xs font-bold text-slate-700">PHP Sürümü</Label>
+            <Input id="php-version" defaultValue="8.3" className="font-mono h-10 rounded-xl" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="site-root">Site kök dizini</Label>
-            <Input id="site-root" placeholder={rootPlaceholder} className="font-mono" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="linux-user">Linux kullanıcısı (opsiyonel)</Label>
-            <Input id="linux-user" placeholder="boş bırakılırsa oluşturulmaz" className="font-mono" />
+            <Label htmlFor="site-root" className="text-xs font-bold text-slate-700">Site Kök Dizini</Label>
+            <Input id="site-root" placeholder={rootPlaceholder} className="font-mono h-10 rounded-xl" />
           </div>
         </div>
       )
     case "static":
       return (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="site-root">Site kök dizini</Label>
-            <Input id="site-root" placeholder={rootPlaceholder} className="font-mono" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="linux-user">Linux kullanıcısı (opsiyonel)</Label>
-            <Input id="linux-user" placeholder="boş bırakılırsa oluşturulmaz" className="font-mono" />
-          </div>
+        <div className="space-y-2 pt-2 border-t border-slate-100">
+          <Label htmlFor="site-root" className="text-xs font-bold text-slate-700">Site Kök Dizini</Label>
+          <Input id="site-root" placeholder={rootPlaceholder} className="font-mono h-10 rounded-xl" />
         </div>
       )
     case "proxy":
-      return <ReverseProxyFields />
-  }
-}
-
-// ------------------------------------------------------------
-// Reverse proxy: hedef port önerisi
-// ------------------------------------------------------------
-interface SystemUsedPort {
-  port: number
-  process: string | null
-  source: "site" | "docker" | "system"
-  label: string | null
-}
-
-interface SystemPortsResponse {
-  used: SystemUsedPort[]
-  suggestions: number[]
-}
-
-const OCCUPIED_PORTS_DISPLAY_LIMIT = 24
-const SUGGESTED_PORTS_DISPLAY_LIMIT = 8
-
-function ReverseProxyFields() {
-  const [ports, setPorts] = useState<SystemPortsResponse | null>(null)
-  const [loadingPorts, setLoadingPorts] = useState(true)
-  const [value, setValue] = useState("")
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function load() {
-      try {
-        const res = await fetch("/api/system/ports", { cache: "no-store" })
-        if (!res.ok) return
-        const data = (await res.json()) as SystemPortsResponse
-        if (cancelled) return
-        setPorts(data)
-        // Kullanıcı henüz bir şey yazmadıysa, bulunan en yakın müsait porta
-        // otomatik ayarla (3000, 3001, 3003 doluysa -> 3004 gibi).
-        setValue((current) => (current === "" && data.suggestions[0] ? `http://127.0.0.1:${data.suggestions[0]}` : current))
-      } catch {
-        // sessizce yoksay — port listesi yalnızca bir kolaylık, formu bloklamaz
-      } finally {
-        if (!cancelled) setLoadingPorts(false)
-      }
-    }
-
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const occupiedPorts = ports?.used.map((u) => u.port).sort((a, b) => a - b) ?? []
-  const shownOccupied = occupiedPorts.slice(0, OCCUPIED_PORTS_DISPLAY_LIMIT)
-  const hiddenOccupiedCount = occupiedPorts.length - shownOccupied.length
-
-  function pickPort(port: number) {
-    setValue(`http://127.0.0.1:${port}`)
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="space-y-2">
-        <Label htmlFor="target-url">Hedef adres</Label>
-        <Input
-          id="target-url"
-          placeholder="http://127.0.0.1:4000"
-          className="font-mono"
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-        />
-      </div>
-
-      {!loadingPorts && occupiedPorts.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">Meşgul portlar:</span>{" "}
-          <span className="font-mono">
-            {shownOccupied.join(", ")}
-            {hiddenOccupiedCount > 0 ? ` (+${hiddenOccupiedCount} tane daha)` : ""}
-          </span>
-        </p>
-      )}
-
-      {!loadingPorts && (ports?.suggestions.length ?? 0) > 0 && (
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium text-foreground">Müsait port öner:</p>
-          <div className="flex flex-wrap gap-1.5">
-            {ports!.suggestions.slice(0, SUGGESTED_PORTS_DISPLAY_LIMIT).map((port) => (
-              <button
-                key={port}
-                type="button"
-                onClick={() => pickPort(port)}
-                className={cn(
-                  "rounded-md border px-2 py-1 font-mono text-xs transition-colors",
-                  value === `http://127.0.0.1:${port}`
-                    ? "border-ring bg-secondary text-foreground ring-1 ring-ring/40"
-                    : "border-border text-muted-foreground hover:border-ring/40 hover:text-foreground"
-                )}
-              >
-                {port}
-              </button>
-            ))}
-          </div>
+      return (
+        <div className="space-y-2 pt-2 border-t border-slate-100">
+          <Label htmlFor="target-url" className="text-xs font-bold text-slate-700">Hedef Adres (Upstream URL)</Label>
+          <Input id="target-url" placeholder="http://127.0.0.1:8080" className="font-mono h-10 rounded-xl" />
         </div>
-      )}
-    </div>
-  )
+      )
+  }
 }
