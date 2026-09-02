@@ -1,12 +1,29 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import {
+  Loader2,
+  Pencil,
+  Plus,
+  Trash2,
+  Settings as SettingsIcon,
+  Globe,
+  Lock,
+  Database,
+  Cloud,
+  ShieldCheck,
+  ShieldAlert,
+  ArrowUpRight,
+  Server,
+  Sparkles,
+  CheckCircle2,
+  HardDrive,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
 
 interface S3ConfigView {
   id: string
@@ -55,11 +72,30 @@ interface DomainFormState {
 
 const EMPTY_DOMAIN_FORM: DomainFormState = { domain: "", email: "" }
 
-const SSL_STATUS_LABEL: Record<string, string> = {
-  none: "Bağlanmadı",
-  pending: "İşleniyor...",
-  active: "Aktif (HTTPS)",
-  error: "Hata",
+const SSL_STATUS_CONFIG: Record<
+  string,
+  { label: string; badge: string; dot: string }
+> = {
+  none: {
+    label: "Bağlanmadı (HTTP)",
+    badge: "bg-slate-100 text-slate-600 border-slate-200",
+    dot: "bg-slate-400",
+  },
+  pending: {
+    label: "Sertifika Alınıyor...",
+    badge: "bg-amber-50 text-amber-700 border-amber-200",
+    dot: "bg-amber-500 animate-pulse",
+  },
+  active: {
+    label: "Aktif (Let's Encrypt HTTPS)",
+    badge: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
+    dot: "bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]",
+  },
+  error: {
+    label: "Doğrulama Hatası",
+    badge: "bg-red-50 text-red-700 border-red-200",
+    dot: "bg-red-500 animate-pulse",
+  },
 }
 
 async function parseError(res: Response): Promise<string> {
@@ -96,7 +132,7 @@ export default function SettingsPage() {
       setDomainSettings(data)
       setDomainForm({ domain: data.domain ?? "", email: data.domainEmail ?? "" })
     } catch {
-      // sessizce yoksay -- kart kendi hata durumunu yalnizca kaydetme/kaldirma sirasinda gosterir
+      // sessizce yoksay
     } finally {
       setDomainLoading(false)
     }
@@ -125,8 +161,7 @@ export default function SettingsPage() {
       loadDomain()
     }, 0)
     return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [load, loadDomain])
 
   function openCreateForm() {
     setEditingId(null)
@@ -256,213 +291,418 @@ export default function SettingsPage() {
   const canSubmit =
     form.bucket.trim() && form.region.trim() && form.accessKeyId.trim() && (editingId ? true : form.secretAccessKey.trim())
 
+  const domainStatus = domainSettings?.sslStatus
+    ? SSL_STATUS_CONFIG[domainSettings.sslStatus] ?? SSL_STATUS_CONFIG.none
+    : SSL_STATUS_CONFIG.none
+
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="font-heading text-2xl font-semibold text-foreground">Ayarlar</h1>
-        <p className="text-sm text-muted-foreground">
-          Panel genelinde kullanılabilecek S3 (ya da S3-uyumlu) depolama yapılandırmaları —
-          site bazında yedekleme ayarlarında seçilir.
-        </p>
+    <div className="max-w-6xl mx-auto space-y-8 pb-12">
+      {/* ═══ 1. ÜST BAŞLIK ═══ */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-200/80">
+        <div className="flex items-center gap-3.5">
+          <div className="size-12 rounded-2xl bg-[#580619]/5 border border-[#c8a87c]/30 flex items-center justify-center text-[#580619] shadow-2xs">
+            <SettingsIcon className="size-6 text-[#580619]" />
+          </div>
+          <div>
+            <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619]">
+              Sistem Ayarları
+            </h1>
+            <p className="text-xs text-slate-500 font-sans mt-0.5">
+              Panel erişim alan adı, SSL sertifikaları ve harici S3 bulut depolama yapılandırmaları.
+            </p>
+          </div>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Alan Adı ve SSL</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Panele kendi alan adınız üzerinden, gerçek bir Let&apos;s Encrypt SSL sertifikasıyla erişin.
-            IP:24428 üzerinden erişim her zaman çalışmaya devam eder.
-          </p>
-
-          {domainLoading ? (
-            <div className="flex items-center justify-center py-6 text-muted-foreground">
-              <Loader2 className="size-5 animate-spin" />
+      {/* ═══ 2. PANEL ALAN ADI & SSL KARTI ═══ */}
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-6 md:p-8 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-6">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="size-9 rounded-xl bg-emerald-500/10 text-emerald-700 flex items-center justify-center">
+              <Globe className="size-5 text-[#580619]" />
             </div>
-          ) : (
-            <>
-              {domainSettings?.domain && (
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm">
+            <div>
+              <h2 className="font-heading font-bold text-lg text-slate-900">
+                Panel Alan Adı ve Otomatik SSL
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Rudder paneline kendi özel alan adınızla (örn: <code className="font-mono text-slate-700">panel.siteniz.com</code>) güvenli HTTPS üzerinden erişin.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {domainLoading ? (
+          <div className="flex items-center justify-center py-8 text-slate-400">
+            <Loader2 className="size-6 animate-spin text-[#580619]" />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Bağlı Alan Adı Kartı */}
+            {domainSettings?.domain && (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-emerald-200/80 bg-emerald-50/50 p-5">
+                <div className="flex items-start gap-3.5">
+                  <div className="size-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <ShieldCheck className="size-5" />
+                  </div>
                   <div>
-                    <p className="font-medium text-foreground">
-                      {domainSettings.sslEnabled ? `https://${domainSettings.domain}` : domainSettings.domain}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Durum: {SSL_STATUS_LABEL[domainSettings.sslStatus] ?? domainSettings.sslStatus}
+                    <div className="flex items-center gap-2.5">
+                      <a
+                        href={`https://${domainSettings.domain}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-mono font-bold text-sm text-emerald-950 hover:underline flex items-center gap-1"
+                      >
+                        {domainSettings.sslEnabled ? `https://${domainSettings.domain}` : domainSettings.domain}
+                        <ArrowUpRight className="size-3.5 text-emerald-700" />
+                      </a>
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border shadow-2xs",
+                          domainStatus.badge
+                        )}
+                      >
+                        <span className={cn("size-1.5 rounded-full", domainStatus.dot)} />
+                        {domainStatus.label}
+                      </span>
+                    </div>
+                    <p className="text-xs text-emerald-800 mt-1">
+                      Let&apos;s Encrypt SSL sertifikası aktif ve otomatik olarak yenilenir.
                     </p>
                     {domainSettings.lastError && (
-                      <p className="mt-1 text-xs text-destructive">{domainSettings.lastError}</p>
+                      <p className="mt-2 text-xs text-red-600 font-mono bg-red-50 p-2 rounded-lg border border-red-200">
+                        {domainSettings.lastError}
+                      </p>
                     )}
                   </div>
-                  <Button variant="ghost" size="sm" disabled={domainRemoving} onClick={handleRemoveDomain}>
-                    {domainRemoving ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
-                  </Button>
                 </div>
-              )}
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>Alan adı</Label>
-                  <Input
-                    value={domainForm.domain}
-                    onChange={(e) => setDomainForm((f) => ({ ...f, domain: e.target.value }))}
-                    placeholder="panel.ornek.com"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>E-posta (Let&apos;s Encrypt bildirimleri için)</Label>
-                  <Input
-                    type="email"
-                    value={domainForm.email}
-                    onChange={(e) => setDomainForm((f) => ({ ...f, email: e.target.value }))}
-                    placeholder="admin@ornek.com"
-                  />
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={domainRemoving}
+                  onClick={handleRemoveDomain}
+                  className="h-9 rounded-xl border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold shrink-0"
+                >
+                  {domainRemoving ? (
+                    <Loader2 className="size-3.5 animate-spin mr-1" />
+                  ) : (
+                    <Trash2 className="size-3.5 mr-1" />
+                  )}
+                  Bağlantıyı Kaldır
+                </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Alan adının DNS A kaydının bu sunucunun IP adresini gösterdiğinden emin olun — SSL doğrulaması
-                bu sunucuya port 80 üzerinden erişebilmeyi gerektirir.
-              </p>
-              {domainError && <p className="text-sm text-destructive">{domainError}</p>}
-              <Button size="sm" disabled={!canBindDomain} onClick={handleBindDomain}>
-                {domainSaving && <Loader2 className="size-3.5 animate-spin" />}
-                {domainSettings?.domain ? "Güncelle ve SSL Al" : "Bağla ve SSL Al"}
-              </Button>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            )}
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>S3 Yapılandırmaları</CardTitle>
-            <Button size="sm" onClick={openCreateForm}>
-              <Plus className="size-3.5" />
-              Yeni Yapılandırma
+            {/* Form Alanları */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-slate-700">Panel Alan Adı (FQDN)</Label>
+                <Input
+                  value={domainForm.domain}
+                  onChange={(e) => setDomainForm((f) => ({ ...f, domain: e.target.value }))}
+                  placeholder="panel.ornek.com"
+                  className="font-mono text-xs h-11 rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-slate-700">
+                  SSL Bildirim E-postası (Let&apos;s Encrypt)
+                </Label>
+                <Input
+                  type="email"
+                  value={domainForm.email}
+                  onChange={(e) => setDomainForm((f) => ({ ...f, email: e.target.value }))}
+                  placeholder="admin@ornek.com"
+                  className="text-xs h-11 rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-amber-200/80 bg-amber-50/50 p-3.5 text-xs text-amber-900 flex items-start gap-2.5">
+              <ShieldAlert className="size-4 text-amber-600 shrink-0 mt-0.5" />
+              <span>
+                Alan adınızın <strong>DNS A kaydının</strong> bu sunucunun genel IP adresini gösterdiğinden emin olun. SSL doğrulaması için port 80/443 erişimi gereklidir.
+              </span>
+            </div>
+
+            {domainError && (
+              <p className="text-xs text-red-600 font-mono bg-red-50 p-3 rounded-xl border border-red-200">
+                {domainError}
+              </p>
+            )}
+
+            <div className="flex justify-end pt-1">
+              <Button
+                size="sm"
+                disabled={!canBindDomain || domainSaving}
+                onClick={handleBindDomain}
+                className="bg-[#580619] hover:bg-[#720a22] text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 hover:border-[#c8a87c] disabled:opacity-40 cursor-pointer"
+              >
+                {domainSaving ? (
+                  <Loader2 className="size-4 animate-spin text-[#dfc9a0]" />
+                ) : (
+                  <CheckCircle2 className="size-4 text-[#dfc9a0]" />
+                )}
+                {domainSettings?.domain ? "GÜNCELLE VE SSL YENİLE" : "BAĞLA VE SSL SERTİFİKASI AL"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ═══ 3. S3 BULUT DEPOLAMA KARTI ═══ */}
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-6 md:p-8 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="size-9 rounded-xl bg-[#580619]/10 text-[#580619] flex items-center justify-center">
+              <Cloud className="size-5 text-[#580619]" />
+            </div>
+            <div>
+              <h2 className="font-heading font-bold text-lg text-slate-900">
+                S3 Bulut Depolama Yapılandırmaları
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                AWS S3, Cloudflare R2, MinIO, Wasabi veya DigitalOcean Spaces otomatik yedekleme hedefleri.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            size="sm"
+            onClick={openCreateForm}
+            className="bg-[#580619] hover:bg-[#720a22] text-white font-semibold text-xs uppercase tracking-wider px-4 py-2 rounded-xl shadow-sm transition-all flex items-center gap-1.5 h-10 border border-[#c8a87c]/40 hover:border-[#c8a87c] shrink-0 cursor-pointer"
+          >
+            <Plus className="size-4 text-[#dfc9a0]" />
+            Yeni Yapılandırma
+          </Button>
+        </div>
+
+        {/* Yeni / Düzenleme Formu */}
+        {formOpen && (
+          <div className="rounded-2xl border border-[#c8a87c]/70 bg-slate-50/60 p-6 shadow-sm space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-4 text-[#c8a87c]" />
+                <h3 className="font-heading font-bold text-sm text-slate-900">
+                  {editingId ? "S3 Yapılandırmasını Düzenle" : "Yeni S3 Sağlayıcı Profili Ekle"}
+                </h3>
+              </div>
+              <span className="text-xs text-slate-500 font-sans">AWS S3 / R2 / MinIO Uyumlu</span>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Profil Etiketi</Label>
+                <Input
+                  value={form.label}
+                  onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
+                  placeholder="Örn: AWS Frankfurt, Cloudflare R2 Yedekler"
+                  className="h-10 rounded-xl text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Bucket Adı</Label>
+                <Input
+                  value={form.bucket}
+                  onChange={(e) => setForm((f) => ({ ...f, bucket: e.target.value }))}
+                  placeholder="panel-backups-bucket"
+                  className="h-10 rounded-xl font-mono text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Bölge (Region)</Label>
+                <Input
+                  value={form.region}
+                  onChange={(e) => setForm((f) => ({ ...f, region: e.target.value }))}
+                  placeholder="eu-central-1 veya auto"
+                  className="h-10 rounded-xl font-mono text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">
+                  Özel Endpoint URL (Opsiyonel — R2 / MinIO / Spaces)
+                </Label>
+                <Input
+                  value={form.endpoint}
+                  onChange={(e) => setForm((f) => ({ ...f, endpoint: e.target.value }))}
+                  placeholder="https://<accountid>.r2.cloudflarestorage.com"
+                  className="h-10 rounded-xl font-mono text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Access Key ID</Label>
+                <Input
+                  value={form.accessKeyId}
+                  onChange={(e) => setForm((f) => ({ ...f, accessKeyId: e.target.value }))}
+                  className="h-10 rounded-xl font-mono text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">
+                  Secret Access Key {editingId ? "(Değiştirmek istemiyorsanız boş bırakın)" : ""}
+                </Label>
+                <Input
+                  type="password"
+                  value={form.secretAccessKey}
+                  onChange={(e) => setForm((f) => ({ ...f, secretAccessKey: e.target.value }))}
+                  placeholder={editingId ? "••••••••••••••••••••••••" : ""}
+                  className="h-10 rounded-xl font-mono text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs font-bold text-slate-700">
+                  Yol Öneki / Klasör (Path Prefix — Opsiyonel)
+                </Label>
+                <Input
+                  value={form.pathPrefix}
+                  onChange={(e) => setForm((f) => ({ ...f, pathPrefix: e.target.value }))}
+                  placeholder="rudder-backups/"
+                  className="h-10 rounded-xl font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            {saveError && (
+              <p className="text-xs text-red-600 font-mono bg-red-50 p-2.5 rounded-lg border border-red-200">
+                {saveError}
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setFormOpen(false)}
+                className="h-10 px-4 rounded-xl text-xs font-semibold"
+              >
+                Vazgeç
+              </Button>
+              <Button
+                size="sm"
+                disabled={!canSubmit || saving}
+                onClick={handleSave}
+                className="bg-[#580619] hover:bg-[#720a22] text-white h-10 px-6 rounded-xl text-xs font-semibold border border-[#c8a87c]/40"
+              >
+                {saving && <Loader2 className="size-3.5 animate-spin mr-1 text-[#dfc9a0]" />}
+                {editingId ? "Değişiklikleri Kaydet" : "Profili Oluştur"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {listError && (
+          <p className="text-xs text-red-600 font-mono bg-red-50 p-3 rounded-xl border border-red-200">
+            {listError}
+          </p>
+        )}
+
+        {/* Profil Listesi */}
+        {loading ? (
+          <div className="flex items-center justify-center py-8 text-slate-400">
+            <Loader2 className="size-6 animate-spin text-[#580619]" />
+          </div>
+        ) : configs.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/40 p-8 text-center flex flex-col items-center justify-center">
+            <div className="size-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+              <Database className="size-6" />
+            </div>
+            <h3 className="font-heading font-bold text-sm text-slate-800">
+              Henüz bir S3 yapılandırması eklenmedi.
+            </h3>
+            <p className="text-xs text-slate-500 max-w-sm mt-1 mb-4">
+              Sitelerinizin veritabanı ve dosya yedeklerini güvenli bulut depolama alanına aktarmak için ilk profilinizi oluşturun.
+            </p>
+            <Button
+              size="sm"
+              onClick={openCreateForm}
+              className="bg-[#580619] hover:bg-[#720a22] text-white text-xs font-semibold px-4 h-9 rounded-xl border border-[#c8a87c]/40"
+            >
+              <Plus className="size-3.5 mr-1 text-[#dfc9a0]" />
+              İlk S3 Profilini Ekle
             </Button>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {formOpen && (
-            <div className="space-y-3 rounded-lg border border-border p-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>Etiket</Label>
-                  <Input
-                    value={form.label}
-                    onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
-                    placeholder="Varsayılan"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Bucket</Label>
-                  <Input
-                    value={form.bucket}
-                    onChange={(e) => setForm((f) => ({ ...f, bucket: e.target.value }))}
-                    placeholder="panel-yedekler"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Bölge (region)</Label>
-                  <Input
-                    value={form.region}
-                    onChange={(e) => setForm((f) => ({ ...f, region: e.target.value }))}
-                    placeholder="eu-central-1"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Özel endpoint (opsiyonel — MinIO/Spaces vb.)</Label>
-                  <Input
-                    value={form.endpoint}
-                    onChange={(e) => setForm((f) => ({ ...f, endpoint: e.target.value }))}
-                    placeholder="https://s3.example.com"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Access Key ID</Label>
-                  <Input
-                    value={form.accessKeyId}
-                    onChange={(e) => setForm((f) => ({ ...f, accessKeyId: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>
-                    Secret Access Key{editingId ? " (değiştirmek istemiyorsan boş bırak)" : ""}
-                  </Label>
-                  <Input
-                    type="password"
-                    value={form.secretAccessKey}
-                    onChange={(e) => setForm((f) => ({ ...f, secretAccessKey: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label>Yol öneki (opsiyonel)</Label>
-                  <Input
-                    value={form.pathPrefix}
-                    onChange={(e) => setForm((f) => ({ ...f, pathPrefix: e.target.value }))}
-                    placeholder="backups/"
-                  />
-                </div>
-              </div>
-              {saveError && <p className="text-sm text-destructive">{saveError}</p>}
-              <div className="flex items-center gap-2">
-                <Button size="sm" disabled={!canSubmit || saving} onClick={handleSave}>
-                  {saving && <Loader2 className="size-3.5 animate-spin" />}
-                  {editingId ? "Güncelle" : "Oluştur"}
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setFormOpen(false)}>
-                  Vazgeç
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {listError && <p className="text-sm text-destructive">{listError}</p>}
-
-          {loading ? (
-            <div className="flex items-center justify-center py-8 text-muted-foreground">
-              <Loader2 className="size-5 animate-spin" />
-            </div>
-          ) : configs.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              Henüz bir S3 yapılandırması eklenmedi.
-            </p>
-          ) : (
-            <div className="divide-y divide-border">
-              {configs.map((config) => (
-                <div key={config.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                  <div>
-                    <p className="font-medium text-foreground">{config.label}</p>
-                    <p className="font-mono text-xs text-muted-foreground">
-                      {config.bucket} · {config.region}
-                      {config.endpoint ? ` · ${config.endpoint}` : ""}
-                    </p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {configs.map((config) => (
+              <div
+                key={config.id}
+                className="flex flex-col justify-between p-5 rounded-2xl border border-slate-200/90 bg-white hover:border-[#c8a87c]/60 shadow-xs hover:shadow-sm transition-all"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-heading font-bold text-sm text-slate-900">
+                      {config.label || "İsimsiz S3 Profili"}
+                    </span>
+                    <span className="text-[10px] font-mono font-bold bg-[#580619]/10 text-[#580619] px-2 py-0.5 rounded-full border border-[#c8a87c]/30">
+                      S3 Uyumlu
+                    </span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => openEditForm(config)}>
-                      <Pencil className="size-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={deletingId === config.id}
-                      onClick={() => handleDelete(config.id)}
-                    >
-                      {deletingId === config.id ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="size-3.5" />
-                      )}
-                    </Button>
+
+                  <div className="mt-3 space-y-1.5 text-xs text-slate-600">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Bucket:</span>
+                      <span className="font-mono font-bold text-slate-800">{config.bucket}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Bölge (Region):</span>
+                      <span className="font-mono text-slate-800">{config.region}</span>
+                    </div>
+                    {config.endpoint && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Özel Endpoint:</span>
+                        <span className="font-mono text-[11px] text-slate-700 truncate max-w-[200px]" title={config.endpoint}>
+                          {config.endpoint}
+                        </span>
+                      </div>
+                    )}
+                    {config.pathPrefix && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Yol Öneki:</span>
+                        <span className="font-mono text-[11px] text-slate-700">{config.pathPrefix}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
+                <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEditForm(config)}
+                    className="h-8 rounded-xl text-xs font-semibold px-3"
+                  >
+                    <Pencil className="size-3 mr-1 text-[#c8a87c]" />
+                    Düzenle
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={deletingId === config.id}
+                    onClick={() => handleDelete(config.id)}
+                    className="h-8 rounded-xl text-xs font-semibold px-3 border-red-200 text-red-600 hover:bg-red-50"
+                  >
+                    {deletingId === config.id ? (
+                      <Loader2 className="size-3 animate-spin mr-1" />
+                    ) : (
+                      <Trash2 className="size-3 mr-1" />
+                    )}
+                    Sil
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
+
