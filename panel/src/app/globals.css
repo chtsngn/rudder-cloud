@@ -5,54 +5,69 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.65rem;
-  --background: #0f0d0b;
-  --foreground: #f0e6d0;
-  --card: #1a1510;
-  --card-foreground: #f0e6d0;
-  --popover: #1e1813;
-  --popover-foreground: #f0e6d0;
-  --primary: #8b1a2a;
-  --primary-hover: #a01e30;
-  --primary-foreground: #f0e6d0;
-  --secondary: #221c15;
-  --secondary-foreground: #c9a96e;
-  --muted: #1e1813;
-  --muted-foreground: #7a6a55;
-  --accent: #c9a96e;
-  --accent-foreground: #0f0d0b;
-  --destructive: #b91c1c;
-  --destructive-foreground: #f0e6d0;
-  --border: rgba(201, 169, 110, 0.12);
-  --input: rgba(201, 169, 110, 0.15);
-  --ring: #c9a96e;
-  --success: #15803d;
-  --warning: #b45309;
+  --radius: 0.5rem;
+
+  /* Gorsel 4: cok koyu antrasit arka plan */
+  --background: #191714;
+  --foreground: #e8d5b0;
+
+  /* Kartlar: biraz daha acik */
+  --card: #201d19;
+  --card-foreground: #e8d5b0;
+
+  --popover: #201d19;
+  --popover-foreground: #e8d5b0;
+
+  /* Birincil: koyu bordo */
+  --primary: #6b1020;
+  --primary-hover: #7f1428;
+  --primary-foreground: #e8d5b0;
+
+  --secondary: #251e17;
+  --secondary-foreground: #b8956a;
+
+  --muted: #201d19;
+  --muted-foreground: #6b5a40;
+
+  /* Aksan: bronz/altin */
+  --accent: #b8956a;
+  --accent-foreground: #191714;
+
+  --destructive: #7f1d1d;
+  --destructive-foreground: #e8d5b0;
+
+  /* Gorsel 2 altin rengi icin sinir */
+  --border: rgba(184, 149, 106, 0.1);
+  --input: rgba(184, 149, 106, 0.12);
+  --ring: #b8956a;
+
+  --success: #3d6b3a;
+  --warning: #8a5c20;
 }
 
 .dark {
-  --background: #0f0d0b;
-  --foreground: #f0e6d0;
-  --card: #1a1510;
-  --card-foreground: #f0e6d0;
-  --popover: #1e1813;
-  --popover-foreground: #f0e6d0;
-  --primary: #8b1a2a;
-  --primary-hover: #a01e30;
-  --primary-foreground: #f0e6d0;
-  --secondary: #221c15;
-  --secondary-foreground: #c9a96e;
-  --muted: #1e1813;
-  --muted-foreground: #7a6a55;
-  --accent: #c9a96e;
-  --accent-foreground: #0f0d0b;
-  --destructive: #b91c1c;
-  --destructive-foreground: #f0e6d0;
-  --border: rgba(201, 169, 110, 0.12);
-  --input: rgba(201, 169, 110, 0.15);
-  --ring: #c9a96e;
-  --success: #15803d;
-  --warning: #b45309;
+  --background: #191714;
+  --foreground: #e8d5b0;
+  --card: #201d19;
+  --card-foreground: #e8d5b0;
+  --popover: #201d19;
+  --popover-foreground: #e8d5b0;
+  --primary: #6b1020;
+  --primary-hover: #7f1428;
+  --primary-foreground: #e8d5b0;
+  --secondary: #251e17;
+  --secondary-foreground: #b8956a;
+  --muted: #201d19;
+  --muted-foreground: #6b5a40;
+  --accent: #b8956a;
+  --accent-foreground: #191714;
+  --destructive: #7f1d1d;
+  --destructive-foreground: #e8d5b0;
+  --border: rgba(184, 149, 106, 0.1);
+  --input: rgba(184, 149, 106, 0.12);
+  --ring: #b8956a;
+  --success: #3d6b3a;
+  --warning: #8a5c20;
 }
 
 @theme inline {
@@ -78,10 +93,10 @@
   --color-ring: var(--ring);
   --color-success: var(--success);
   --color-warning: var(--warning);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
   --font-sans: 'Plus Jakarta Sans', -apple-system, 'Segoe UI', sans-serif;
   --font-heading: 'Cinzel', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -93,9 +108,5 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image:
-      radial-gradient(ellipse at 20% 0%, rgba(139,26,42,0.08) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 100%, rgba(201,169,110,0.04) 0%, transparent 50%);
-    background-attachment: fixed;
   }
 }

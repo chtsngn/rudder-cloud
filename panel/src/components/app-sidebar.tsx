@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
@@ -21,9 +21,7 @@ import { useCurrentUser } from "@/hooks/use-current-user"
 import { cn } from "@/lib/utils"
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "panel:sidebar-collapsed"
-
 const BASE_NAV_ITEMS = [{ href: "/", label: "Anasayfa", icon: Home }]
-
 const SUPER_ADMIN_NAV_ITEMS = [
   { href: "/ports", label: "Portlar", icon: Network },
   { href: "/terminal", label: "Terminal", icon: Terminal },
@@ -31,15 +29,11 @@ const SUPER_ADMIN_NAV_ITEMS = [
   { href: "/users", label: "Kullanicilar", icon: Users },
   { href: "/audit", label: "Denetim Kaydi", icon: ClipboardList },
 ]
-
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: "Super Admin",
   MEMBER: "Uye",
 }
-
-function initialsFor(username: string): string {
-  return username.slice(0, 2).toUpperCase()
-}
+function initialsFor(u: string) { return u.slice(0, 2).toUpperCase() }
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -48,28 +42,27 @@ export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      try {
-        setCollapsed(window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "1")
-      } catch { /* ignore */ }
+    const t = setTimeout(() => {
+      try { setCollapsed(window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "1") } catch { /* ignore */ }
     }, 0)
-    return () => clearTimeout(timer)
+    return () => clearTimeout(t)
   }, [])
 
   function toggleCollapsed() {
-    setCollapsed((prev) => {
+    setCollapsed(prev => {
       const next = !prev
       try { window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, next ? "1" : "0") } catch { /* ignore */ }
       return next
     })
   }
 
-  const navItems = user?.role === "SUPER_ADMIN" ? [...BASE_NAV_ITEMS, ...SUPER_ADMIN_NAV_ITEMS] : BASE_NAV_ITEMS
+  const navItems = user?.role === "SUPER_ADMIN"
+    ? [...BASE_NAV_ITEMS, ...SUPER_ADMIN_NAV_ITEMS]
+    : BASE_NAV_ITEMS
 
   async function handleLogout() {
     try { await fetch("/api/auth/logout", { method: "POST" }) } finally {
-      router.push("/login")
-      router.refresh()
+      router.push("/login"); router.refresh()
     }
   }
 
@@ -77,32 +70,24 @@ export function AppSidebar() {
     <aside
       className={cn(
         "sticky top-0 flex h-screen shrink-0 flex-col transition-[width] duration-150 z-30",
-        collapsed ? "w-16" : "w-60"
+        collapsed ? "w-16" : "w-56"
       )}
       style={{
-        background: "linear-gradient(180deg, #3d0f14 0%, #2d0a0e 60%, #200709 100%)",
-        borderRight: "1px solid rgba(201,169,110,0.15)",
-        boxShadow: "2px 0 20px rgba(0,0,0,0.5)",
+        /* Gorsel 3: cok derin koyu bordo */
+        background: "#160008",
+        borderRight: "1px solid rgba(184,149,106,0.12)",
       }}
     >
-      {/* Brand Logo */}
+      {/* Logo */}
       <div
-        className={cn(
-          "flex h-20 items-center px-4 shrink-0",
-          collapsed ? "justify-center px-0" : "justify-start"
-        )}
-        style={{ borderBottom: "1px solid rgba(201,169,110,0.1)" }}
+        className={cn("flex h-[72px] items-center px-4 shrink-0", collapsed ? "justify-center px-0" : "")}
+        style={{ borderBottom: "1px solid rgba(184,149,106,0.08)" }}
       >
-        <RudderLogo
-          size={collapsed ? "sm" : "md"}
-          iconOnly={collapsed}
-          href="/"
-          className={collapsed ? "justify-center" : ""}
-        />
+        <RudderLogo size={collapsed ? "sm" : "md"} iconOnly={collapsed} href="/" />
       </div>
 
-      {/* Navigation */}
-      <nav className={cn("flex flex-1 flex-col gap-1 p-2 pt-3", collapsed && "items-center px-1.5")}>
+      {/* Nav */}
+      <nav className={cn("flex flex-1 flex-col gap-0.5 p-2 pt-3", collapsed && "items-center px-1.5")}>
         {navItems.map((item) => {
           const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
           const Icon = item.icon
@@ -112,77 +97,63 @@ export function AppSidebar() {
               href={item.href}
               title={collapsed ? item.label : undefined}
               className={cn(
-                "relative flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-150 group",
+                "flex items-center gap-3 rounded-md text-[13px] font-medium transition-colors duration-100",
                 collapsed ? "justify-center p-2.5" : "px-3 py-2.5",
-                active
-                  ? "text-[#f0e6d0]"
-                  : "text-[#8a7560] hover:text-[#c9a96e] hover:bg-[rgba(201,169,110,0.06)]"
               )}
-              style={active ? {
-                background: "linear-gradient(90deg, rgba(201,169,110,0.12) 0%, rgba(201,169,110,0.03) 100%)",
-                borderLeft: collapsed ? "none" : "2px solid #c9a96e",
-                boxShadow: "inset 0 0 20px rgba(201,169,110,0.04)",
-              } : { borderLeft: collapsed ? "none" : "2px solid transparent" }}
+              style={active
+                ? {
+                    background: "rgba(184,149,106,0.1)",
+                    borderLeft: collapsed ? "none" : "2px solid #b8956a",
+                    color: "#e8d5b0",
+                  }
+                : {
+                    borderLeft: collapsed ? "none" : "2px solid transparent",
+                    color: "#5a4030",
+                  }
+              }
             >
               <Icon
-                className={cn(
-                  "size-4 shrink-0 transition-colors",
-                  active ? "text-[#c9a96e]" : "text-[#6b5540] group-hover:text-[#c9a96e]"
-                )}
+                className="size-4 shrink-0"
+                style={{ color: active ? "#b8956a" : "#3d2a1a" }}
               />
-              {!collapsed && <span className="font-sans text-[13px]">{item.label}</span>}
+              {!collapsed && <span>{item.label}</span>}
             </Link>
           )
         })}
       </nav>
 
-      {/* Collapse Toggle */}
+      {/* Collapse */}
       <button
         type="button"
         onClick={toggleCollapsed}
-        title={collapsed ? "Menuyu genislet" : "Menuyu daralt"}
-        className={cn(
-          "flex items-center gap-2 px-4 py-2.5 text-xs font-medium transition-colors",
-          collapsed && "justify-center px-0"
-        )}
-        style={{ color: "#5a4535", borderTop: "1px solid rgba(201,169,110,0.08)" }}
+        className={cn("flex items-center gap-2 px-4 py-2.5 text-xs transition-colors", collapsed && "justify-center px-0")}
+        style={{ color: "#3d2a1a", borderTop: "1px solid rgba(184,149,106,0.06)" }}
       >
         {collapsed
-          ? <ChevronRight className="size-4 shrink-0" style={{ color: "#5a4535" }} />
-          : <><ChevronLeft className="size-4 shrink-0" /><span>Daralt</span></>
+          ? <ChevronRight className="size-4" style={{ color: "#3d2a1a" }} />
+          : <><ChevronLeft className="size-4" /><span>Daralt</span></>
         }
       </button>
 
-      {/* User Section */}
+      {/* User */}
       <div
         className={cn("p-2.5", collapsed && "px-1.5")}
-        style={{ borderTop: "1px solid rgba(201,169,110,0.1)" }}
+        style={{ borderTop: "1px solid rgba(184,149,106,0.08)" }}
       >
-        <div
-          className={cn(
-            "flex items-center justify-between gap-2 rounded-lg p-2 transition-colors",
-            collapsed && "justify-center p-1.5"
-          )}
-          style={{ background: "rgba(0,0,0,0.2)" }}
-        >
+        <div className={cn("flex items-center justify-between gap-2 rounded-md p-2", collapsed && "justify-center p-1.5")}
+          style={{ background: "rgba(0,0,0,0.25)" }}>
           <div className="flex items-center gap-2 min-w-0">
-            <Avatar
-              className="size-8 shrink-0"
-              style={{ border: "1.5px solid rgba(201,169,110,0.5)", boxShadow: "0 0 8px rgba(201,169,110,0.15)" }}
-            >
-              <AvatarFallback
-                className="text-xs font-bold"
-                style={{ background: "#3d0f14", color: "#c9a96e" }}
-              >
+            <Avatar className="size-8 shrink-0" style={{ border: "1.5px solid rgba(184,149,106,0.4)" }}>
+              <AvatarFallback className="text-xs font-bold" style={{ background: "#200010", color: "#b8956a" }}>
                 {user ? initialsFor(user.username) : "?"}
               </AvatarFallback>
             </Avatar>
             {!collapsed && (
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-semibold leading-tight" style={{ color: "#f0e6d0" }}>
+                <p className="truncate text-[12px] font-semibold leading-tight" style={{ color: "#e8d5b0" }}>
                   {user?.username ?? "..."}
                 </p>
-                <p className="truncate text-[11px] leading-tight" style={{ color: "#7a6a55" }}>
+                <p className="truncate text-[11px] leading-tight" style={{ color: "#4a3020" }}>
                   {user ? (ROLE_LABELS[user.role] ?? user.role) : ""}
                 </p>
               </div>
@@ -193,10 +164,10 @@ export function AppSidebar() {
               type="button"
               onClick={handleLogout}
               title="Cikis Yap"
-              className="size-7 flex items-center justify-center rounded-md transition-colors"
-              style={{ color: "#5a4535" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "#c9a96e")}
-              onMouseLeave={e => (e.currentTarget.style.color = "#5a4535")}
+              className="size-7 flex items-center justify-center rounded transition-colors"
+              style={{ color: "#3d2a1a" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#b8956a")}
+              onMouseLeave={e => (e.currentTarget.style.color = "#3d2a1a")}
             >
               <LogOut className="size-3.5" />
             </button>
