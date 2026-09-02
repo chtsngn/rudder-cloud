@@ -40,7 +40,7 @@ export default function LoginPage() {
     <div
       className="min-h-screen flex items-center justify-center p-4"
       style={{
-        background: "linear-gradient(135deg, #1d000a 0%, #2e0911 50%, #150007 100%)",
+        background: "linear-gradient(135deg, #3d0510 0%, #6e0d25 50%, #4a0717 100%)",
       }}
     >
       <div className="relative z-10 w-full max-w-sm">
@@ -49,9 +49,9 @@ export default function LoginPage() {
           <Image
             src="/rudder-helm-transparent.png"
             alt="Rudder Dümen"
-            width={80}
-            height={80}
-            className="object-contain drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+            width={84}
+            height={84}
+            className="object-contain drop-shadow-[0_6px_24px_rgba(0,0,0,0.6)]"
             priority
           />
           <div className="text-center">
@@ -64,19 +64,19 @@ export default function LoginPage() {
             >
               rudder
             </h1>
-            <p className="text-xs mt-1 tracking-[0.15em] uppercase text-white/60 font-medium">
+            <p className="text-xs mt-1 tracking-[0.15em] uppercase text-white/70 font-medium">
               Server Panel
             </p>
           </div>
         </div>
 
         {/* Card */}
-        <div className="rounded-xl bg-white p-6 shadow-2xl border border-white/20 space-y-5">
+        <div className="rounded-2xl bg-white p-7 shadow-2xl border border-white/20 space-y-5">
           <div className="mb-1">
             <h2 className="text-base font-bold text-slate-800 font-heading">
               Giriş Yap
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5 font-sans">
               Sunucu yönetim paneline erişmek için giriş yapın.
             </p>
           </div>
@@ -102,7 +102,7 @@ export default function LoginPage() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition-all focus:border-[#2e0911] focus:bg-white focus:ring-1 focus:ring-[#2e0911]"
+                className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 outline-none transition-all focus:border-[#6e0d25] focus:bg-white focus:ring-1 focus:ring-[#6e0d25]"
               />
             </div>
 
@@ -120,14 +120,14 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition-all focus:border-[#2e0911] focus:bg-white focus:ring-1 focus:ring-[#2e0911]"
+                className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 outline-none transition-all focus:border-[#6e0d25] focus:bg-white focus:ring-1 focus:ring-[#6e0d25]"
               />
             </div>
 
             <button
               type="submit"
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#2e0911] hover:bg-[#4a0e1c] py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-all disabled:opacity-60 mt-2"
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#6e0d25] hover:bg-[#86102e] py-3 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-all disabled:opacity-60 mt-2 border border-[#c8a87c]/30"
             >
               {submitting && <Loader2 className="size-4 animate-spin" />}
               Giriş Yap

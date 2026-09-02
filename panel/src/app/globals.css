@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.65rem;
+  --radius: 0.75rem;
 
   /* Temiz beyaz / aydinlik arka plan */
   --background: #f8fafc;
@@ -18,9 +18,9 @@
   --popover: #ffffff;
   --popover-foreground: #0f172a;
 
-  /* Birincil: Korsan/Dümen Bordosu */
-  --primary: #2e0911;
-  --primary-hover: #4a0e1c;
+  /* Canlı Kraliyet Bordosu (Royal Wine Burgundy - sıfır kahverengi) */
+  --primary: #6e0d25;
+  --primary-hover: #86102e;
   --primary-foreground: #ffffff;
 
   --secondary: #f1f5f9;
@@ -31,7 +31,7 @@
 
   /* Aksan: Bronz / Altın */
   --accent: #c8a87c;
-  --accent-foreground: #2e0911;
+  --accent-foreground: #6e0d25;
 
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
@@ -45,22 +45,22 @@
 }
 
 .dark {
-  --radius: 0.65rem;
+  --radius: 0.75rem;
   --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-  --primary: #2e0911;
-  --primary-hover: #4a0e1c;
+  --primary: #6e0d25;
+  --primary-hover: #86102e;
   --primary-foreground: #ffffff;
   --secondary: #f1f5f9;
   --secondary-foreground: #0f172a;
   --muted: #f8fafc;
   --muted-foreground: #64748b;
   --accent: #c8a87c;
-  --accent-foreground: #2e0911;
+  --accent-foreground: #6e0d25;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
   --border: #e2e8f0;
@@ -107,6 +107,6 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
   }
 }

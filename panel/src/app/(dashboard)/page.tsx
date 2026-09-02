@@ -4,13 +4,14 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import {
-  Activity,
   Cpu,
+  Globe,
   HardDrive,
   MemoryStick,
   Plus,
   Server,
-  Layers,
+  Activity,
+  CheckCircle2,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -34,77 +35,71 @@ function formatUptime(seconds: number): string {
   return `${days} gün ${hours} saat`
 }
 
-function StatCard({
+function MetricCard({
   icon: Icon,
   title,
-  value,
-  subtext,
+  mainValue,
+  subValue,
   percentage,
-  colorScheme = "burgundy",
 }: {
   icon: any
   title: string
-  value: string
-  subtext: string
+  mainValue: string
+  subValue: string
   percentage: number
-  colorScheme?: "burgundy" | "bronze"
 }) {
   const safePct = Math.max(0, Math.min(100, Math.round(percentage)))
   const isHigh = safePct >= 80
 
   return (
-    <div className="group relative rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 overflow-hidden flex flex-col justify-between">
-      {/* Top Nautical Accent Line */}
-      <div
-        className={cn(
-          "absolute top-0 left-0 right-0 h-[3px] transition-all",
-          colorScheme === "bronze"
-            ? "bg-gradient-to-r from-[#c8a87c] via-[#b8956a] to-[#c8a87c]"
-            : "bg-gradient-to-r from-[#2e0911] via-[#4a0e1c] to-[#2e0911]"
-        )}
-      />
-
-      {/* Header with Icon and Title */}
+    <div className="group rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-[#c8a87c]/70 flex flex-col justify-between">
+      {/* Top Header: Title & Relevant Tech Icon */}
       <div>
         <div className="flex items-center justify-between gap-2 mb-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-sans">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-sans">
             {title}
           </span>
-          <div className="size-8 rounded-lg bg-[#2e0911]/5 flex items-center justify-center text-[#2e0911] group-hover:bg-[#2e0911]/10 transition-colors">
+          <div className="size-8 rounded-lg bg-[#6e0d25]/5 border border-[#6e0d25]/10 flex items-center justify-center text-[#6e0d25] group-hover:bg-[#6e0d25] group-hover:text-white transition-all">
             <Icon className="size-4" />
           </div>
         </div>
 
-        {/* Main Stat Value */}
-        <div className="mb-1">
-          <span className="font-mono text-3xl font-bold tracking-tight text-slate-800">
-            {value}
+        {/* Main Metric Value */}
+        <div className="flex items-baseline gap-2 mb-1">
+          <span className="font-mono text-3xl font-bold tracking-tight text-slate-900">
+            {mainValue}
           </span>
         </div>
 
-        {/* Subtext */}
+        {/* Subtext info */}
         <p className="text-xs font-medium text-slate-500 truncate mb-4">
-          {subtext}
+          {subValue}
         </p>
       </div>
 
-      {/* Progress Meter Bar */}
+      {/* Progress Gauge */}
       <div>
-        <div className="flex items-center justify-between text-xs font-semibold text-slate-500 mb-1.5 font-mono">
-          <span>Kullanım</span>
-          <span className={cn(isHigh ? "text-red-600 font-bold" : "text-slate-700")}>
+        <div className="flex items-center justify-between text-xs font-semibold text-slate-600 mb-1.5 font-mono">
+          <span className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                "size-2 rounded-full",
+                isHigh ? "bg-red-500" : "bg-emerald-500"
+              )}
+            />
+            {isHigh ? "Yüksek Yük" : "Normal"}
+          </span>
+          <span className={cn("font-bold", isHigh ? "text-red-600" : "text-slate-800")}>
             {safePct}%
           </span>
         </div>
-        <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden p-[1px] border border-slate-200/60">
+        <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden border border-slate-200/70 p-[1px]">
           <div
             className={cn(
               "h-full rounded-full transition-all duration-500",
               isHigh
                 ? "bg-gradient-to-r from-red-600 to-red-700"
-                : colorScheme === "bronze"
-                ? "bg-gradient-to-r from-[#b8956a] to-[#c8a87c]"
-                : "bg-gradient-to-r from-[#4a0e1c] to-[#2e0911]"
+                : "bg-gradient-to-r from-[#6e0d25] via-[#86102e] to-[#c8a87c]"
             )}
             style={{ width: `${safePct}%` }}
           />
@@ -169,21 +164,21 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200/80">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="font-heading text-2xl font-bold tracking-wide text-[#2e0911]">
+          <h1 className="font-heading text-2xl font-bold tracking-wide text-[#6e0d25]">
             Anasayfa
           </h1>
           <p className="text-xs text-slate-500 mt-1 font-sans">
-            Sunucunuzun genel durumu ve yönetilen siteleriniz.
+            Sunucunuzun gerçek zamanlı telemetrisi ve barındırılan web siteleriniz.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <Button
             asChild
-            className="bg-[#2e0911] hover:bg-[#4a0e1c] text-white font-semibold text-xs uppercase tracking-wider px-4 py-2 rounded-lg shadow-sm transition-all flex items-center gap-1.5 h-9"
+            className="bg-[#6e0d25] hover:bg-[#86102e] text-white font-semibold text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 h-10 border border-[#c8a87c]/30 hover:border-[#c8a87c]"
           >
             <Link href="/sites/new">
               <Plus className="size-4" />
@@ -193,19 +188,18 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 4 Balanced Top Stat Cards */}
+      {/* 4 Balanced Elite Metric Cards (No top gradient bar, holistic design) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* CPU Card */}
         {stats === null ? (
           <div className="h-44 rounded-xl border border-slate-200 bg-white p-5 animate-pulse" />
         ) : (
-          <StatCard
+          <MetricCard
             icon={Cpu}
-            title="CPU Kullanımı"
-            value={`${Math.round(stats.cpu.usedPercent)}%`}
-            subtext={`${stats.cpu.cores} Çekirdek • Yük: ${(stats.cpu.loadAvg[0] ?? 0).toFixed(2)}`}
+            title="İşlemci (CPU)"
+            mainValue={`${Math.round(stats.cpu.usedPercent)}%`}
+            subValue={`${stats.cpu.cores} Çekirdek • Yük: ${(stats.cpu.loadAvg[0] ?? 0).toFixed(2)}`}
             percentage={stats.cpu.usedPercent}
-            colorScheme="burgundy"
           />
         )}
 
@@ -213,13 +207,12 @@ export default function DashboardPage() {
         {stats === null ? (
           <div className="h-44 rounded-xl border border-slate-200 bg-white p-5 animate-pulse" />
         ) : (
-          <StatCard
+          <MetricCard
             icon={MemoryStick}
-            title="RAM Kullanımı"
-            value={`${Math.round(stats.mem.usedPercent)}%`}
-            subtext={`${stats.mem.usedGB.toFixed(1)} GB / ${stats.mem.totalGB.toFixed(1)} GB`}
+            title="Bellek (RAM)"
+            mainValue={`${Math.round(stats.mem.usedPercent)}%`}
+            subValue={`${stats.mem.usedGB.toFixed(1)} GB / ${stats.mem.totalGB.toFixed(1)} GB`}
             percentage={stats.mem.usedPercent}
-            colorScheme="bronze"
           />
         )}
 
@@ -227,13 +220,12 @@ export default function DashboardPage() {
         {stats === null ? (
           <div className="h-44 rounded-xl border border-slate-200 bg-white p-5 animate-pulse" />
         ) : (
-          <StatCard
+          <MetricCard
             icon={HardDrive}
-            title="Disk Kullanımı"
-            value={`${Math.round(stats.disk.usedPercent)}%`}
-            subtext={`${stats.disk.usedGB.toFixed(1)} GB / ${stats.disk.totalGB.toFixed(1)} GB`}
+            title="Depolama (Disk)"
+            mainValue={`${Math.round(stats.disk.usedPercent)}%`}
+            subValue={`${stats.disk.usedGB.toFixed(1)} GB / ${stats.disk.totalGB.toFixed(1)} GB`}
             percentage={stats.disk.usedPercent}
-            colorScheme="burgundy"
           />
         )}
 
@@ -241,14 +233,13 @@ export default function DashboardPage() {
         {stats === null ? (
           <div className="h-44 rounded-xl border border-slate-200 bg-white p-5 animate-pulse" />
         ) : (
-          <div className="relative rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 overflow-hidden flex flex-col justify-between">
-            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#c8a87c] via-[#2e0911] to-[#c8a87c]" />
+          <div className="group rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-[#c8a87c]/70 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between gap-2 mb-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-sans">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-sans">
                   Sunucu Bilgisi
                 </span>
-                <div className="size-8 rounded-lg bg-[#2e0911]/5 flex items-center justify-center text-[#2e0911]">
+                <div className="size-8 rounded-lg bg-[#6e0d25]/5 border border-[#6e0d25]/10 flex items-center justify-center text-[#6e0d25] group-hover:bg-[#6e0d25] group-hover:text-white transition-all">
                   <Server className="size-4" />
                 </div>
               </div>
@@ -266,6 +257,11 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-emerald-600 font-medium">
+              <CheckCircle2 className="size-3.5" />
+              <span>Sistem Çalışıyor</span>
+            </div>
           </div>
         )}
       </div>
@@ -274,11 +270,11 @@ export default function DashboardPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <h2 className="font-heading text-lg font-bold text-[#2e0911] tracking-wide">
+            <h2 className="font-heading text-lg font-bold text-[#6e0d25] tracking-wide">
               Siteleriniz
             </h2>
             {sites !== null && (
-              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+              <span className="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700 font-mono">
                 {sites.length}
               </span>
             )}
@@ -298,7 +294,7 @@ export default function DashboardPage() {
         ) : sites.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-12 shadow-sm flex flex-col items-center justify-center text-center">
             {/* Helm Watermark / Emblem Icon */}
-            <div className="size-16 rounded-2xl bg-[#2e0911]/5 border border-[#2e0911]/10 flex items-center justify-center p-3 mb-4 shadow-inner">
+            <div className="size-16 rounded-2xl bg-[#6e0d25]/5 border border-[#6e0d25]/10 flex items-center justify-center p-3 mb-4 shadow-inner">
               <Image
                 src="/rudder-helm-transparent.png"
                 alt="Rudder Helm"
@@ -317,7 +313,7 @@ export default function DashboardPage() {
 
             <Button
               asChild
-              className="bg-[#2e0911] hover:bg-[#4a0e1c] text-white font-semibold text-xs tracking-wider px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 h-10 hover:scale-[1.02]"
+              className="bg-[#6e0d25] hover:bg-[#86102e] text-white font-semibold text-xs tracking-wider px-5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2 h-10 hover:scale-[1.02] border border-[#c8a87c]/40"
             >
               <Link href="/sites/new">
                 <Plus className="size-4" />

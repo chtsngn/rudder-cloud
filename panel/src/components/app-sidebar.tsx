@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import {
-  ChevronLeft,
-  ChevronRight,
   ClipboardList,
   Home,
   LogOut,
@@ -46,6 +45,7 @@ export function AppSidebar() {
   const router = useRouter()
   const { user } = useCurrentUser()
   const [collapsed, setCollapsed] = useState(false)
+  const [rotating, setRotating] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -59,6 +59,8 @@ export function AppSidebar() {
   }, [])
 
   function toggleCollapsed() {
+    setRotating(true)
+    setTimeout(() => setRotating(false), 500)
     setCollapsed((prev) => {
       const next = !prev
       try {
@@ -84,21 +86,46 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "sticky top-0 flex h-screen shrink-0 flex-col transition-[width] duration-200 z-30 shadow-xl",
-        collapsed ? "w-16" : "w-60"
+        "sticky top-0 flex h-screen shrink-0 flex-col z-30 shadow-2xl transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] relative",
+        collapsed ? "w-20" : "w-64"
       )}
       style={{
-        background: "#2e0911", // Gorsel 3'teki derin bordo tonu
-        borderRight: "1px solid rgba(200, 168, 124, 0.2)",
+        background: "linear-gradient(180deg, #63081e 0%, #6e0d25 45%, #520618 100%)",
+        borderRight: "1px solid rgba(200, 168, 124, 0.3)",
       }}
     >
+      {/* Sail Edge Decorative Contour */}
+      <div
+        className="pointer-events-none absolute inset-y-0 right-0 w-1.5 bg-gradient-to-b from-[#c8a87c]/30 via-[#c8a87c]/60 to-[#c8a87c]/30"
+      />
+
+      {/* Floating Helm Toggle Button (Yelken / Dümen Açma-Kapama Butonu) */}
+      <button
+        type="button"
+        onClick={toggleCollapsed}
+        title={collapsed ? "Menüyü Yelken Gibi Aç" : "Menüyü Daralt"}
+        className="group absolute -right-4 top-24 z-40 size-8 rounded-full bg-[#520618] border-2 border-[#c8a87c] shadow-lg flex items-center justify-center p-1 cursor-pointer transition-transform hover:scale-110 active:scale-95"
+      >
+        <Image
+          src="/rudder-helm-transparent.png"
+          alt="Dümen Açma/Kapama"
+          width={22}
+          height={22}
+          className={cn(
+            "object-contain transition-transform duration-500",
+            rotating && "rotate-[360deg]",
+            collapsed ? "rotate-0" : "rotate-180"
+          )}
+        />
+      </button>
+
       {/* Brand Header */}
       <div
         className={cn(
-          "flex h-20 items-center px-4 shrink-0",
+          "flex h-20 items-center px-5 shrink-0 transition-all",
           collapsed ? "justify-center px-0" : "justify-start"
         )}
-        style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.1)" }}
+        style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.12)" }}
       >
         <RudderLogo
           size={collapsed ? "sm" : "md"}
@@ -108,8 +135,8 @@ export function AppSidebar() {
         />
       </div>
 
-      {/* Navigation Links - All texts and icons in crisp white */}
-      <nav className={cn("flex flex-1 flex-col gap-1.5 p-3 pt-4", collapsed && "items-center px-1.5")}>
+      {/* Navigation Links */}
+      <nav className={cn("flex flex-1 flex-col gap-1.5 p-3.5 pt-5", collapsed && "items-center px-2")}>
         {navItems.map((item) => {
           const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
           const Icon = item.icon
@@ -119,27 +146,17 @@ export function AppSidebar() {
               href={item.href}
               title={collapsed ? item.label : undefined}
               className={cn(
-                "relative flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-150",
-                collapsed ? "justify-center p-2.5" : "px-3.5 py-2.5",
+                "relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 group",
+                collapsed ? "justify-center p-3" : "px-3.5 py-2.5",
                 active
-                  ? "bg-white/15 text-white font-semibold shadow-inner"
-                  : "text-white/80 hover:bg-white/10 hover:text-white"
+                  ? "bg-white/20 text-white font-semibold shadow-inner border-l-4 border-[#c8a87c]"
+                  : "text-white/85 hover:bg-white/10 hover:text-white border-l-4 border-transparent"
               )}
-              style={
-                active
-                  ? {
-                      borderLeft: collapsed ? "none" : "3px solid #c8a87c",
-                      paddingLeft: collapsed ? undefined : "12px",
-                    }
-                  : {
-                      borderLeft: collapsed ? "none" : "3px solid transparent",
-                    }
-              }
             >
               <Icon
                 className={cn(
-                  "size-4 shrink-0 transition-colors",
-                  active ? "text-white" : "text-white/80 group-hover:text-white"
+                  "size-4 shrink-0 transition-transform group-hover:scale-110",
+                  active ? "text-[#c8a87c]" : "text-white/90"
                 )}
               />
               {!collapsed && (
@@ -147,40 +164,22 @@ export function AppSidebar() {
                   {item.label}
                 </span>
               )}
+              {active && !collapsed && (
+                <span className="ml-auto size-1.5 rounded-full bg-[#c8a87c] shadow-[0_0_6px_#c8a87c]" />
+              )}
             </Link>
           )
         })}
       </nav>
 
-      {/* Collapse Toggle */}
-      <button
-        type="button"
-        onClick={toggleCollapsed}
-        title={collapsed ? "Menüyü genişlet" : "Menüyü daralt"}
-        className={cn(
-          "flex items-center gap-2 px-4 py-2.5 text-xs font-medium text-white/70 transition-colors hover:text-white hover:bg-white/10",
-          collapsed && "justify-center px-0"
-        )}
-        style={{ borderTop: "1px solid rgba(255, 255, 255, 0.1)" }}
-      >
-        {collapsed ? (
-          <ChevronRight className="size-4 shrink-0 text-white" />
-        ) : (
-          <>
-            <ChevronLeft className="size-4 shrink-0 text-white" />
-            <span className="text-white">Daralt</span>
-          </>
-        )}
-      </button>
-
-      {/* Bottom User Section - White text */}
+      {/* Bottom User Section */}
       <div
-        className={cn("p-3", collapsed && "px-1.5")}
-        style={{ borderTop: "1px solid rgba(255, 255, 255, 0.1)" }}
+        className={cn("p-3.5", collapsed && "px-2")}
+        style={{ borderTop: "1px solid rgba(255, 255, 255, 0.12)" }}
       >
         <div
           className={cn(
-            "flex items-center justify-between gap-2.5 rounded-lg bg-black/20 p-2.5",
+            "flex items-center justify-between gap-2.5 rounded-xl bg-black/25 p-2.5 shadow-inner",
             collapsed && "justify-center p-1.5"
           )}
         >
@@ -189,19 +188,19 @@ export function AppSidebar() {
               className="size-8 shrink-0"
               style={{
                 border: "2px solid #c8a87c",
-                boxShadow: "0 0 8px rgba(200, 168, 124, 0.3)",
+                boxShadow: "0 0 10px rgba(200, 168, 124, 0.4)",
               }}
             >
               <AvatarFallback
                 className="text-xs font-bold text-white"
-                style={{ background: "#4a0e1c" }}
+                style={{ background: "#3d0510" }}
               >
                 {user ? initialsFor(user.username) : "?"}
               </AvatarFallback>
             </Avatar>
             {!collapsed && (
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-white leading-tight">
+                <p className="truncate text-[13px] font-bold text-white leading-tight">
                   {user?.username ?? "..."}
                 </p>
                 <p className="truncate text-[11px] text-white/70 leading-tight mt-0.5">
@@ -215,7 +214,7 @@ export function AppSidebar() {
               type="button"
               onClick={handleLogout}
               title="Çıkış Yap"
-              className="size-7 flex items-center justify-center rounded-md text-white/75 hover:text-white hover:bg-white/10 transition-colors"
+              className="size-7 flex items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/15 transition-colors"
             >
               <LogOut className="size-3.5 text-white" />
             </button>
