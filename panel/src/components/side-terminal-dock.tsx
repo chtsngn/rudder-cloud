@@ -80,26 +80,30 @@ export function SideTerminalDock() {
 
   return (
     <>
-      {/* ═══ 1. SAĞA TUTTURULMUŞ DOCK PANELİ ═══ */}
+      {/* ═══ 1. SAĞA TUTTURULMUŞ DOCK PANELİ (SOLU OVAL / YELKEN KAVİSLİ & ALTIN ÇERÇEVELİ) ═══ */}
       {isOpen && !isMinimized && (
         <aside
           style={{ width: `${width}px` }}
           className={cn(
-            "fixed right-0 top-0 bottom-0 z-40 flex flex-col bg-[#0a0d14] border-l border-slate-700/80 shadow-[-16px_0_40px_rgba(0,0,0,0.5)] transition-[width] duration-75 p-2",
+            "fixed right-0 top-0 bottom-0 z-40 flex flex-col bg-[#0a0d14] border-l-2 border-[#c8a87c]/70 rounded-l-[28px] shadow-[-20px_0_60px_rgba(0,0,0,0.65)] transition-[width] duration-75 p-3 overflow-hidden",
             isDragging && "select-none transition-none"
           )}
         >
-          {/* Sol Kenar Sürükleme Tutamacı (Resize Drag Handle) */}
+          {/* Sol Kenar Sürükleme Tutamacı (Nautical Helm Grip Handle) */}
           <div
             onMouseDown={handleMouseDown}
             title="Genişliği ayarlamak için sürükleyin"
-            className="group absolute -left-2 top-0 bottom-0 w-4 cursor-col-resize z-50 flex items-center justify-center hover:bg-[#c8a87c]/30 transition-colors"
+            className="group absolute -left-2.5 top-0 bottom-0 w-5 cursor-col-resize z-50 flex items-center justify-center hover:bg-[#c8a87c]/20 transition-colors"
           >
-            <div className="h-12 w-1 rounded-full bg-slate-600 group-hover:bg-[#dfc9a0] transition-colors shadow-sm" />
+            <div className="h-16 w-2.5 rounded-full bg-[#580619] border border-[#c8a87c] group-hover:border-[#dfc9a0] group-hover:scale-110 transition-all shadow-[0_0_12px_rgba(200,168,124,0.4)] flex flex-col items-center justify-center gap-1">
+              <span className="size-0.5 rounded-full bg-[#dfc9a0]" />
+              <span className="size-0.5 rounded-full bg-[#dfc9a0]" />
+              <span className="size-0.5 rounded-full bg-[#dfc9a0]" />
+            </div>
           </div>
 
           {/* Terminal Gövdesi (isDocked=true ile tekil, kompakt ve lüks pencere başlığı) */}
-          <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden rounded-2xl">
             <TerminalView
               isDocked={true}
               onClose={closeDock}

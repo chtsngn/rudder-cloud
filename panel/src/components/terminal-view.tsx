@@ -460,7 +460,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
             )}
           </div>
 
-          {/* Sağ: Terminal Kontrol Araçları */}
+          {/* Sağ: Terminal Kontrol Araçları (Yalnızca yardımcı araçlar, soldaki pencerelerle çakışmaz) */}
           <div className="flex items-center gap-1 shrink-0">
             {/* Komut Paleti Butonu */}
             <button
@@ -521,28 +521,6 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
             >
               <RotateCw className={cn("size-3", state === "connecting" && "animate-spin")} />
             </button>
-
-            {/* Tam Ekran Toggle */}
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              title={isFullscreen ? "Pencereye Dön" : "Tam Ekran Yap"}
-              className="size-6.5 flex items-center justify-center rounded-md border border-slate-700/60 bg-slate-900/90 text-slate-400 hover:text-white hover:border-slate-600 transition-all cursor-pointer"
-            >
-              {isFullscreen ? <Minimize2 className="size-3" /> : <Maximize2 className="size-3" />}
-            </button>
-
-            {/* Eğer Dock modundaysa kapat butonu */}
-            {isDocked && onClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                title="Pencereyi Kapat"
-                className="size-6.5 flex items-center justify-center rounded-md border border-slate-700/60 bg-slate-900/90 text-slate-400 hover:text-red-400 hover:border-red-500/50 transition-all cursor-pointer"
-              >
-                <X className="size-3" />
-              </button>
-            )}
           </div>
         </div>
 
@@ -554,27 +532,27 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
         />
       </div>
 
-      {/* ═══ 2. HIZLI KOMUT ÇİPLERİ & YÖNETİM BAR ═══ */}
+      {/* ═══ 2. HIZLI KOMUT ÇİPLERİ & YÖNETİM BAR (TEMİz BEYAZ/ALTIN KART TASARIMI) ═══ */}
       <div className="flex items-center justify-between gap-2 overflow-x-auto py-1 text-xs shrink-0 scrollbar-none">
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Komut Ekle Butonu */}
           <button
             type="button"
             onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center gap-1 rounded-xl border border-[#c8a87c] bg-[#580619] px-2.5 py-1 font-bold text-[10px] text-white shadow-xs hover:bg-[#720a22] transition-all cursor-pointer shrink-0 active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[#c8a87c] bg-[#580619] px-3 py-1.5 font-bold text-[11px] text-white shadow-xs hover:bg-[#720a22] transition-all cursor-pointer shrink-0 active:scale-95"
           >
-            <Plus className="size-3 text-[#dfc9a0]" />
-            Ekle
+            <Plus className="size-3.5 text-[#dfc9a0]" />
+            Komut Ekle
           </button>
 
           {/* Kitaplık Butonu */}
           <button
             type="button"
             onClick={() => setIsLibraryOpen(true)}
-            className="inline-flex items-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900 px-2.5 py-1 font-bold text-[10px] text-slate-300 shadow-2xs hover:border-[#c8a87c] hover:text-white transition-all cursor-pointer shrink-0 active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 font-bold text-[11px] text-slate-700 shadow-2xs hover:border-[#c8a87c] hover:bg-slate-50 transition-all cursor-pointer shrink-0 active:scale-95"
           >
-            <BookOpen className="size-3 text-[#dfc9a0]" />
-            Kitaplık
+            <BookOpen className="size-3.5 text-[#580619]" />
+            Komut Kitaplığı
           </button>
         </div>
 
@@ -583,7 +561,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
           {customCommands.map((qc) => (
             <div
               key={qc.id}
-              className="group relative inline-flex items-center rounded-xl border border-[#c8a87c]/70 bg-[#580619]/20 pl-2 pr-1 py-0.5 text-[10px] font-mono font-bold text-[#dfc9a0] shadow-2xs hover:border-[#c8a87c] hover:bg-[#580619]/30 transition-all shrink-0"
+              className="group relative inline-flex items-center rounded-xl border border-[#c8a87c]/70 bg-[#580619]/5 pl-2.5 pr-1.5 py-1 text-[11px] font-mono font-bold text-[#580619] shadow-2xs hover:border-[#c8a87c] hover:bg-[#580619]/10 transition-all shrink-0"
             >
               <button
                 type="button"
@@ -591,16 +569,16 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                 title={`${qc.desc || qc.label} (Çalıştırmak için tıkla)`}
                 className="flex items-center gap-1 cursor-pointer pr-1"
               >
-                <Sparkles className="size-2.5 text-[#c8a87c]" />
+                <Sparkles className="size-3 text-[#c8a87c]" />
                 <span>{qc.label}</span>
               </button>
               <button
                 type="button"
                 onClick={(e) => handleDeleteCustomCommand(qc.id, e)}
                 title="Özel komutu sil"
-                className="size-3.5 rounded flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-950/50 transition-colors cursor-pointer"
+                className="size-4 rounded-md flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
               >
-                <X className="size-2" />
+                <X className="size-2.5" />
               </button>
             </div>
           ))}
@@ -611,9 +589,9 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
               type="button"
               onClick={() => handleExecuteCommand(qc.cmd)}
               title={`${qc.desc} (Çalıştırmak için tıkla)`}
-              className="group inline-flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-900/90 px-2.5 py-1 font-mono text-[10px] font-bold text-slate-300 shadow-2xs hover:border-[#c8a87c] hover:bg-slate-800 hover:text-white transition-all cursor-pointer shrink-0 active:scale-95"
+              className="group inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 font-mono text-[11px] font-bold text-slate-700 shadow-2xs hover:border-[#c8a87c] hover:bg-[#580619]/5 hover:text-[#580619] transition-all cursor-pointer shrink-0 active:scale-95"
             >
-              <ChevronRight className="size-2.5 text-slate-500 group-hover:text-[#c8a87c]" />
+              <ChevronRight className="size-3 text-slate-400 group-hover:text-[#c8a87c]" />
               {qc.label}
             </button>
           ))}

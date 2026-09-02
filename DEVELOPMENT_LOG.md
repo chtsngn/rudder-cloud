@@ -28,11 +28,10 @@
 - [x] **Terminal Akıllı Komut Sistemi (Spotlight Paleti, Özel Komut Ekleme, Komut Kitaplığı).**
 - [x] **Sistem Ayarları (\/settings\) Sayfası Temaya Uygun Olarak Yenilendi.**
 - [x] **Kullanıcı Yönetimi (\/users\) Sayfası Lüks Tablo & Arama/Filtre Sistemiyle Yenilendi.**
-- [x] **Kalıcı Sağ Yan Terminal Dock'u & Tam Ekran Modal İyileştirmeleri:**
-  - **Havalı Butonlar & Tipografi:** \/terminal\ sayfasındaki "YAN PENCEREYE TUTTUR" ve sağ alttaki "KONSOLU AÇ" butonları degradeli lüks cammorfik kapsül butonlara dönüştürüldü, yanıp sönen yeşil canlı sinyal noktası eklendi.
-  - **Çift Başlık ve Nokta Çakışması Giderildi:** Yan dock penceresindeki mükerrer başlıklar kaldırıldı; tek, kompakt ve taşmayan lüks pencere başlığı giydirildi.
-  - **Doğrudan Tam Ekran (Modal Fullscreen):** Genişletme butonuna basıldığında sayfa değiştirmeden mevcut sayfanın üzerinde pürüzsüz 100vw x 100vh tam ekran açılması ve tek tıkla geri dönmesi sağlandı.
-  - **Hızlı Komut Çipleri & Kaydırma:** Dar genişliklerde butonların ve komut çiplerinin taşması engellendi, yatay kaydırma optimize edildi.
+- [x] **Kalıcı Sağ Yan Terminal Dock'u & Özel Oval Yelken Tasarımı (Custom Nautical Arch):**
+  - **Alt Komut Çipleri Eski Sevilen Temiz Beyaz/Altın Kart Tasarımına Döndürüldü:** \+ Komut Ekle\ ve \📖 Komut Kitaplığı\ butonları ile beyaz arka planlı şık komut çipleri restore edildi.
+  - **Sağdaki Mükerrer Kontroller Kaldırıldı:** Başlığın solundaki macOS trafik ışıkları (🔴 Kapat, 🟡 Küçült, 🟢 Tam Ekran) korunup, sağdaki gereksiz çift butonlar temizlendi; sadece arama, font ve yenileme araçları bırakıldı.
+  - **Sol Tarafı Oval / Yelken Kavisli & Altın Bordürlü Tasarım:** Sağ terminal penceresinin sol kenarı \ounded-l-[28px]\ kavis ve \#c8a87c\ altın kenarlık ile sol bordo menümüzün yelken eğrisiyle mükemmel bir ahenk yakalayacak şekilde özelleştirildi; altın tutamaç rozeti yerleştirildi.
 - [x] **Test & Doğrulama:** TypeScript typecheck (\
 px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 
@@ -48,4 +47,4 @@ px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 | 2026-09-02 | \/terminal\ sayfası ve akıllı komut sistemi (\Ctrl+K\, özel komutlar, kitaplık) kuruldu | \	erminal/page.tsx\, \	erminal-view.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | \/settings\ sayfası (Alan Adı/SSL ve S3 Depolama) lüks tasarımla yenilendi | \settings/page.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | \/users\ sayfası lüks tablo, arama/filtre çubuğu ve avatar sistemiyle yenilendi | \users/page.tsx\ | Başarılı (TypeScript 0 hata) |
-| 2026-09-02 | Kalıcı Sağ Yan Terminal Dock'u & Tam Ekran Modal ve Buton Tasarımları İyileştirildi | \side-terminal-dock.tsx\, \	erminal-view.tsx\, \	erminal/page.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | Sağ terminal dock'u sol oval kavis (\ounded-l-[28px]\), temiz beyaz çipler ve sadeleştirilmiş kontrollerle yenilendi | \side-terminal-dock.tsx\, \	erminal-view.tsx\ | Başarılı (TypeScript 0 hata) |
