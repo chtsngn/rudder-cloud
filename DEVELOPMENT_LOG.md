@@ -32,6 +32,9 @@
   - **Dengeli & Canlı Arama Destekli Komut Kitaplığı:** Renk dengesizlikleri giderildi, lüks kartlar ve anlık arama / filtreleme çubuğu ile kategori hapları eklendi.
   - **Spotlight Komut Paleti Kapatma Butonu:** Statik ESC rozeti yerine tıklanabilir zarif kapatma (\X\) butonu ve arka plan tıklamasıyla kapatma desteği eklendi.
   - **Sağa Tuttur Butonu:** Terminal üst başlığındaki buton neon ışıktan arındırılıp sade ve lüks **\Sağa Tuttur\** butonuna revize edildi.
+- [x] **Tüm Dropdown ve Seçim Menülerinin Temaya Uygun Olarak Yenilenmesi (\CustomSelect\):**
+  - Tarayıcının varsayılan ham ve kaba gri HTML \<select>\ menüleri projedeki tüm sayfalardan (\/sites\, \/users\, \/sites/[id]\, \/sites/[id]/files\, \SiteBackupCard\) tamamen kaldırıldı.
+  - Yerine yumuşak açılış animasyonlu (\ade-in zoom-in-95\), kavisli oval köşeli (\ounded-2xl\), altın kenarlıklı (\#c8a87c\) ve aktif seçeneklerde bordo-altın onay ikonlu lüks \<CustomSelect>\ bileşeni entegre edildi.
 - [x] **Sistem Ayarları (\/settings\) Sayfası Temaya Uygun Olarak Yenilendi.**
 - [x] **Kullanıcı Yönetimi (\/users\) Sayfası Lüks Tablo & Arama/Filtre Sistemiyle Yenilendi.**
 - [x] **Kalıcı Sağ Yan Terminal Dock'u & Rekürsif Sayfa Uyumlanması (Adaptive Split Screen).**
@@ -54,4 +57,4 @@ px tsc --noEmit\ -> 0 Hata), HTTP 200/307 doğrulandı.
 | 2026-09-02 | Kalıcı Yan Terminal, Rekürsif Sayfa Uyumlanması (\DashboardMain\) ve Obsidian Komut Barı | \dashboard-main.tsx\, \layout.tsx\, \	erminal-dock-context.tsx\, \	erminal-view.tsx\, \side-terminal-dock.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | Bordo/Altın Minimalist Terminal Rozeti ve \/audit\ Aydınlık Kart Uyarlaması | \side-terminal-dock.tsx\, \udit/page.tsx\ | Başarılı (TypeScript 0 hata) |
 | 2026-09-02 | Oval Hızlı Komut Barı, En Sık Kullanılanlar Sıralaması, Sabitleme (Pin) ve Arama Destekli Komut Kitaplığı | \	erminal-view.tsx\, \	erminal/page.tsx\ | Başarılı (TypeScript 0 hata) |
-| 2026-09-02 | Spotlight Komut Paleti (\Ctrl+K\) penceresine kapatma butonu (\X\) eklendi | \	erminal-view.tsx\ | Başarılı (TypeScript 0 hata) |
+| 2026-09-02 | Projedeki tüm native \<select>\ menüleri \<CustomSelect>\ ile lüks animasyonlu menülere dönüştürüldü | \custom-select.tsx\, \sites/page.tsx\, \users/page.tsx\, \sites/[id]/page.tsx\, \site-backup-card.tsx\, \sites/[id]/files/page.tsx\ | Başarılı (TypeScript 0 hata) |

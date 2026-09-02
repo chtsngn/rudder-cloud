@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { FILE_TEMPLATES } from "@/lib/file-templates"
+import { CustomSelect } from "@/components/ui/custom-select"
 import { cn } from "@/lib/utils"
 
 interface SiteEntry {
@@ -503,18 +504,19 @@ export default function SiteFilesPage() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs text-muted-foreground">Şablon (opsiyonel)</label>
-                    <select
+                    <CustomSelect
                       value={newFileTemplate}
-                      onChange={(e) => setNewFileTemplate(e.target.value)}
-                      className="border-input dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-40 rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                    >
-                      <option value="">Boş dosya</option>
-                      {FILE_TEMPLATES.map((t) => (
-                        <option key={t.extension} value={t.extension}>
-                          {t.label} ({t.extension})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setNewFileTemplate}
+                      options={[
+                        { value: "", label: "Boş dosya" },
+                        ...FILE_TEMPLATES.map((t) => ({
+                          value: t.extension,
+                          label: `${t.label} (${t.extension})`,
+                        })),
+                      ]}
+                      size="sm"
+                      className="min-w-[150px]"
+                    />
                   </div>
                   <Button size="sm" disabled={creating || !newFileName.trim()} onClick={handleCreateFile}>
                     {creating && <Loader2 className="size-3.5 animate-spin" />}

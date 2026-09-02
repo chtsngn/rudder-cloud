@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SuperAdminGate } from "@/components/super-admin-gate"
 import { useCurrentUser } from "@/hooks/use-current-user"
+import { CustomSelect } from "@/components/ui/custom-select"
 import { cn } from "@/lib/utils"
 
 interface UserView {
@@ -284,16 +285,17 @@ function UsersContent() {
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700">Sistem Rolü</Label>
-                <select
+                <CustomSelect
                   value={createForm.role}
-                  onChange={(e) =>
-                    setCreateForm((f) => ({ ...f, role: e.target.value as "SUPER_ADMIN" | "MEMBER" }))
+                  onChange={(val) =>
+                    setCreateForm((f) => ({ ...f, role: val as "SUPER_ADMIN" | "MEMBER" }))
                   }
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-800 shadow-2xs outline-none focus:border-[#c8a87c] cursor-pointer"
-                >
-                  <option value="MEMBER">Üye (Yalnızca yetkilendirilen siteleri görür)</option>
-                  <option value="SUPER_ADMIN">Süper Admin (Tüm paneli &amp; sunucuyu yönetir)</option>
-                </select>
+                  options={[
+                    { value: "MEMBER", label: "Üye (Yalnızca yetkilendirilen siteleri görür)" },
+                    { value: "SUPER_ADMIN", label: "Süper Admin (Tüm paneli & sunucuyu yönetir)" },
+                  ]}
+                  className="w-full"
+                />
               </div>
             </div>
 
@@ -497,22 +499,24 @@ function UsersContent() {
                       {/* Rol Seçici / Rozet */}
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2">
-                          <select
+                          <CustomSelect
                             value={u.role}
                             disabled={isBusy}
-                            onChange={(e) =>
-                              handleRoleChange(u.id, e.target.value as "SUPER_ADMIN" | "MEMBER")
+                            onChange={(val) =>
+                              handleRoleChange(u.id, val as "SUPER_ADMIN" | "MEMBER")
                             }
+                            options={[
+                              { value: "SUPER_ADMIN", label: "Süper Admin" },
+                              { value: "MEMBER", label: "Üye" },
+                            ]}
+                            size="sm"
                             className={cn(
-                              "h-8 rounded-xl border px-2.5 py-0.5 text-xs font-bold outline-none shadow-2xs transition-all cursor-pointer",
+                              "font-bold min-w-[125px]",
                               isSuper
-                                ? "bg-[#580619]/10 text-[#580619] border-[#c8a87c]/50 focus:border-[#580619]"
-                                : "bg-slate-100 text-slate-700 border-slate-200 focus:border-slate-400"
+                                ? "bg-[#580619]/10 text-[#580619] border-[#c8a87c]/50"
+                                : "bg-slate-100 text-slate-700 border-slate-200"
                             )}
-                          >
-                            <option value="SUPER_ADMIN">Süper Admin</option>
-                            <option value="MEMBER">Üye</option>
-                          </select>
+                          />
                         </div>
                       </td>
 

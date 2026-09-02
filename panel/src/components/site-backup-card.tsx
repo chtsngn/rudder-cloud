@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { CustomSelect } from "@/components/ui/custom-select"
 
 interface DetectedDatabase {
   engine: "postgres" | "mysql" | "mongo"
@@ -300,20 +301,17 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
 
             {form.backupUploadToS3 && (
               <div className="space-y-1.5">
-                <Label htmlFor="s3Config">S3 yapılandırması</Label>
-                <select
-                  id="s3Config"
+                <Label htmlFor="s3Config" className="text-xs font-bold text-slate-700">S3 Yapılandırması</Label>
+                <CustomSelect
                   value={form.s3ConfigId}
-                  onChange={(e) => setForm((f) => ({ ...f, s3ConfigId: e.target.value }))}
-                  className="border-input dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                >
-                  <option value="">Seçilmedi</option>
-                  {s3Configs.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setForm((f) => ({ ...f, s3ConfigId: val }))}
+                  options={[
+                    { value: "", label: "Seçilmedi (Varsayılan)" },
+                    ...s3Configs.map((c) => ({ value: c.id, label: c.label })),
+                  ]}
+                  placeholder="S3 Yapılandırması Seçiniz..."
+                  className="w-full"
+                />
                 {s3Configs.length === 0 && (
                   <p className="text-xs text-muted-foreground">
                     Henüz S3 yapılandırması yok — Ayarlar sayfasından ekleyebilirsin.

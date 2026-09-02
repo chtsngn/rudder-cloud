@@ -42,6 +42,7 @@ import { SiteGithubKeysCard } from "@/components/site-github-keys-card"
 import { StatMeter } from "@/components/stat-meter"
 import { SITE_TYPES, type Site, type SiteType } from "@/lib/mock-data"
 import { apiSiteToUiSite, type ApiSite } from "@/lib/site-adapter"
+import { CustomSelect } from "@/components/ui/custom-select"
 import { cn } from "@/lib/utils"
 
 const STATUS_CONFIG: Record<
@@ -902,24 +903,24 @@ export default function SiteDetailPage() {
                 <Label htmlFor="processManager" className="text-xs font-bold text-slate-700">
                   Yeniden Başlatma Yöntemi (Process Manager)
                 </Label>
-                <select
-                  id="processManager"
-                  value={gitForm.processManager}
-                  onChange={(e) =>
+                <CustomSelect
+                  value={gitForm.processManager || "SYSTEMD"}
+                  onChange={(val) =>
                     setGitForm((f) => ({
                       ...f,
-                      processManager: e.target.value as ApiSite["processManager"],
+                      processManager: val as ApiSite["processManager"],
                     }))
                   }
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#c8a87c]"
-                >
-                  {!isProxy && (
-                    <option value="SYSTEMD">systemd (panel yönetiyor — varsayılan)</option>
-                  )}
-                  <option value="DOCKER_COMPOSE">Docker Compose (docker compose restart)</option>
-                  <option value="PM2">PM2 (pm2 restart)</option>
-                  <option value="CUSTOM_SCRIPT">Özel script betiği</option>
-                </select>
+                  options={[
+                    ...(!isProxy
+                      ? [{ value: "SYSTEMD", label: "systemd (panel yönetiyor — varsayılan)" }]
+                      : []),
+                    { value: "DOCKER_COMPOSE", label: "Docker Compose (docker compose restart)" },
+                    { value: "PM2", label: "PM2 (pm2 restart)" },
+                    { value: "CUSTOM_SCRIPT", label: "Özel script betiği" },
+                  ]}
+                  className="w-full"
+                />
               </div>
 
               {gitForm.processManager === "CUSTOM_SCRIPT" && (

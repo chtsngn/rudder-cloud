@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input"
 import { SiteCard } from "@/components/site-card"
 import type { Site, SiteType } from "@/lib/mock-data"
 import { apiSiteToUiSite, type ApiSite } from "@/lib/site-adapter"
+import { CustomSelect } from "@/components/ui/custom-select"
 import { cn } from "@/lib/utils"
 
 export default function SitesListPage() {
@@ -170,33 +171,34 @@ export default function SitesListPage() {
           />
         </div>
 
-        {/* Tip Filtresi */}
+        {/* Filtre Dropdownları */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-          <select
+          <CustomSelect
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="h-10 px-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-xs font-semibold text-slate-700 outline-none focus:border-[#c8a87c] cursor-pointer"
-          >
-            <option value="all">Tüm Türler</option>
-            <option value="wordpress">WordPress</option>
-            <option value="nodejs">Node.js</option>
-            <option value="python">Python</option>
-            <option value="php">PHP</option>
-            <option value="proxy">Ters Proxy</option>
-            <option value="static">Statik</option>
-          </select>
+            onChange={setTypeFilter}
+            options={[
+              { value: "all", label: "Tüm Türler" },
+              { value: "wordpress", label: "WordPress" },
+              { value: "nodejs", label: "Node.js" },
+              { value: "python", label: "Python" },
+              { value: "php", label: "PHP" },
+              { value: "proxy", label: "Ters Proxy" },
+              { value: "static", label: "Statik" },
+            ]}
+            className="min-w-[130px]"
+          />
 
-          {/* Durum Filtresi */}
-          <select
+          <CustomSelect
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 px-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-xs font-semibold text-slate-700 outline-none focus:border-[#c8a87c] cursor-pointer"
-          >
-            <option value="all">Tüm Durumlar</option>
-            <option value="running">Çalışıyor</option>
-            <option value="stopped">Durduruldu</option>
-            <option value="error">Hatalı</option>
-          </select>
+            onChange={setStatusFilter}
+            options={[
+              { value: "all", label: "Tüm Durumlar" },
+              { value: "running", label: "Çalışıyor" },
+              { value: "stopped", label: "Durduruldu" },
+              { value: "error", label: "Hatalı" },
+            ]}
+            className="min-w-[130px]"
+          />
         </div>
       </div>
 
