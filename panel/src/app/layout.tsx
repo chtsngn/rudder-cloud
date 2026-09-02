@@ -19,12 +19,12 @@ import "./globals.css";
 // other change is needed.
 
 export const metadata: Metadata = {
-  title: "Rudder Cloud — Sunucu Yönetim Paneli",
-  description: "Modern, güçlü ve kendi sunucunuzda barındırılan sunucu yönetim paneli.",
+  title: "Rudder — Server Panel",
+  description: "Profesyonel sunucu yönetim ve self-hosting platformu.",
   icons: {
-    icon: "/rudder-icon.png",
-    shortcut: "/rudder-icon.png",
-    apple: "/rudder-icon.png",
+    icon: "/rudder-helm-logo.png",
+    shortcut: "/rudder-helm-logo.png",
+    apple: "/rudder-helm-logo.png",
   },
 };
 
