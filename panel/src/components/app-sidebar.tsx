@@ -6,6 +6,7 @@ import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import {
   ClipboardList,
+  Globe,
   Home,
   LogOut,
   Network,
@@ -20,7 +21,10 @@ import { cn } from "@/lib/utils"
 
 const SIDEBAR_KEY = "panel:sidebar-collapsed"
 
-const BASE_NAV = [{ href: "/", label: "Anasayfa", icon: Home }]
+const BASE_NAV = [
+  { href: "/", label: "Anasayfa", icon: Home },
+  { href: "/sites", label: "Siteler", icon: Globe },
+]
 const ADMIN_NAV = [
   { href: "/terminal", label: "Terminal", icon: Terminal },
   { href: "/settings", label: "Ayarlar", icon: Settings },

@@ -17,6 +17,7 @@ import {
   Radio,
   Layers,
   Search,
+  ArrowRight,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -501,6 +502,14 @@ export default function DashboardPage() {
               </span>
             )}
           </div>
+
+          <Link
+            href="/sites"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#580619] hover:text-[#720a22] transition-colors group px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:border-[#c8a87c] shadow-2xs"
+          >
+            Tüm Siteleri Yönet
+            <ArrowRight className="size-3.5 text-[#c8a87c] transition-transform group-hover:translate-x-0.5" />
+          </Link>
         </div>
 
         {/* Siteler Konteyneri */}
