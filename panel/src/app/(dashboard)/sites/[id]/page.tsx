@@ -636,15 +636,19 @@ export default function SiteDetailPage() {
 
         {/* SSL Hata Uyarı Bandı */}
         {sslInfo?.sslStatus === "error" && (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/30 p-4 text-xs text-amber-900 dark:text-amber-300 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-amber-200/80 dark:border-[#16223f] bg-amber-50/60 dark:bg-[#090e1f] p-4 text-xs text-amber-900 dark:text-slate-200 shadow-2xs">
             <div className="flex items-start gap-3">
-              <ShieldAlert className="size-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="size-8 rounded-xl bg-amber-500/10 dark:bg-[#101c38] border border-amber-500/30 dark:border-[#1e3568]/50 flex items-center justify-center shrink-0 mt-0.5">
+                <ShieldAlert className="size-4.5 text-amber-600 dark:text-amber-400" />
+              </div>
               <div>
-                <p className="font-bold">SSL sertifikası doğrulanamadı, site HTTP üzerinden yayında.</p>
-                <p className="text-[11px] text-amber-700 dark:text-amber-400/90 mt-0.5">
+                <p className="font-heading font-bold text-slate-900 dark:text-slate-100 text-xs">
+                  SSL sertifikası doğrulanamadı, site HTTP üzerinden yayında.
+                </p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 font-sans">
                   {sslInfo.sslLastError || "DNS A kaydının sunucunuza yönlendiğinden emin olduktan sonra tekrar deneyin."}
                 </p>
-                {sslRetryError && <p className="text-[11px] text-red-600 dark:text-red-400 mt-1">{sslRetryError}</p>}
+                {sslRetryError && <p className="text-[11px] text-red-600 dark:text-red-400 mt-1 font-mono">{sslRetryError}</p>}
               </div>
             </div>
             <Button
@@ -652,7 +656,7 @@ export default function SiteDetailPage() {
               variant="outline"
               disabled={sslRetrying}
               onClick={handleRetrySsl}
-              className="shrink-0 h-8 rounded-xl border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-900 text-amber-900 dark:text-amber-300 hover:bg-amber-100 text-xs font-semibold"
+              className="shrink-0 h-8 rounded-xl border-amber-300 dark:border-[#16223f] bg-white dark:bg-[#060a17] text-amber-900 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-[#111f40] text-xs font-semibold"
             >
               {sslRetrying && <Loader2 className="size-3 animate-spin mr-1" />}
               Tekrar Dene

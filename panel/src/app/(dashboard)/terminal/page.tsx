@@ -63,19 +63,21 @@ export default function TerminalPage() {
         </div>
 
         {/* Güvenlik & Yetki Bilgilendirme Bandı */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/30 p-3.5 text-xs text-amber-900 dark:text-amber-300 shadow-2xs">
-          <div className="flex items-start gap-2.5">
-            <ShieldAlert className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-amber-200/80 dark:border-[#16223f] bg-amber-50/50 dark:bg-[#090e1f] p-4 text-xs text-amber-950 dark:text-slate-200 shadow-2xs">
+          <div className="flex items-start gap-3">
+            <div className="size-8 rounded-xl bg-amber-500/10 dark:bg-[#101c38] border border-amber-500/30 dark:border-[#1e3568]/50 flex items-center justify-center shrink-0 mt-0.5">
+              <ShieldAlert className="size-4.5 text-amber-600 dark:text-amber-400" />
+            </div>
             <div>
-              <p className="font-bold">
+              <p className="font-heading font-bold text-slate-900 dark:text-slate-100 text-xs">
                 Yüksek Yetkili Kabuk Oturumu (Root/Sudo Erişimi)
               </p>
-              <p className="text-[11px] text-amber-700 dark:text-amber-400/90 mt-0.5 leading-relaxed font-sans">
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed font-sans">
                 Burada çalıştırılan komutlar sunucu dosya sistemini ve çalışan servisleri anında etkiler. Sekme kapatıldığında veya bağlantı koptuğunda oturum otomatik sonlandırılır.
               </p>
             </div>
           </div>
-          <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/60 font-mono text-[11px] font-bold text-amber-800 dark:text-amber-300 shadow-2xs">
+          <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#101c38] border border-slate-200 dark:border-[#1e3568]/60 font-mono text-[11px] font-bold text-slate-700 dark:text-blue-300 shadow-2xs">
             /bin/bash • PTY
           </span>
         </div>

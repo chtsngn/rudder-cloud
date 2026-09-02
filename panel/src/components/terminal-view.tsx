@@ -36,6 +36,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useTheme } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 
 type ConnectionState = "connecting" | "connected" | "closed" | "error"
@@ -88,6 +89,7 @@ export interface TerminalViewProps {
 }
 
 export function TerminalView({ isDocked = false, onClose, onMinimize }: TerminalViewProps) {
+  const { theme } = useTheme()
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
@@ -281,6 +283,8 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
     setState("connecting")
     setExitMessage(null)
 
+    const isDark = theme === "dark"
+
     const term = new Terminal({
       cursorBlink: true,
       cursorStyle: "block",
@@ -289,11 +293,11 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
       lineHeight: 1.25,
       letterSpacing: 0,
       theme: {
-        background: "#0a0d14",
+        background: isDark ? "#040711" : "#0a0d14",
         foreground: "#e2e8f0",
-        cursor: "#dfc9a0",
-        cursorAccent: "#0a0d14",
-        selectionBackground: "rgba(200, 168, 124, 0.35)",
+        cursor: isDark ? "#60a5fa" : "#dfc9a0",
+        cursorAccent: isDark ? "#040711" : "#0a0d14",
+        selectionBackground: isDark ? "rgba(37, 99, 235, 0.35)" : "rgba(200, 168, 124, 0.35)",
         black: "#1e293b",
         red: "#f87171",
         green: "#4ade80",
@@ -319,7 +323,11 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
     term.loadAddon(fitAddon)
     term.open(container)
 
-    term.writeln("\x1b[38;2;223;201;160m>_ Rudder Cloud • Sunucu Web Terminali\x1b[0m")
+    if (isDark) {
+      term.writeln("\x1b[38;2;147;197;253m>_ Rudder Cloud • Sunucu Web Terminali\x1b[0m")
+    } else {
+      term.writeln("\x1b[38;2;223;201;160m>_ Rudder Cloud • Sunucu Web Terminali\x1b[0m")
+    }
     term.writeln("\x1b[90mBağlantı kuruluyor, lütfen bekleyin...\x1b[0m\r\n")
 
     setTimeout(() => {
@@ -486,9 +494,9 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
       )}
     >
       {/* ═══ 1. WORKSTATION PENCERE KASASI ═══ */}
-      <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-800 bg-[#0a0d14] shadow-[0_12px_36px_rgba(0,0,0,0.4)]">
+      <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-800 dark:border-[#16223f] bg-[#0a0d14] dark:bg-[#040711] shadow-[0_12px_36px_rgba(0,0,0,0.4)]">
         {/* Başlık Çubuğu (Workstation Titlebar) */}
-        <div className="flex items-center justify-between border-b border-slate-800/90 bg-[#111622] px-3.5 py-2 select-none shrink-0 min-h-[42px]">
+        <div className="flex items-center justify-between border-b border-slate-800/90 dark:border-[#16223f] bg-[#111622] dark:bg-[#090e1f] px-3.5 py-2 select-none shrink-0 min-h-[42px]">
           {/* Sol: macOS Trafik Işıkları & Host Etiketi */}
           <div className="flex items-center gap-2.5 shrink-0">
             <div className="flex items-center gap-1.5">
@@ -518,9 +526,9 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
               />
             </div>
 
-            <div className="flex items-center gap-1.5 font-mono text-xs font-semibold text-[#dfc9a0]">
-              <TerminalIcon className="size-3.5 text-[#c8a87c] shrink-0" />
-              <span className="truncate max-w-[140px] sm:max-w-none">
+            <div className="flex items-center gap-1.5 font-mono text-xs font-semibold text-[#dfc9a0] dark:text-slate-200">
+              <TerminalIcon className="size-3.5 text-[#c8a87c] dark:text-blue-300 shrink-0" />
+              <span className="truncate max-w-[140px] sm:max-w-none text-slate-200 dark:text-slate-100 font-bold">
                 root@rudder-cloud:~
               </span>
             </div>
@@ -529,7 +537,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
           {/* Orta: Canlı Durum Noktası */}
           <div className="flex items-center gap-1.5 shrink-0 px-1">
             {state === "connected" && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-400">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 dark:border-emerald-500/40 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-400">
                 <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
                 <span className="hidden sm:inline">Online</span>
               </span>
@@ -540,8 +548,8 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
               </span>
             )}
             {(state === "closed" || state === "error") && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 border border-red-500/30 px-2 py-0.5 text-[10px] font-mono text-red-400">
-                <span className="size-1.5 rounded-full bg-red-400" />
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 dark:bg-rose-950/40 border border-rose-500/30 dark:border-rose-900/60 px-2 py-0.5 text-[10px] font-mono text-rose-400">
+                <span className="size-1.5 rounded-full bg-rose-400" />
                 <span className="hidden sm:inline">Offline</span>
               </span>
             )}
@@ -557,19 +565,19 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                 setPaletteQuery("")
               }}
               title="Komut Paletini Aç (Ctrl + K)"
-              className="h-6.5 px-2 flex items-center gap-1 rounded-md border border-slate-700/60 bg-slate-900/90 text-slate-300 hover:text-white hover:border-[#c8a87c] transition-all cursor-pointer text-xs"
+              className="h-6.5 px-2 flex items-center gap-1 rounded-md border border-slate-700/60 dark:border-[#16223f] bg-slate-900/90 dark:bg-[#060a17] text-slate-300 dark:text-slate-300 hover:text-white dark:hover:text-blue-300 hover:border-[#c8a87c] dark:hover:border-[#2a4687] transition-all cursor-pointer text-xs"
             >
-              <Command className="size-3 text-[#c8a87c]" />
+              <Command className="size-3 text-[#c8a87c] dark:text-blue-300" />
               <kbd className="text-[9px] font-mono text-slate-400">Ctrl+K</kbd>
             </button>
 
             {/* Yazı Boyutu */}
-            <div className="hidden xs:flex items-center bg-slate-900/90 rounded-md border border-slate-700/60 p-0.5">
+            <div className="hidden xs:flex items-center bg-slate-900/90 dark:bg-[#060a17] rounded-md border border-slate-700/60 dark:border-[#16223f] p-0.5">
               <button
                 type="button"
                 onClick={() => handleZoom(-1)}
                 title="Yazıyı Küçült"
-                className="size-5 flex items-center justify-center text-slate-400 hover:text-white rounded transition-colors cursor-pointer"
+                className="size-5 flex items-center justify-center text-slate-400 hover:text-white dark:hover:text-slate-200 rounded transition-colors cursor-pointer"
               >
                 <ZoomOut className="size-3" />
               </button>
@@ -578,7 +586,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                 type="button"
                 onClick={() => handleZoom(1)}
                 title="Yazıyı Büyüt"
-                className="size-5 flex items-center justify-center text-slate-400 hover:text-white rounded transition-colors cursor-pointer"
+                className="size-5 flex items-center justify-center text-slate-400 hover:text-white dark:hover:text-slate-200 rounded transition-colors cursor-pointer"
               >
                 <ZoomIn className="size-3" />
               </button>
@@ -589,7 +597,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
               type="button"
               onClick={handleClear}
               title="Konsolu Temizle"
-              className="size-6.5 flex items-center justify-center rounded-md border border-slate-700/60 bg-slate-900/90 text-slate-400 hover:text-white hover:border-slate-600 transition-all cursor-pointer"
+              className="size-6.5 flex items-center justify-center rounded-md border border-slate-700/60 dark:border-[#16223f] bg-slate-900/90 dark:bg-[#060a17] text-slate-400 hover:text-white dark:hover:text-slate-200 hover:border-slate-600 dark:hover:border-[#2a4687] transition-all cursor-pointer"
             >
               <Eraser className="size-3" />
             </button>
@@ -602,8 +610,8 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
               className={cn(
                 "size-6.5 flex items-center justify-center rounded-md border text-xs font-semibold transition-all cursor-pointer",
                 state === "closed" || state === "error"
-                  ? "bg-[#580619] border-[#c8a87c] text-white hover:bg-[#720a22] animate-pulse"
-                  : "border-slate-700/60 bg-slate-900/90 text-slate-400 hover:text-white hover:border-slate-600"
+                  ? "bg-[#580619] dark:bg-[#162752] border-[#c8a87c] dark:border-[#2a4687] text-white dark:text-blue-200 hover:bg-[#720a22] dark:hover:bg-[#1e346b] animate-pulse shadow-xs"
+                  : "border-slate-700/60 dark:border-[#16223f] bg-slate-900/90 dark:bg-[#060a17] text-slate-400 hover:text-white dark:hover:text-slate-200 hover:border-slate-600 dark:hover:border-[#2a4687]"
               )}
             >
               <RotateCw className={cn("size-3", state === "connecting" && "animate-spin")} />

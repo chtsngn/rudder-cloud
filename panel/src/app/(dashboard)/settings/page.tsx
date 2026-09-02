@@ -531,7 +531,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-amber-200/80 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/30 p-3.5 text-xs text-amber-900 dark:text-amber-300 flex items-start gap-2.5">
+            <div className="rounded-xl border border-amber-200/80 dark:border-[#16223f] bg-amber-50/50 dark:bg-[#060a17] p-3.5 text-xs text-amber-900 dark:text-slate-300 flex items-start gap-2.5">
               <ShieldAlert className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <span>
                 Alan adınızın <strong>DNS A kaydının</strong> bu sunucunun genel IP adresini gösterdiğinden emin olun. SSL doğrulaması için port 80/443 erişimi gereklidir.
