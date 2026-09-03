@@ -6,6 +6,7 @@ import { ChevronDown, Compass, FastForward } from "lucide-react"
 import { useTranslation } from "@/components/language-provider"
 import { CinematicCanvasScene } from "@/components/auth/cinematic-canvas-scene"
 import { GlassLoginCard } from "@/components/auth/glass-login-card"
+import { SailingShipRoute } from "@/components/auth/sailing-ship-route"
 
 export default function LoginPage() {
   const { lang, setLang } = useTranslation()
@@ -135,7 +136,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* SAHNE 1 SAĞ: SADE, TEMATİK SEYİR & SİSTEM TELEMETRİSİ (Aşırı Olmayan, Sade Denge) */}
+          {/* SAHNE 1 SAĞ: DOLAŞAN ASİL YELKENLİ GEMİ ROTASI */}
           <div
             style={{
               opacity: introOpacity,
@@ -144,30 +145,7 @@ export default function LoginPage() {
             }}
             className="hidden lg:flex flex-col items-end text-right select-none pointer-events-none pr-2 md:pr-8"
           >
-            <div className="p-4 rounded-2xl bg-slate-950/45 backdrop-blur-md border border-slate-800/60 shadow-xl space-y-2.5 max-w-[260px]">
-              <div className="flex items-center justify-end gap-2 text-[10px] font-mono text-slate-400 uppercase tracking-widest">
-                <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Sistemler Çevrimiçi</span>
-              </div>
-              <div className="space-y-1.5 text-xs font-mono">
-                <div className="flex justify-between gap-6 text-slate-400">
-                  <span>ROTA</span>
-                  <span className="text-slate-200">042° • KUZEYDOĞU</span>
-                </div>
-                <div className="flex justify-between gap-6 text-slate-400">
-                  <span>ATMOSFER</span>
-                  <span className="text-slate-200">1014 hPa • SİSLİ</span>
-                </div>
-                <div className="flex justify-between gap-6 text-slate-400">
-                  <span>BAĞLANTI</span>
-                  <span className="text-sky-300 font-semibold">TLS 1.3 GÜVENLİ</span>
-                </div>
-              </div>
-              <div className="pt-2 border-t border-slate-800/80 flex justify-between items-center text-[10px] font-mono text-slate-500">
-                <span>RUDDER CLOUD</span>
-                <span>v1.1.0</span>
-              </div>
-            </div>
+            <SailingShipRoute />
           </div>
 
           {/* SAHNE 4: GERÇEKÇİ KASIRGA İÇİNDEN GELEN VE DURAN LÜKS LOGİN KARTI */}
