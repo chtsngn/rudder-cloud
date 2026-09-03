@@ -13,28 +13,28 @@ export const RAMP: {
   light: Record<string, [number, number]>
 } = {
   dark: {
-    '--surface-0': [22, 9.0],
-    '--surface-1': [23, 12.2],
-    '--surface-2': [23, 15.3],
-    '--surface-3': [23, 20.4],
-    '--surface-inset': [24, 10.8],
-    '--border': [22, 22.2],
-    '--border-strong': [21, 30.4],
+    '--surface-0': [28, 8.5],
+    '--surface-1': [28, 11.5],
+    '--surface-2': [28, 14.8],
+    '--surface-3': [30, 19.8],
+    '--surface-inset': [29, 10.2],
+    '--border': [26, 21.8],
+    '--border-strong': [28, 29.8],
     '--text-primary': [33, 95.9],
     '--text-secondary': [29, 90.6],
     '--text-muted': [27, 81.8],
   },
   light: {
-    '--surface-0': [10, 96.1],
-    '--surface-1': [25, 98.4],
-    '--surface-2': [40, 99.2],
-    '--surface-3': [17, 95.3],
-    '--surface-inset': [40, 99.2],
-    '--border': [10, 90.4],
-    '--border-strong': [10, 84.7],
+    '--surface-0': [30, 93.0],
+    '--surface-1': [25, 96.0],
+    '--surface-2': [40, 97.5],
+    '--surface-3': [25, 90.0],
+    '--surface-inset': [35, 98.0],
+    '--border': [30, 84.0],
+    '--border-strong': [35, 75.0],
     '--text-primary': [6, 10.0],
-    '--text-secondary': [5, 33.9],
-    '--text-muted': [5, 41.0],
+    '--text-secondary': [15, 30.0],
+    '--text-muted': [12, 40.0],
   },
 }
 
@@ -57,36 +57,62 @@ export const THEME_PALETTES: ThemePalette[] = [
     id: 'default',
     label: 'Varsayılan',
     hue: 226,
+    satMul: 1,
     accent: { 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857' },
+    ramp: {
+      dark: {
+        '--surface-0': [40, 4.5],     /* #040711 */
+        '--surface-1': [40, 7.0],
+        '--surface-2': [45, 9.0],     /* #090e1f */
+        '--surface-3': [40, 15.0],
+        '--surface-inset': [45, 6.0], /* #060a17 */
+        '--border': [35, 17.0],       /* #16223f */
+        '--border-strong': [35, 25.0],/* #1e3568 */
+      },
+      light: {
+        '--surface-0': [0, 96.0],     /* #f4f4f5 */
+        '--surface-1': [0, 100],      /* #ffffff */
+        '--surface-2': [0, 100],      /* #ffffff */
+        '--surface-3': [0, 96.0],
+        '--surface-inset': [0, 100],  /* #ffffff */
+        '--border': [0, 89.0],        /* #e2e8f0 */
+        '--border-strong': [0, 80.0],
+      },
+    },
   },
   {
     id: 'forest',
     label: 'Orman',
     hue: 152,
+    satMul: 1.6,
     accent: { 400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d' },
   },
   {
     id: 'ocean',
     label: 'Okyanus',
     hue: 208,
+    satMul: 1.6,
     accent: { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
   },
   {
     id: 'indigo',
     label: 'Indigo',
     hue: 243,
+    satMul: 1.6,
     accent: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' },
   },
   {
     id: 'violet',
     label: 'Mor',
     hue: 268,
+    satMul: 1.6,
     accent: { 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9' },
   },
   {
     id: 'rose',
     label: 'Gül',
     hue: 342,
+    satMul: 1.6,
     accent: { 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c' },
   },
   {
@@ -116,6 +142,7 @@ export const THEME_PALETTES: ThemePalette[] = [
     id: 'amber',
     label: 'Kehribar',
     hue: 30,
+    satMul: 1.6,
     accent: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706', 700: '#b45309' },
     fg: '#1a1a1a',
   },
@@ -123,6 +150,7 @@ export const THEME_PALETTES: ThemePalette[] = [
     id: 'cyan',
     label: 'Camgöbeği',
     hue: 187,
+    satMul: 1.6,
     accent: { 400: '#22d3ee', 500: '#06b6d4', 600: '#0891b2', 700: '#0e7490' },
     fg: '#1a1a1a',
   },
@@ -283,6 +311,12 @@ export function buildThemeVars(paletteId: string, mode: 'light' | 'dark'): Recor
 export function applyTheme(paletteId: string = getStoredPaletteId()): void {
   if (typeof document === 'undefined') return
   const root = document.documentElement
+  root.setAttribute('data-palette', paletteId)
+  for (const p of THEME_PALETTES) {
+    root.classList.remove(`palette-${p.id}`)
+  }
+  root.classList.add(`palette-${paletteId}`)
+
   const isLight = root.classList.contains('light') || (!root.classList.contains('dark') && root.getAttribute('data-theme') === 'light')
   const mode = isLight ? 'light' : 'dark'
   const vars = buildThemeVars(paletteId, mode)

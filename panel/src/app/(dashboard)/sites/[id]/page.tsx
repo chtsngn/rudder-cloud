@@ -504,25 +504,25 @@ export default function SiteDetailPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-7 pb-12">
       {/* ═══ 1. ÜST GERİ DÖNÜŞ & BAŞLIK KONTROLLERİ ═══ */}
-      <div className="space-y-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
+      <div className="space-y-4 pb-5 border-b border-border">
         <Link
           href="/sites"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-[#580619] dark:hover:text-blue-400 hover:border-[#c8a87c] dark:hover:border-blue-500/50 shadow-xs transition-all"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-card text-xs font-semibold text-foreground/80 hover:text-primary hover:border-primary shadow-xs transition-all"
         >
-          <ArrowLeft className="size-3.5 text-[#580619] dark:text-blue-400" />
+          <ArrowLeft className="size-3.5 text-primary" />
           {t("sites.detail.backToList")}
         </Link>
 
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           {/* Site Başlığı & Rozetler */}
           <div className="flex items-center gap-3.5">
-            <div className="size-12 rounded-2xl bg-[#580619]/5 dark:bg-[#101c38] border border-[#c8a87c]/30 dark:border-[#1e3568]/50 flex items-center justify-center text-[#580619] dark:text-blue-300 font-mono text-xs font-black shadow-sm shrink-0">
+            <div className="size-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-mono text-xs font-black shadow-sm shrink-0">
               <TypeIcon className="size-6" />
             </div>
 
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
+                <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">
                   {site.domain}
                 </h1>
                 <span
@@ -535,7 +535,7 @@ export default function SiteDetailPage() {
                   {statusLabels[site.status] ?? status.label}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans flex items-center gap-2">
+              <p className="text-xs text-muted-foreground mt-0.5 font-sans flex items-center gap-2">
                 <span>{localizedTypeLabel} {t("sites.siteSuffix")}</span>
                 <span>•</span>
                 <span>{sslInfo?.sslEnabled ? t("sites.sslActiveLabel") : t("sites.httpOnlyLabel")}</span>
@@ -549,7 +549,7 @@ export default function SiteDetailPage() {
               asChild
               variant="outline"
               size="sm"
-              className="h-9 px-3 rounded-xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#580619] dark:hover:text-blue-300 hover:border-[#c8a87c] dark:hover:border-[#2a4687] shadow-2xs"
+              className="h-9 px-3 rounded-xl border border-border bg-card text-xs font-semibold text-foreground/80 hover:text-primary hover:border-primary shadow-2xs"
             >
               <a
                 href={`http://${site.domain}`}
@@ -559,7 +559,7 @@ export default function SiteDetailPage() {
               >
                 <Globe className="size-3.5" />
                 {t("sites.openSiteBtn")}
-                <ArrowUpRight className="size-3 text-slate-400 dark:text-slate-500" />
+                <ArrowUpRight className="size-3 text-muted-foreground" />
               </a>
             </Button>
 
@@ -568,10 +568,10 @@ export default function SiteDetailPage() {
                 asChild
                 variant="outline"
                 size="sm"
-                className="h-9 px-3 rounded-xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#580619] dark:hover:text-blue-300 hover:border-[#c8a87c] dark:hover:border-[#2a4687] shadow-2xs"
+                className="h-9 px-3 rounded-xl border border-border bg-card text-xs font-semibold text-foreground/80 hover:text-primary hover:border-primary shadow-2xs"
               >
                 <Link href={`/sites/${site.id}/files`} className="flex items-center gap-1.5">
-                  <FolderOpen className="size-3.5 text-[#580619] dark:text-blue-300" />
+                  <FolderOpen className="size-3.5 text-primary" />
                   {t("sites.filesBtn")}
                 </Link>
               </Button>
@@ -680,18 +680,18 @@ export default function SiteDetailPage() {
       </div>
 
       {/* ═══ 2. ŞIK TABLAR (SEKMELER) ═══ */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-[#16223f] pb-px overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-1.5 border-b border-border pb-px overflow-x-auto no-scrollbar">
         <button
           type="button"
           onClick={() => setActiveTab("overview")}
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 whitespace-nowrap",
             activeTab === "overview"
-              ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
-              : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
-          <Settings2 className="size-4 text-[#c8a87c] dark:text-blue-300" />
+          <Settings2 className={cn("size-4", activeTab === "overview" ? "text-primary" : "text-muted-foreground")} />
           {t("sites.tabs.overview")}
         </button>
 
@@ -702,11 +702,11 @@ export default function SiteDetailPage() {
             className={cn(
               "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 whitespace-nowrap",
               activeTab === "git"
-                ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
-                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
-            <GitBranch className="size-4 text-[#c8a87c] dark:text-blue-300" />
+            <GitBranch className={cn("size-4", activeTab === "git" ? "text-primary" : "text-muted-foreground")} />
             {t("sites.tabs.git")}
           </button>
         )}
@@ -717,11 +717,11 @@ export default function SiteDetailPage() {
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 whitespace-nowrap",
             activeTab === "backups"
-              ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
-              : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
-          <Database className="size-4 text-[#c8a87c] dark:text-blue-300" />
+          <Database className={cn("size-4", activeTab === "backups" ? "text-primary" : "text-muted-foreground")} />
           {t("sites.tabs.backups")}
         </button>
 
@@ -731,11 +731,11 @@ export default function SiteDetailPage() {
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 whitespace-nowrap",
             activeTab === "access"
-              ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
-              : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
-          <Users className="size-4 text-[#c8a87c] dark:text-blue-300" />
+          <Users className={cn("size-4", activeTab === "access" ? "text-primary" : "text-muted-foreground")} />
           {t("sites.tabs.access")}
         </button>
 
@@ -746,11 +746,11 @@ export default function SiteDetailPage() {
             className={cn(
               "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 whitespace-nowrap",
               activeTab === "logs"
-                ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
-                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
-            <Terminal className="size-4 text-[#c8a87c] dark:text-blue-300" />
+            <Terminal className={cn("size-4", activeTab === "logs" ? "text-primary" : "text-muted-foreground")} />
             {t("sites.tabs.logs")}
           </button>
         )}
@@ -839,12 +839,12 @@ export default function SiteDetailPage() {
       {/* ── TAB 2: GİT & OTOMATİK DAĞITIM ── */}
       {activeTab === "git" && (isManaged || isProxy) && (
         <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 md:p-8 shadow-xs space-y-6">
-            <div className="border-b border-slate-100 dark:border-[#16223f] pb-4">
-              <h3 className="font-heading font-bold text-slate-900 dark:text-slate-100 text-base">
+          <div className="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-xs space-y-6">
+            <div className="border-b border-border pb-4">
+              <h3 className="font-heading font-bold text-foreground text-base">
                 {t("sites.detail.gitRepoTitle")}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {t("sites.detail.gitRepoDesc")}
               </p>
             </div>
@@ -852,25 +852,25 @@ export default function SiteDetailPage() {
             <div className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="repoUrl" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <Label htmlFor="repoUrl" className="text-xs font-bold text-foreground/90">
                     {t("sites.detail.repoAddressLabel")}
                   </Label>
                   <Input
                     id="repoUrl"
                     placeholder="git@github.com:owner/repo.git"
-                    className="font-mono text-xs h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
+                    className="font-mono text-xs h-10 rounded-xl bg-card border border-border text-foreground"
                     value={gitForm.repoUrl}
                     onChange={(e) => setGitForm((f) => ({ ...f, repoUrl: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="gitBranch" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <Label htmlFor="gitBranch" className="text-xs font-bold text-foreground/90">
                     {t("sites.detail.branchNameLabel")}
                   </Label>
                   <Input
                     id="gitBranch"
                     placeholder="main"
-                    className="font-mono text-xs h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
+                    className="font-mono text-xs h-10 rounded-xl bg-card border border-border text-foreground"
                     value={gitForm.gitBranch}
                     onChange={(e) => setGitForm((f) => ({ ...f, gitBranch: e.target.value }))}
                   />
@@ -878,10 +878,10 @@ export default function SiteDetailPage() {
               </div>
 
               {/* Otomatik Pull Switch */}
-              <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-[#16223f] p-4 bg-slate-50/50 dark:bg-[#060a17]">
+              <div className="flex items-center justify-between rounded-xl border border-border p-4 bg-muted/30">
                 <div>
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{t("sites.detail.autoPullRestartLabel")}</p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs font-bold text-foreground">{t("sites.detail.autoPullRestartLabel")}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
                     {t("sites.detail.autoPullDesc")}
                   </p>
                 </div>
@@ -896,7 +896,7 @@ export default function SiteDetailPage() {
 
               {gitForm.autoPullEnabled && (
                 <div className="space-y-2 sm:w-64">
-                  <Label htmlFor="autoPullInterval" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <Label htmlFor="autoPullInterval" className="text-xs font-bold text-foreground/90">
                     {t("sites.detail.checkIntervalSecLabel")}
                   </Label>
                   <Input
@@ -904,7 +904,7 @@ export default function SiteDetailPage() {
                     type="number"
                     min={5}
                     max={86400}
-                    className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
+                    className="h-10 rounded-xl font-mono text-xs bg-card border border-border text-foreground"
                     value={gitForm.autoPullIntervalSeconds}
                     onChange={(e) =>
                       setGitForm((f) => ({
@@ -918,7 +918,7 @@ export default function SiteDetailPage() {
 
               {/* Process Manager Seçimi */}
               <div className="space-y-2">
-                <Label htmlFor="processManager" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                <Label htmlFor="processManager" className="text-xs font-bold text-foreground/90">
                   {t("sites.detail.processManagerLabel")}
                 </Label>
                 <CustomSelect
@@ -943,13 +943,13 @@ export default function SiteDetailPage() {
 
               {gitForm.processManager === "CUSTOM_SCRIPT" && (
                 <div className="space-y-2">
-                  <Label htmlFor="customRestartCommand" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <Label htmlFor="customRestartCommand" className="text-xs font-bold text-foreground/90">
                     {t("sites.detail.customRestartScriptLabel")}
                   </Label>
                   <Input
                     id="customRestartCommand"
                     placeholder={`/var/www/${site.domain}/deploy/restart.sh`}
-                    className="font-mono text-xs h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
+                    className="font-mono text-xs h-10 rounded-xl bg-card border border-border text-foreground"
                     value={gitForm.customRestartCommand}
                     onChange={(e) =>
                       setGitForm((f) => ({ ...f, customRestartCommand: e.target.value }))
@@ -958,13 +958,13 @@ export default function SiteDetailPage() {
                 </div>
               )}
 
-              {gitSaveError && <p className="text-xs text-red-600 dark:text-red-400">{gitSaveError}</p>}
+              {gitSaveError && <p className="text-xs text-destructive">{gitSaveError}</p>}
 
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Button
                   onClick={handleGitSave}
                   disabled={gitSaving}
-                  className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-10 px-6 rounded-xl text-xs font-semibold cursor-pointer border border-[#c8a87c]/40 dark:border-[#2a4687]/60"
+                  className="bg-primary hover:bg-primary-hover text-primary-foreground h-10 px-6 rounded-xl text-xs font-semibold cursor-pointer shadow-sm"
                 >
                   {gitSaving && <Loader2 className="size-3.5 animate-spin mr-1" />}
                   {t("sites.detail.saveGitSettings")}
@@ -973,7 +973,7 @@ export default function SiteDetailPage() {
                   variant="outline"
                   onClick={handleGitPull}
                   disabled={gitPulling || !gitForm.repoUrl.trim()}
-                  className="h-10 px-5 rounded-xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#060a17] text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer dark:hover:bg-[#111f40]"
+                  className="h-10 px-5 rounded-xl border border-border bg-card text-foreground/90 hover:text-primary hover:border-primary text-xs font-semibold cursor-pointer"
                 >
                   {gitPulling ? (
                     <Loader2 className="size-3.5 animate-spin mr-1" />
@@ -997,9 +997,9 @@ export default function SiteDetailPage() {
               )}
 
               {/* Son Pull Durumu */}
-              <div className="pt-4 border-t border-slate-100 dark:border-[#16223f] flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <div className="pt-4 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
                 <span>{t("sites.detail.lastGitPull")}</span>
-                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                <span className="font-mono font-bold text-foreground">
                   {gitLastPull.at ? new Date(gitLastPull.at).toLocaleString(lang === "en" ? "en-US" : "tr-TR") : t("sites.detail.gitPullNever")}
                 </span>
               </div>
