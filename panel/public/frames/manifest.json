@@ -1,0 +1,7 @@
+{
+  "totalFrames": 180,
+  "extension": "jpg",
+  "pattern": "/frames/frame_%04d.jpg",
+  "width": 1280,
+  "height": 720
+}

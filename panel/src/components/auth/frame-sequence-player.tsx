@@ -56,7 +56,43 @@ export function FrameSequencePlayer({
     }
   }, [manifestUrl])
 
-  // ═══ 2. KARELERİ ÖN YÜKLE (PRELOAD FRAMES) ═══
+  // ═══ 2. KANVASA KARE ÇİZİMİ (OBJECT-FIT: COVER) ═══
+  const renderFrame = useCallback((frameIdx: number) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    const imgs = imagesRef.current
+    if (frameIdx < 0 || frameIdx >= imgs.length) return
+    const img = imgs[frameIdx]
+
+    // Resim henüz tam decode edilmediyse çizimi atla
+    if (!img || !img.complete || img.naturalWidth === 0) return
+
+    if (canvas.width === 0 || canvas.height === 0) {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+
+    const cw = canvas.width
+    const ch = canvas.height
+    const iw = img.naturalWidth
+    const ih = img.naturalHeight
+
+    // Object-fit: cover oranı hesaplama
+    const scale = Math.max(cw / iw, ch / ih)
+    const nw = iw * scale
+    const nh = ih * scale
+    const ox = (cw - nw) / 2
+    const oy = (ch - nh) / 2
+
+    ctx.clearRect(0, 0, cw, ch)
+    ctx.drawImage(img, ox, oy, nw, nh)
+    currentRenderedFrameRef.current = frameIdx
+  }, [])
+
+  // ═══ 3. KARELERİ ÖN YÜKLE (PRELOAD FRAMES) ═══
   useEffect(() => {
     if (!manifest || manifest.totalFrames <= 0) return
 
@@ -76,8 +112,12 @@ export function FrameSequencePlayer({
       img.onload = () => {
         count++
         setLoadedCount(count)
-        if (count >= Math.min(total, 25)) {
-          // İlk 25 kare yüklendiğinde anında render başlat
+        if (i === 1) {
+          // İlk kare iner inmez hemen çiz
+          renderFrame(0)
+          setIsReady(true)
+        }
+        if (count >= Math.min(total, 15)) {
           setIsReady(true)
         }
       }
@@ -96,38 +136,7 @@ export function FrameSequencePlayer({
         im.onerror = null
       })
     }
-  }, [manifest])
-
-  // ═══ 3. KANVASA KARE ÇİZİMİ (OBJECT-FIT: COVER) ═══
-  const renderFrame = useCallback((frameIdx: number) => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-
-    const imgs = imagesRef.current
-    if (frameIdx < 0 || frameIdx >= imgs.length) return
-    const img = imgs[frameIdx]
-
-    // Resim henüz tam decode edilmediyse çizimi atla
-    if (!img || !img.complete || img.naturalWidth === 0) return
-
-    const cw = canvas.width
-    const ch = canvas.height
-    const iw = img.naturalWidth
-    const ih = img.naturalHeight
-
-    // Object-fit: cover oranı hesaplama
-    const scale = Math.max(cw / iw, ch / ih)
-    const nw = iw * scale
-    const nh = ih * scale
-    const ox = (cw - nw) / 2
-    const oy = (ch - nh) / 2
-
-    ctx.clearRect(0, 0, cw, ch)
-    ctx.drawImage(img, ox, oy, nw, nh)
-    currentRenderedFrameRef.current = frameIdx
-  }, [])
+  }, [manifest, renderFrame])
 
   // ═══ 4. RESIZE DİNLEYİCİSİ ═══
   useEffect(() => {

@@ -19,8 +19,8 @@ export function GlassLoginCard({ progress }: GlassLoginCardProps) {
 
   // Scroll ilerlemesine göre kartın sahneye giriş eşiği (0.65 - 0.95 arası)
   // 0.65'in altında tamamen gizli, 0.85 ve sonrasında %100 görünür ve etkileşimli
-  const appearStart = 0.65
-  const appearEnd = 0.90
+  const appearStart = 0.70
+  const appearEnd = 0.88
   const normalizedProgress = Math.min(
     1,
     Math.max(0, (progress - appearStart) / (appearEnd - appearStart))
