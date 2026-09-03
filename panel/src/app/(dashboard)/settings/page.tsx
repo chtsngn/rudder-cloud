@@ -6,6 +6,7 @@ import {
   Pencil,
   Plus,
   Trash2,
+  AlertCircle,
   Settings as SettingsIcon,
   Globe,
   Lock,
@@ -30,6 +31,7 @@ import {
   GitBranch,
   RefreshCw,
   Languages,
+  Zap,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -38,37 +40,7 @@ import { Label } from "@/components/ui/label"
 import { useTheme } from "@/components/theme-provider"
 import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
-
-interface S3ConfigView {
-  id: string
-  label: string
-  bucket: string
-  region: string
-  endpoint: string | null
-  accessKeyId: string
-  pathPrefix: string
-  hasSecret: boolean
-}
-
-interface S3FormState {
-  label: string
-  bucket: string
-  region: string
-  endpoint: string
-  accessKeyId: string
-  secretAccessKey: string
-  pathPrefix: string
-}
-
-const EMPTY_FORM: S3FormState = {
-  label: "",
-  bucket: "",
-  region: "",
-  endpoint: "",
-  accessKeyId: "",
-  secretAccessKey: "",
-  pathPrefix: "",
-}
+import { S3ConfigDialog, type S3ConfigView } from "@/components/s3-config-dialog"
 
 interface PanelDomainSettings {
   domain: string | null
@@ -170,12 +142,10 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [listError, setListError] = useState<string | null>(null)
 
-  const [formOpen, setFormOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState<S3FormState>(EMPTY_FORM)
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
-
+  const [s3DialogOpen, setS3DialogOpen] = useState(false)
+  const [dialogConfig, setDialogConfig] = useState<S3ConfigView | null>(null)
+  const [testingS3Id, setTestingS3Id] = useState<string | null>(null)
+  const [s3TestResults, setS3TestResults] = useState<Record<string, { ok: boolean; message?: string; error?: string }>>({})
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const [domainSettings, setDomainSettings] = useState<PanelDomainSettings | null>(null)
@@ -226,63 +196,56 @@ export default function SettingsPage() {
   }, [load, loadDomain])
 
   function openCreateForm() {
-    setEditingId(null)
-    setForm(EMPTY_FORM)
-    setSaveError(null)
-    setFormOpen(true)
+    setDialogConfig(null)
+    setS3DialogOpen(true)
   }
 
   function openEditForm(config: S3ConfigView) {
-    setEditingId(config.id)
-    setForm({
-      label: config.label,
-      bucket: config.bucket,
-      region: config.region,
-      endpoint: config.endpoint ?? "",
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: "",
-      pathPrefix: config.pathPrefix,
-    })
-    setSaveError(null)
-    setFormOpen(true)
+    setDialogConfig(config)
+    setS3DialogOpen(true)
   }
 
-  async function handleSave() {
-    setSaving(true)
-    setSaveError(null)
+  async function handleTestS3(id: string) {
+    setTestingS3Id(id)
+    setS3TestResults((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
     try {
-      const body = {
-        label: form.label,
-        bucket: form.bucket,
-        region: form.region,
-        endpoint: form.endpoint || null,
-        accessKeyId: form.accessKeyId,
-        pathPrefix: form.pathPrefix,
-        ...(form.secretAccessKey ? { secretAccessKey: form.secretAccessKey } : {}),
+      const res = await fetch("/api/settings/s3/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      })
+      const data = await res.json()
+      if (res.ok && data.ok) {
+        setS3TestResults((prev) => ({
+          ...prev,
+          [id]: {
+            ok: true,
+            message: lang === "tr" ? "Bağlantı başarılı! Bucket erişilebilir." : "Connection verified! Bucket accessible.",
+          },
+        }))
+      } else {
+        setS3TestResults((prev) => ({
+          ...prev,
+          [id]: {
+            ok: false,
+            error: data.error || (lang === "tr" ? "Bağlantı testi başarısız." : "Connection test failed."),
+          },
+        }))
       }
-      const res = editingId
-        ? await fetch(`/api/settings/s3/${editingId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          })
-        : await fetch("/api/settings/s3", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          })
-      if (!res.ok) {
-        setSaveError(await parseError(res))
-        return
-      }
-      setFormOpen(false)
-      setForm(EMPTY_FORM)
-      setEditingId(null)
-      await load()
     } catch {
-      setSaveError("Sunucuya bağlanılamadı.")
+      setS3TestResults((prev) => ({
+        ...prev,
+        [id]: {
+          ok: false,
+          error: lang === "tr" ? "Sunucuya bağlanılamadı." : "Failed to connect to server.",
+        },
+      }))
     } finally {
-      setSaving(false)
+      setTestingS3Id(null)
     }
   }
 
@@ -446,9 +409,6 @@ export default function SettingsPage() {
   }
 
   const canBindDomain = domainForm.domain.trim() && domainForm.email.trim() && !domainSaving
-
-  const canSubmit =
-    form.bucket.trim() && form.region.trim() && form.accessKeyId.trim() && (editingId ? true : form.secretAccessKey.trim())
 
   const domainStatus = domainSettings?.sslStatus
     ? SSL_STATUS_CONFIG[domainSettings.sslStatus] ?? SSL_STATUS_CONFIG.none
@@ -927,133 +887,6 @@ export default function SettingsPage() {
         {/* Aşağı Doğru Açılan İçerik */}
         {openSections.s3 && (
           <div className="p-5 md:p-6 pt-0 border-t border-slate-100 dark:border-[#16223f] space-y-6 animate-in fade-in-0 duration-200">
-            {/* Yeni / Düzenleme Formu */}
-            {formOpen && (
-              <div className="mt-4 rounded-2xl border border-[#c8a87c]/70 dark:border-[#2a4687] bg-slate-50/60 dark:bg-[#060a17] p-6 shadow-sm space-y-5 animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-[#16223f] pb-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="size-4 text-[#c8a87c] dark:text-blue-300" />
-                    <h3 className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
-                      {editingId ? t("settings.s3.modalTitleEdit") : t("settings.s3.modalTitleAdd")}
-                    </h3>
-                  </div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 font-sans">AWS S3 / R2 / MinIO</span>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {t("settings.s3.label")}
-                    </Label>
-                    <Input
-                      value={form.label}
-                      onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
-                      placeholder="AWS Frankfurt, Cloudflare R2"
-                      className="h-10 rounded-xl text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {t("settings.s3.bucket")}
-                    </Label>
-                    <Input
-                      value={form.bucket}
-                      onChange={(e) => setForm((f) => ({ ...f, bucket: e.target.value }))}
-                      placeholder="panel-backups-bucket"
-                      className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {t("settings.s3.region")}
-                    </Label>
-                    <Input
-                      value={form.region}
-                      onChange={(e) => setForm((f) => ({ ...f, region: e.target.value }))}
-                      placeholder="eu-central-1 / auto"
-                      className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {t("settings.s3.endpoint")}
-                    </Label>
-                    <Input
-                      value={form.endpoint}
-                      onChange={(e) => setForm((f) => ({ ...f, endpoint: e.target.value }))}
-                      placeholder="https://<accountid>.r2.cloudflarestorage.com"
-                      className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {t("settings.s3.accessKey")}
-                    </Label>
-                    <Input
-                      value={form.accessKeyId}
-                      onChange={(e) => setForm((f) => ({ ...f, accessKeyId: e.target.value }))}
-                      className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {t("settings.s3.secretKey")}
-                    </Label>
-                    <Input
-                      type="password"
-                      value={form.secretAccessKey}
-                      onChange={(e) => setForm((f) => ({ ...f, secretAccessKey: e.target.value }))}
-                      placeholder={editingId ? "••••••••••••••••••••••••" : ""}
-                      className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {t("settings.s3.prefix")}
-                    </Label>
-                    <Input
-                      value={form.pathPrefix}
-                      onChange={(e) => setForm((f) => ({ ...f, pathPrefix: e.target.value }))}
-                      placeholder="rudder-backups/"
-                      className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                    />
-                  </div>
-                </div>
-
-                {saveError && (
-                  <p className="text-xs text-red-600 dark:text-red-400 font-mono bg-red-50 dark:bg-red-950/40 p-2.5 rounded-lg border border-red-200 dark:border-red-900">
-                    {saveError}
-                  </p>
-                )}
-
-                <div className="flex items-center justify-end gap-2.5 pt-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setFormOpen(false)}
-                    className="h-10 px-4 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300 dark:hover:bg-[#111f40]"
-                  >
-                    {t("common.vazgec")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={!canSubmit || saving}
-                    onClick={handleSave}
-                    className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-10 px-6 rounded-xl text-xs font-semibold border border-[#c8a87c]/40 dark:border-[#2a4687]/60"
-                  >
-                    {saving && <Loader2 className="size-3.5 animate-spin mr-1 text-[#dfc9a0] dark:text-white" />}
-                    {editingId ? t("common.save") : t("settings.s3.saveBtn")}
-                  </Button>
-                </div>
-              </div>
-            )}
-
             {listError && (
               <p className="text-xs text-red-600 dark:text-red-400 font-mono bg-red-50 dark:bg-red-950/40 p-3 rounded-xl border border-red-200 dark:border-red-900">
                 {listError}
@@ -1087,76 +920,155 @@ export default function SettingsPage() {
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 pt-4">
-                {configs.map((config) => (
-                  <div
-                    key={config.id}
-                    className="flex flex-col justify-between p-5 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#060a17] hover:border-[#c8a87c]/60 dark:hover:border-[#2a4687] shadow-xs hover:shadow-sm transition-all"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
-                          {config.label || "S3 Profile"}
-                        </span>
-                        <span className="text-[10px] font-mono font-bold bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 px-2 py-0.5 rounded-full border border-[#c8a87c]/30 dark:border-[#1e3568]/50">
-                          S3
-                        </span>
-                      </div>
+                {configs.map((config) => {
+                  const ep = (config.endpoint || "").toLowerCase()
+                  const providerBadge = !ep
+                    ? "AWS S3"
+                    : ep.includes("r2.cloudflarestorage")
+                    ? "Cloudflare R2"
+                    : ep.includes("wasabisys")
+                    ? "Wasabi"
+                    : ep.includes("digitaloceanspaces")
+                    ? "DO Spaces"
+                    : ep.includes("minio") || ep.includes(":9000")
+                    ? "MinIO"
+                    : "S3"
 
-                      <div className="mt-3 space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+                  const testRes = s3TestResults[config.id]
+                  const isTesting = testingS3Id === config.id
+
+                  return (
+                    <div
+                      key={config.id}
+                      className="flex flex-col justify-between p-5 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#060a17] hover:border-[#c8a87c]/60 dark:hover:border-[#2a4687] shadow-xs hover:shadow-sm transition-all"
+                    >
+                      <div>
                         <div className="flex items-center justify-between">
-                          <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.bucket")}:</span>
-                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{config.bucket}</span>
+                          <span className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
+                            {config.label || "S3 Profile"}
+                          </span>
+                          <span className="text-[10px] font-mono font-bold bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 px-2 py-0.5 rounded-full border border-[#c8a87c]/30 dark:border-[#1e3568]/50">
+                            {providerBadge}
+                          </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.region")}:</span>
-                          <span className="font-mono text-slate-800 dark:text-slate-200">{config.region}</span>
-                        </div>
-                        {config.endpoint && (
+
+                        <div className="mt-3 space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
                           <div className="flex items-center justify-between">
-                            <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.endpoint")}:</span>
-                            <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300 truncate max-w-[200px]" title={config.endpoint}>
-                              {config.endpoint}
-                            </span>
+                            <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.bucket")}:</span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{config.bucket}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.region")}:</span>
+                            <span className="font-mono text-slate-800 dark:text-slate-200">{config.region}</span>
+                          </div>
+                          {config.endpoint && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.endpoint")}:</span>
+                              <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300 truncate max-w-[200px]" title={config.endpoint}>
+                                {config.endpoint}
+                              </span>
+                            </div>
+                          )}
+                          {config.pathPrefix && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.prefix")}:</span>
+                              <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300">{config.pathPrefix}</span>
+                            </div>
+                          )}
+
+                          {/* Bağlı Siteler */}
+                          <div className="pt-2 border-t border-slate-100 dark:border-[#16223f]/60">
+                            {config.sites && config.sites.length > 0 ? (
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                                  {lang === "tr" ? "Kullanan siteler:" : "Used by:"}
+                                </span>
+                                {config.sites.map((s) => (
+                                  <span
+                                    key={s.id}
+                                    className="font-mono text-[10px] font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-[#1e3568]"
+                                  >
+                                    {s.domain}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                                {lang === "tr" ? "Henüz hiçbir siteye atanmadı" : "Not assigned to any site yet"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {testRes && (
+                          <div
+                            className={`mt-2.5 p-2.5 rounded-xl border text-xs flex items-center gap-2 ${
+                              testRes.ok
+                                ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900"
+                                : "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900"
+                            }`}
+                          >
+                            {testRes.ok ? (
+                              <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            ) : (
+                              <AlertCircle className="size-3.5 text-red-600 dark:text-red-400 shrink-0" />
+                            )}
+                            <span>{testRes.ok ? testRes.message : testRes.error}</span>
                           </div>
                         )}
-                        {config.pathPrefix && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.prefix")}:</span>
-                            <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300">{config.pathPrefix}</span>
-                          </div>
-                        )}
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-[#16223f]">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isTesting}
+                          onClick={() => handleTestS3(config.id)}
+                          className="h-8 rounded-xl text-xs font-semibold px-2.5 dark:border-[#16223f] dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer"
+                        >
+                          {isTesting ? (
+                            <Loader2 className="size-3 animate-spin mr-1 text-[#c8a87c] dark:text-blue-300" />
+                          ) : (
+                            <Zap className="size-3 mr-1 text-amber-500" />
+                          )}
+                          {lang === "tr" ? "Test Et" : "Test"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditForm(config)}
+                          className="h-8 rounded-xl text-xs font-semibold px-3 dark:border-[#16223f] dark:text-slate-300 dark:hover:border-[#2a4687] dark:hover:bg-[#111f40] cursor-pointer"
+                        >
+                          <Pencil className="size-3 mr-1 text-[#c8a87c] dark:text-blue-300" />
+                          {t("settings.s3.editBtn")}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={deletingId === config.id}
+                          onClick={() => handleDelete(config.id)}
+                          className="h-8 rounded-xl text-xs font-semibold px-3 border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
+                        >
+                          {deletingId === config.id ? (
+                            <Loader2 className="size-3 animate-spin mr-1" />
+                          ) : (
+                            <Trash2 className="size-3 mr-1" />
+                          )}
+                          {t("settings.s3.deleteBtn")}
+                        </Button>
                       </div>
                     </div>
-
-                    <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-[#16223f]">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditForm(config)}
-                        className="h-8 rounded-xl text-xs font-semibold px-3 dark:border-[#16223f] dark:text-slate-300 dark:hover:border-[#2a4687] dark:hover:bg-[#111f40]"
-                      >
-                        <Pencil className="size-3 mr-1 text-[#c8a87c] dark:text-blue-300" />
-                        {t("settings.s3.editBtn")}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={deletingId === config.id}
-                        onClick={() => handleDelete(config.id)}
-                        className="h-8 rounded-xl text-xs font-semibold px-3 border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
-                      >
-                        {deletingId === config.id ? (
-                          <Loader2 className="size-3 animate-spin mr-1" />
-                        ) : (
-                          <Trash2 className="size-3 mr-1" />
-                        )}
-                        {t("settings.s3.deleteBtn")}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
+
+            <S3ConfigDialog
+              open={s3DialogOpen}
+              onOpenChange={setS3DialogOpen}
+              initialConfig={dialogConfig}
+              onSuccess={load}
+            />
           </div>
         )}
       </div>

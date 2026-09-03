@@ -304,6 +304,11 @@ export const en: TranslationDict = {
       secretKey: "Secret Access Key",
       prefix: "Path Prefix",
       saveBtn: "Save Profile",
+      testBtn: "Test Connection",
+      testingBtn: "Testing...",
+      testSuccess: "Connection verified! Bucket accessible.",
+      usedBySites: "Used by sites:",
+      noSitesAssigned: "Not assigned to any site yet",
     },
     github: {
       title: "GitHub Integration & Deploy Key Management",

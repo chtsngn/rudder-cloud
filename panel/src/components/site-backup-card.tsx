@@ -1,7 +1,17 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Database, Loader2, Trash2 } from "lucide-react"
+import {
+  AlertCircle,
+  CheckCircle2,
+  Cloud,
+  Database,
+  Loader2,
+  Pencil,
+  Plus,
+  Trash2,
+  Zap,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,6 +20,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { CustomSelect } from "@/components/ui/custom-select"
 import { useTranslation } from "@/components/language-provider"
+import { S3ConfigDialog, type S3ConfigView } from "@/components/s3-config-dialog"
 
 interface DetectedDatabase {
   engine: "postgres" | "mysql" | "mongo"
@@ -23,11 +34,6 @@ interface BackupFileInfo {
   fileName: string
   sizeBytes: number
   createdAt: string
-}
-
-interface S3ConfigOption {
-  id: string
-  label: string
 }
 
 interface BackupData {
@@ -67,7 +73,11 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  const [s3Configs, setS3Configs] = useState<S3ConfigOption[]>([])
+  const [s3Configs, setS3Configs] = useState<S3ConfigView[]>([])
+  const [s3DialogOpen, setS3DialogOpen] = useState(false)
+  const [editingS3Config, setEditingS3Config] = useState<S3ConfigView | null>(null)
+  const [s3TestingId, setS3TestingId] = useState<string | null>(null)
+  const [siteS3TestResult, setSiteS3TestResult] = useState<{ ok: boolean; message?: string; error?: string } | null>(null)
 
   const [form, setForm] = useState({
     backupEnabled: false,
@@ -108,7 +118,7 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
         s3ConfigId: backupData.schedule.s3ConfigId ?? "",
       })
       if (s3Res.ok) {
-        setS3Configs((await s3Res.json()) as S3ConfigOption[])
+        setS3Configs((await s3Res.json()) as S3ConfigView[])
       }
     } catch {
       setLoadError("Sunucuya bağlanılamadı.")
@@ -116,6 +126,58 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
       setLoading(false)
     }
   }, [siteId])
+
+  async function handleTestSelectedS3(configId: string) {
+    setS3TestingId(configId)
+    setSiteS3TestResult(null)
+    try {
+      const res = await fetch("/api/settings/s3/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: configId }),
+      })
+      const testData = await res.json()
+      if (res.ok && testData.ok) {
+        setSiteS3TestResult({
+          ok: true,
+          message:
+            lang === "en"
+              ? `Connection verified! '${testData.bucket}' is accessible.`
+              : `Bağlantı doğrulandı! '${testData.bucket}' bucket'ına sorunsuz erişildi.`,
+        })
+      } else {
+        setSiteS3TestResult({
+          ok: false,
+          error: testData.error || (lang === "en" ? "S3 connection test failed." : "S3 bağlantı testi başarısız."),
+        })
+      }
+    } catch {
+      setSiteS3TestResult({
+        ok: false,
+        error: lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı.",
+      })
+    } finally {
+      setS3TestingId(null)
+    }
+  }
+
+  function handleS3Saved(saved: S3ConfigView) {
+    setS3Configs((prev) => {
+      const exists = prev.some((c) => c.id === saved.id)
+      if (exists) {
+        return prev.map((c) => (c.id === saved.id ? saved : c))
+      }
+      return [...prev, saved]
+    })
+    setForm((f) => ({ ...f, s3ConfigId: saved.id, backupUploadToS3: true }))
+    setSiteS3TestResult({
+      ok: true,
+      message:
+        lang === "en"
+          ? `S3 credential "${saved.label}" saved and selected for this site.`
+          : `"${saved.label}" S3 kimlik bilgisi kaydedildi ve bu site için seçildi.`,
+    })
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -302,23 +364,151 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
             </div>
 
             {form.backupUploadToS3 && (
-              <div className="space-y-1.5">
-                <Label htmlFor="s3Config" className="text-xs font-bold text-slate-700 dark:text-slate-300">{lang === "en" ? "S3 Configuration" : "S3 Yapılandırması"}</Label>
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="s3Config" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {lang === "en" ? "S3 Storage Credential" : "S3 Depolama Kimlik Bilgisi"}
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setEditingS3Config(null)
+                      setS3DialogOpen(true)
+                    }}
+                    className="h-7 text-xs text-[#580619] dark:text-blue-300 hover:underline px-2 cursor-pointer"
+                  >
+                    <Plus className="size-3.5 mr-1" />
+                    {lang === "en" ? "+ Add New S3 Credential" : "+ Yeni S3 Ekle"}
+                  </Button>
+                </div>
+
                 <CustomSelect
                   value={form.s3ConfigId}
-                  onChange={(val) => setForm((f) => ({ ...f, s3ConfigId: val }))}
+                  onChange={(val) => {
+                    setForm((f) => ({ ...f, s3ConfigId: val }))
+                    setSiteS3TestResult(null)
+                  }}
                   options={[
-                    { value: "", label: lang === "en" ? "Not selected (Default)" : "Seçilmedi (Varsayılan)" },
-                    ...s3Configs.map((c) => ({ value: c.id, label: c.label })),
+                    { value: "", label: lang === "en" ? "Select S3 Credential..." : "S3 Yapılandırması Seçiniz..." },
+                    ...s3Configs.map((c) => ({
+                      value: c.id,
+                      label: `☁️ ${c.label} (${c.bucket}${c.region ? ` / ${c.region}` : ""})`,
+                    })),
                   ]}
                   placeholder={lang === "en" ? "Select S3 Configuration..." : "S3 Yapılandırması Seçiniz..."}
                   className="w-full"
                 />
-                {s3Configs.length === 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    {lang === "en" ? "No S3 configurations yet — you can add one in Settings." : "Henüz S3 yapılandırması yok — Ayarlar sayfasından ekleyebilirsin."}
-                  </p>
-                )}
+
+                {(() => {
+                  const selectedConfig = s3Configs.find((c) => c.id === form.s3ConfigId)
+                  if (selectedConfig) {
+                    return (
+                      <div className="rounded-xl border border-slate-200/90 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] p-3.5 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Cloud className="size-4 text-[#c8a87c] dark:text-blue-300" />
+                            <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                              {selectedConfig.label}
+                            </span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white dark:bg-[#101c38] border border-slate-200 dark:border-[#1e3568] text-slate-600 dark:text-slate-300 font-bold">
+                              {selectedConfig.bucket}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleTestSelectedS3(selectedConfig.id)}
+                              disabled={s3TestingId === selectedConfig.id}
+                              className="h-7 text-xs px-2.5 dark:border-[#16223f]"
+                            >
+                              {s3TestingId === selectedConfig.id ? (
+                                <Loader2 className="size-3 mr-1 animate-spin text-[#c8a87c] dark:text-blue-300" />
+                              ) : (
+                                <Zap className="size-3 mr-1 text-amber-500" />
+                              )}
+                              {lang === "en" ? "Test Connection" : "Bağlantıyı Test Et"}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingS3Config(selectedConfig)
+                                setS3DialogOpen(true)
+                              }}
+                              className="h-7 text-xs px-2.5 dark:border-[#16223f]"
+                            >
+                              <Pencil className="size-3 mr-1 text-[#c8a87c] dark:text-blue-300" />
+                              {lang === "en" ? "Edit" : "Düzenle"}
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                          <div>
+                            <span className="text-slate-400 dark:text-slate-500">{lang === "en" ? "Region: " : "Bölge: "}</span>
+                            <span className="font-mono text-slate-700 dark:text-slate-300">{selectedConfig.region}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 dark:text-slate-500">{lang === "en" ? "Endpoint: " : "Endpoint: "}</span>
+                            <span className="font-mono text-slate-700 dark:text-slate-300 truncate inline-block max-w-[140px]" title={selectedConfig.endpoint || "AWS Standard"}>
+                              {selectedConfig.endpoint || "AWS Standard"}
+                            </span>
+                          </div>
+                          {selectedConfig.pathPrefix && (
+                            <div>
+                              <span className="text-slate-400 dark:text-slate-500">{lang === "en" ? "Prefix: " : "Ön Ek: "}</span>
+                              <span className="font-mono text-slate-700 dark:text-slate-300">{selectedConfig.pathPrefix}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {siteS3TestResult && (
+                          <div className={`p-2.5 rounded-lg border text-xs flex items-center gap-2 ${
+                            siteS3TestResult.ok
+                              ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300"
+                              : "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900 text-red-700 dark:text-red-400"
+                          }`}>
+                            {siteS3TestResult.ok ? (
+                              <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            ) : (
+                              <AlertCircle className="size-3.5 text-red-600 dark:text-red-400 shrink-0" />
+                            )}
+                            <span>{siteS3TestResult.ok ? siteS3TestResult.message : siteS3TestResult.error}</span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  }
+                  if (s3Configs.length === 0) {
+                    return (
+                      <div className="rounded-xl border border-slate-200/80 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] p-4 text-center">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                          {lang === "en"
+                            ? "No S3 storage credentials configured yet."
+                            : "Henüz kayıtlı bir S3 depolama kimlik bilgisi yok."}
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            setEditingS3Config(null)
+                            setS3DialogOpen(true)
+                          }}
+                          className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white text-xs h-8 px-3 rounded-xl"
+                        >
+                          <Plus className="size-3.5 mr-1" />
+                          {lang === "en" ? "Create S3 Credential" : "S3 Yapılandırması Oluştur"}
+                        </Button>
+                      </div>
+                    )
+                  }
+                  return null
+                })()}
               </div>
             )}
 
@@ -402,6 +592,13 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
           </>
         )}
       </CardContent>
+
+      <S3ConfigDialog
+        open={s3DialogOpen}
+        onOpenChange={setS3DialogOpen}
+        initialConfig={editingS3Config}
+        onSuccess={handleS3Saved}
+      />
     </Card>
   )
 }
