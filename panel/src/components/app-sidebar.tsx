@@ -105,58 +105,43 @@ export function AppSidebar() {
 
   return (
     <>
-      {/* ═══ MOBİLDE KAPALIYKEN SOL ÜSTTEKİ YÜZEN DÜMEN BUTONU ═══ */}
+      {/* ═══ MOBİLDE KAPALIYKEN SOL KENARDAKİ YARIM DÜMEN BUTONU ═══ */}
       {!mobileOpen && (
-        <div
-          className="lg:hidden fixed left-4 top-4 z-[9999] flex items-center justify-center cursor-pointer touch-none animate-in fade-in slide-in-from-left-4 duration-300"
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            openMobile()
-          }}
-          onTouchStart={(e) => {
-            e.stopPropagation()
-            openMobile()
-          }}
-          title="Yelkeni Aç"
+        <button
+          type="button"
+          onClick={() => openMobile()}
+          className="lg:hidden fixed left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-[9999] size-12 rounded-full cursor-pointer hover:scale-110 active:scale-95 transition-all outline-none"
+          title="Menüyü Aç"
           aria-label="Menüyü Aç"
         >
-          {/* Yüzen Tam Dümen Butonu */}
-          <div className="relative size-12 rounded-full flex items-center justify-center select-none shadow-[0_8px_30px_rgba(0,0,0,0.6)] group hover:scale-110 active:scale-95 transition-all">
-            {/* Genişletilmiş dokunma alanı */}
-            <div className="absolute -inset-4 rounded-full" />
-            
-            {/* Işıma Halosu */}
-            <div
-              className={cn(
-                "absolute inset-0 rounded-full blur-md transition-all pointer-events-none",
-                isDark
-                  ? "bg-[#38bdf8]/40 group-hover:bg-[#38bdf8]/70"
-                  : "bg-[#dfc9a0]/40 group-hover:bg-[#dfc9a0]/70"
-              )}
-            />
+          {/* Işıma Halosu */}
+          <div
+            className={cn(
+              "absolute inset-0 rounded-full blur-md transition-all pointer-events-none",
+              isDark ? "bg-[#38bdf8]/60" : "bg-[#dfc9a0]/60"
+            )}
+          />
 
-            {/* Madalyon Gövdesi */}
-            <div
-              className="relative size-full rounded-full flex items-center justify-center p-1 pointer-events-none"
-              style={{
-                background: isDark
-                  ? "radial-gradient(circle at 35% 35%, #e2e8f0 0%, #94a3b8 50%, #1e293b 100%)"
-                  : "radial-gradient(circle at 35% 35%, #fcedd2 0%, #dfc9a0 50%, #9e7535 100%)",
-                border: isDark ? "2px solid #080d1a" : "2px solid #3d020a",
-                boxShadow: "0 4px 14px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.8)",
-              }}
-            >
-              <Image
-                src="/rudder-helm-transparent.png"
-                alt="Dümen Kontrolü"
-                width={28}
-                height={28}
-                className="object-contain drop-shadow-md"
-              />
-            </div>
+          {/* Madalyon Gövdesi */}
+          <div
+            className="relative size-full rounded-full flex items-center justify-center p-1"
+            style={{
+              background: isDark
+                ? "radial-gradient(circle at 35% 35%, #e2e8f0 0%, #94a3b8 50%, #1e293b 100%)"
+                : "radial-gradient(circle at 35% 35%, #fcedd2 0%, #dfc9a0 50%, #9e7535 100%)",
+              border: isDark ? "2px solid #080d1a" : "2px solid #3d020a",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.8), inset 0 2px 4px rgba(255,255,255,0.8)",
+            }}
+          >
+            <Image
+              src="/rudder-helm-transparent.png"
+              alt="Dümen"
+              width={28}
+              height={28}
+              className="object-contain"
+            />
           </div>
-        </div>
+        </button>
       )}
 
       {/* ═══ MOBİL BACKDROP (lg altında sidebar açıkken karartma) ═══ */}
