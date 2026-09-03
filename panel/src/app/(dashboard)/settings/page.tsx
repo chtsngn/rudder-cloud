@@ -1067,7 +1067,7 @@ export default function SettingsPage() {
               open={s3DialogOpen}
               onOpenChange={setS3DialogOpen}
               initialConfig={dialogConfig}
-              onSuccess={load}
+              onSuccess={() => load()}
             />
           </div>
         )}
