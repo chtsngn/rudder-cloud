@@ -15,6 +15,8 @@ interface DeployKeyData {
   publicKey: string | null
   fingerprint: string | null
   createdAt: string | null
+  githubStatus?: "active" | "deleted_on_github" | "not_checked"
+  githubKeyId?: number | null
 }
 
 interface ActionsKeyData {
@@ -28,6 +30,13 @@ interface GhResult {
   attempted: boolean
   ok: boolean
   message: string
+}
+
+interface GitHubRepoItem {
+  id: number
+  fullName: string
+  defaultBranch: string
+  private: boolean
 }
 
 async function parseError(res: Response): Promise<string> {
@@ -78,8 +87,12 @@ export function SiteGithubKeysCard({
   const [revealedPrivateKey, setRevealedPrivateKey] = useState<string | null>(null)
 
   const [ghAccount, setGhAccount] = useState<{ username: string; avatarUrl?: string } | null>(null)
+  const [githubRepos, setGithubRepos] = useState<GitHubRepoItem[]>([])
   const [autoAddDeployKeyToGh, setAutoAddDeployKeyToGh] = useState(true)
+  const [deployKeyTitle, setDeployKeyTitle] = useState("")
+  const [deployKeyReadOnly, setDeployKeyReadOnly] = useState(true)
   const [ghDeploySuccess, setGhDeploySuccess] = useState<string | null>(null)
+  const [autoCleanNotice, setAutoCleanNotice] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -98,10 +111,23 @@ export function SiteGithubKeysCard({
         setLoadError(await parseError(actionsRes))
         return
       }
-      const deployData = (await deployRes.json()) as { deployKey: DeployKeyData | null }
+      const deployData = (await deployRes.json()) as {
+        deployKey: DeployKeyData | null
+        autoCleared?: boolean
+        message?: string
+      }
       const actionsData = (await actionsRes.json()) as { actionsKey: ActionsKeyData | null }
+      
       setDeployKey(deployData.deployKey)
       setActionsKey(actionsData.actionsKey)
+
+      if (deployData.autoCleared) {
+        setAutoCleanNotice(
+          lang === "tr"
+            ? "Deploy key GitHub deposunda bulunamadı (silinmiş). Yerel kayıt otomatik senkronize edilerek temizlendi. Dilediğiniz zaman yeni bir anahtar oluşturabilirsiniz."
+            : "Deploy key was not found in the GitHub repository (deleted). Local key was automatically cleaned up. You can generate a new deploy key anytime."
+        )
+      }
 
       if (ghRes && ghRes.ok) {
         const ghData = (await ghRes.json().catch(() => null)) as {
@@ -113,14 +139,21 @@ export function SiteGithubKeysCard({
             username: ghData.account.username,
             avatarUrl: ghData.account.avatarUrl,
           })
+          // Kullanıcının depolarını da getir
+          fetch(`/api/settings/github/repos`, { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+              if (d?.repos) setGithubRepos(d.repos)
+            })
+            .catch(() => null)
         }
       }
     } catch {
-      setLoadError("Sunucuya bağlanılamadı.")
+      setLoadError(lang === "tr" ? "Sunucuya bağlanılamadı." : "Failed to connect to server.")
     } finally {
       setLoading(false)
     }
-  }, [siteId])
+  }, [siteId, lang])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -138,10 +171,7 @@ export function SiteGithubKeysCard({
         setCopiedField(field)
         setTimeout(() => setCopiedField((f) => (f === field ? null : f)), 2000)
       })
-      .catch(() => {
-        // clipboard API kullanılamıyorsa sessizce yut — kullanıcı yine de
-        // metni elle seçip kopyalayabilir.
-      })
+      .catch(() => {})
   }
 
   async function handleCreateDeployKey() {
@@ -149,6 +179,7 @@ export function SiteGithubKeysCard({
     setDeployError(null)
     setDeployTestResult(null)
     setGhDeploySuccess(null)
+    setAutoCleanNotice(null)
     try {
       const parts = repoSlug.split("/")
       const owner = parts[0]?.trim()
@@ -161,6 +192,8 @@ export function SiteGithubKeysCard({
           autoAddToGithub: !!ghAccount && autoAddDeployKeyToGh && !!owner && !!repo,
           owner: owner || undefined,
           repo: repo || undefined,
+          title: deployKeyTitle.trim() || undefined,
+          readOnly: deployKeyReadOnly,
         }),
       })
       if (!res.ok) {
@@ -174,32 +207,58 @@ export function SiteGithubKeysCard({
       }
       setDeployKey(data.deployKey)
       if (data.githubAdded) {
-        setGhDeploySuccess(`✅ Deploy Key GitHub deposuna (@${ghAccount?.username}) başarıyla eklendi!`)
+        setGhDeploySuccess(
+          lang === "tr"
+            ? `✅ Deploy Key GitHub deposuna (@${repoSlug || ghAccount?.username}) başarıyla eklendi!`
+            : `✅ Deploy Key successfully added to GitHub repository (@${repoSlug || ghAccount?.username})!`
+        )
       } else if (data.githubError) {
-        setDeployError(`Deploy Key üretildi fakat GitHub'a eklenemedi: ${data.githubError}`)
+        setDeployError(
+          lang === "tr"
+            ? `Deploy Key üretildi fakat GitHub'a eklenemedi: ${data.githubError}`
+            : `Deploy Key created but could not be pushed to GitHub: ${data.githubError}`
+        )
       }
     } catch {
-      setDeployError("Sunucuya bağlanılamadı.")
+      setDeployError(lang === "tr" ? "Sunucuya bağlanılamadı." : "Failed to connect to server.")
     } finally {
       setDeployCreating(false)
     }
   }
 
   async function handleDeleteDeployKey() {
-    if (!window.confirm("Deploy key silinsin mi? GitHub'daki Deploy Keys kaydı çalışmaz hale gelir."))
-      return
+    const confirmMsg = lang === "tr"
+      ? "Deploy key hem bu sunucudan hem de bağlı GitHub deposundan silinecektir. Devam edilsin mi?"
+      : "Deploy key will be permanently removed from both this server and the connected GitHub repository. Continue?"
+    if (!window.confirm(confirmMsg)) return
+
     setDeployDeleting(true)
     setDeployError(null)
+    setGhDeploySuccess(null)
     try {
-      const res = await fetch(`/api/sites/${siteId}/deploy-key`, { method: "DELETE" })
+      const parts = repoSlug.split("/")
+      const owner = parts[0]?.trim() || ""
+      const repo = parts[1]?.trim() || ""
+      const q = owner && repo ? `?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}` : ""
+      const res = await fetch(`/api/sites/${siteId}/deploy-key${q}`, { method: "DELETE" })
       if (!res.ok) {
         setDeployError(await parseError(res))
         return
       }
+      const data = await res.json().catch(() => ({}))
       setDeployKey(null)
       setDeployTestResult(null)
+      setGhDeploySuccess(
+        data.githubDeleted
+          ? (lang === "tr"
+              ? "Deploy key sunucudan ve GitHub deposundan başarıyla kaldırıldı."
+              : "Deploy key successfully removed from server and GitHub repository.")
+          : (lang === "tr"
+              ? "Deploy key sunucudan silindi."
+              : "Deploy key deleted from server.")
+      )
     } catch {
-      setDeployError("Sunucuya bağlanılamadı.")
+      setDeployError(lang === "tr" ? "Sunucuya bağlanılamadı." : "Failed to connect to server.")
     } finally {
       setDeployDeleting(false)
     }
@@ -301,58 +360,155 @@ export function SiteGithubKeysCard({
           <p className="text-sm text-destructive">{loadError}</p>
         ) : (
           <>
-            <div className="space-y-1.5">
-              <Label htmlFor="repoSlug">GitHub owner/repo</Label>
-              <Input
-                id="repoSlug"
-                value={repoSlug}
-                onChange={(e) => setRepoSlug(e.target.value)}
-                placeholder="owner/repo"
-              />
-              <p className="text-xs text-muted-foreground">
+            {autoCleanNotice && (
+              <div className="flex items-start gap-2.5 p-3.5 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/30 text-xs text-amber-800 dark:text-amber-300">
+                <span className="text-sm">⚠️</span>
+                <div>
+                  <p className="font-semibold">{lang === "tr" ? "Otomatik Senkronizasyon" : "Automatic Sync"}</p>
+                  <p className="mt-0.5 opacity-90">{autoCleanNotice}</p>
+                </div>
+              </div>
+            )}
+
+            {/* --- Depo Seçimi --- */}
+            <div className="space-y-2">
+              <Label htmlFor="repoSlug" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                {lang === "tr" ? "GitHub Deposu (owner/repo)" : "GitHub Repository (owner/repo)"}
+              </Label>
+              
+              {githubRepos.length > 0 ? (
+                <div className="space-y-2">
+                  <select
+                    id="repoSelect"
+                    value={repoSlug}
+                    onChange={(e) => setRepoSlug(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl text-xs bg-white dark:bg-[#090e1f] border border-slate-200 dark:border-[#16223f] text-slate-900 dark:text-slate-100 font-mono outline-none focus:ring-1 focus:ring-[#c8a87c] dark:focus:ring-[#2a4687]"
+                  >
+                    <option value="">
+                      {lang === "tr"
+                        ? `— GitHub Deposu Seçin (${githubRepos.length} depo mevcut) —`
+                        : `— Select GitHub Repository (${githubRepos.length} repos found) —`}
+                    </option>
+                    {githubRepos.map((r) => (
+                      <option key={r.id} value={r.fullName}>
+                        {r.private ? "🔒 " : "🌐 "} {r.fullName} ({r.defaultBranch})
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="repoSlug"
+                      value={repoSlug}
+                      onChange={(e) => setRepoSlug(e.target.value)}
+                      placeholder={lang === "tr" ? "veya elle girin: owner/repo" : "or enter manually: owner/repo"}
+                      className="h-8 text-xs font-mono bg-white/70 dark:bg-[#090e1f]/70"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <Input
+                  id="repoSlug"
+                  value={repoSlug}
+                  onChange={(e) => setRepoSlug(e.target.value)}
+                  placeholder="owner/repo"
+                  className="font-mono text-xs"
+                />
+              )}
+
+              <p className="text-[11px] text-muted-foreground">
                 {lang === "tr"
-                  ? "Yalnızca aşağıdaki önerilen adresleri ve otomatik secret eklemeyi oluşturmak için kullanılır — kaydedilmez."
-                  : "Only used to generate the recommended clone URLs and automatic secret injection — not persisted."}
+                  ? "Deploy key'in atanacağı veya klonlanacağı GitHub deposunu seçin veya yazın."
+                  : "Select or specify the GitHub repository where the deploy key will be attached."}
               </p>
             </div>
 
             {/* --- Deploy key --- */}
-            <div className="space-y-3 border-t border-border pt-4">
-              <div>
-                <h3 className="text-sm font-medium text-foreground">Deploy Key (git clone/pull)</h3>
-                <p className="text-xs text-muted-foreground">
-                  {lang === "tr"
-                    ? "Private repodan çekiş yapabilmek için tek yönlü, salt-okunur bir SSH anahtarı."
-                    : "One-way, read-only SSH key to pull from private repositories."}
-                </p>
+            <div className="space-y-4 border-t border-border pt-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <span>Deploy Key (git clone/pull)</span>
+                    {deployKey?.githubStatus === "active" && (
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 inline-flex items-center gap-1">
+                        <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        {lang === "tr" ? "GitHub'da Aktif" : "Active on GitHub"}
+                      </span>
+                    )}
+                    {deployKey?.githubStatus === "deleted_on_github" && (
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 inline-flex items-center gap-1">
+                        {lang === "tr" ? "GitHub'dan Silinmiş" : "Deleted from GitHub"}
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {lang === "tr"
+                      ? "Özel (private) repolardan güvenli kod çekebilmek için tek yönlü SSH anahtarı."
+                      : "One-way, read-only SSH key to pull code from private repositories securely."}
+                  </p>
+                </div>
               </div>
 
               {!deployKey ? (
-                <div className="space-y-3">
+                <div className="space-y-4 p-4 rounded-xl bg-slate-50/60 dark:bg-[#090e1f]/60 border border-slate-200 dark:border-[#16223f]">
                   {ghAccount ? (
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-slate-50 dark:bg-[#101c38]/70 border border-slate-200 dark:border-[#1e3568]/60 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">
-                          {lang === "tr" ? "GitHub Hesabı" : "GitHub Account"}: @{ghAccount.username}
-                        </span>
+                    <div className="space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">
+                            {lang === "tr" ? "Bağlı GitHub Hesabı" : "Connected GitHub Account"}: @{ghAccount.username}
+                          </span>
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer select-none text-slate-700 dark:text-slate-300 font-medium">
+                          <input
+                            type="checkbox"
+                            checked={autoAddDeployKeyToGh}
+                            onChange={(e) => setAutoAddDeployKeyToGh(e.target.checked)}
+                            className="size-3.5 rounded accent-[#580619] dark:accent-[#162752]"
+                          />
+                          {lang === "tr" ? "GitHub Deposuna Otomatik Ekle" : "Auto-add to GitHub Repository"}
+                        </label>
                       </div>
-                      <label className="flex items-center gap-2 cursor-pointer select-none text-slate-700 dark:text-slate-300 font-medium">
-                        <input
-                          type="checkbox"
-                          checked={autoAddDeployKeyToGh}
-                          onChange={(e) => setAutoAddDeployKeyToGh(e.target.checked)}
-                          className="size-3.5 rounded accent-[#580619] dark:accent-[#162752]"
-                        />
-                        {lang === "tr" ? "GitHub Deposuna Otomatik Ekle" : "Auto-add to GitHub Repository"}
-                      </label>
+
+                      <div className="grid gap-3 sm:grid-cols-2 pt-1 border-t border-slate-200/60 dark:border-[#16223f]/60">
+                        <div className="space-y-1">
+                          <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                            {lang === "tr" ? "Anahtar Başlığı (GitHub'da görünecek)" : "Key Title (Visible on GitHub)"}
+                          </Label>
+                          <Input
+                            value={deployKeyTitle}
+                            onChange={(e) => setDeployKeyTitle(e.target.value)}
+                            placeholder={`Rudder Cloud Deploy Key`}
+                            className="h-8 text-xs bg-white dark:bg-[#060a17]"
+                          />
+                        </div>
+                        <div className="flex flex-col justify-center pt-2">
+                          <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-700 dark:text-slate-300">
+                            <input
+                              type="checkbox"
+                              checked={deployKeyReadOnly}
+                              onChange={(e) => setDeployKeyReadOnly(e.target.checked)}
+                              className="size-3.5 rounded accent-[#580619] dark:accent-[#162752]"
+                            />
+                            <span className="font-semibold">
+                              {lang === "tr" ? "Salt-Okunur (Read-Only)" : "Read-Only"}
+                            </span>
+                          </label>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {lang === "tr"
+                              ? "Yalnızca clone ve pull izinleri verir, kod push etmeye izin vermez."
+                              : "Grants clone and pull only, disallows pushing code."}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 dark:bg-[#060a17] border border-slate-200/80 dark:border-[#16223f] text-xs text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-[#060a17] border border-slate-200 dark:border-[#16223f] text-xs text-slate-500 dark:text-slate-400">
                       <span>
                         {lang === "tr"
-                          ? "GitHub hesabınızı bağlayarak anahtarı tek tıkla depoya ekleyebilirsiniz."
-                          : "Connect your GitHub account to add keys to your repo with 1 click."}
+                          ? "GitHub hesabınızı bağlayarak anahtarı tek tıkla deponuza gönderebilirsiniz."
+                          : "Connect your GitHub account to add keys to your repository with one click."}
                       </span>
                       <a
                         href="/settings"
@@ -369,10 +525,19 @@ export function SiteGithubKeysCard({
                     </p>
                   )}
 
-                  <Button onClick={handleCreateDeployKey} disabled={deployCreating}>
-                    {deployCreating && <Loader2 className="size-4 animate-spin" />}
-                    {lang === "tr" ? "Deploy Key Oluştur" : "Create Deploy Key"}
-                  </Button>
+                  <div className="flex justify-end pt-1">
+                    <Button
+                      onClick={handleCreateDeployKey}
+                      disabled={deployCreating || (autoAddDeployKeyToGh && !repoSlug.trim())}
+                      className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white text-xs h-9 px-4 rounded-xl shadow-xs"
+                    >
+                      {deployCreating && <Loader2 className="size-3.5 mr-1.5 animate-spin" />}
+                      <KeyRound className="size-3.5 mr-1.5" />
+                      {autoAddDeployKeyToGh && ghAccount
+                        ? (lang === "tr" ? "Deploy Key Oluştur ve GitHub'a Gönder" : "Create Deploy Key & Push to GitHub")
+                        : (lang === "tr" ? "Deploy Key Oluştur" : "Create Deploy Key")}
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -391,60 +556,89 @@ export function SiteGithubKeysCard({
 
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <Label>Public key</Label>
+                      <Label className="text-xs font-bold">Public key</Label>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => copy("deployPub", deployKey.publicKey ?? "")}
+                        className="h-7 text-xs"
                       >
-                        <Copy className="size-3.5" />
+                        <Copy className="size-3.5 mr-1" />
                         {copiedField === "deployPub" ? t("common.copied") : t("common.copy")}
                       </Button>
                     </div>
-                    <pre className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-3 text-xs">
+                    <pre className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-3 text-[11px] font-mono">
                       {deployKey.publicKey}
                     </pre>
-                    <p className="text-xs text-muted-foreground">
-                      GitHub: Repo → Settings → Deploy keys → Add deploy key.
-                    </p>
                   </div>
 
                   {suggestedCloneUrl && (
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <Label>{lang === "tr" ? "Önerilen Repo URL (alias ile)" : "Recommended Repo URL (with alias)"}</Label>
+                        <Label className="text-xs font-bold">
+                          {lang === "tr" ? "Önerilen Repo URL (alias ile)" : "Recommended Repo URL (with alias)"}
+                        </Label>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => copy("cloneUrl", suggestedCloneUrl)}
+                          className="h-7 text-xs"
                         >
-                          <Copy className="size-3.5" />
+                          <Copy className="size-3.5 mr-1" />
                           {copiedField === "cloneUrl" ? t("common.copied") : t("common.copy")}
                         </Button>
                       </div>
-                      <pre className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-3 text-xs">
+                      <pre className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-3 text-[11px] font-mono">
                         {suggestedCloneUrl}
                       </pre>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[11px] text-muted-foreground">
                         {lang === "tr"
-                          ? "Bu deploy key'in kullanılması için yukarıdaki \"Git & Dağıtım\" kartındaki Repo URL alanına bu adresi yapıştır."
-                          : "Paste this URL into the Repo URL field under the Git tab to use this deploy key."}
+                          ? "Bu anahtarla çekiş yapmak için yukarıdaki \"Git & Dağıtım\" kartındaki Repo URL alanına bu adresi yapıştırın."
+                          : "Paste this URL into the Repo URL field under the Git tab to pull using this deploy key."}
                       </p>
                     </div>
                   )}
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" onClick={handleTestDeployKey} disabled={deployTesting}>
-                      {deployTesting && <Loader2 className="size-4 animate-spin" />}
+                  {ghDeploySuccess && (
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-900">
+                      {ghDeploySuccess}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <Button variant="outline" size="sm" onClick={handleTestDeployKey} disabled={deployTesting} className="h-8 text-xs">
+                      {deployTesting && <Loader2 className="size-3.5 animate-spin mr-1.5" />}
                       {lang === "tr" ? "Bağlantıyı Test Et" : "Test Connection"}
                     </Button>
-                    <Button variant="ghost" onClick={handleDeleteDeployKey} disabled={deployDeleting}>
-                      {deployDeleting ? (
-                        <Loader2 className="size-3.5 animate-spin" />
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCreateDeployKey}
+                      disabled={deployCreating}
+                      className="h-8 text-xs border-[#c8a87c]/60 dark:border-[#2a4687]/60 hover:bg-[#580619]/5 dark:hover:bg-[#162752]/20"
+                    >
+                      {deployCreating ? (
+                        <Loader2 className="size-3.5 animate-spin mr-1.5" />
                       ) : (
-                        <Trash2 className="size-3.5" />
+                        <KeyRound className="size-3.5 mr-1.5 text-[#c8a87c] dark:text-blue-300" />
                       )}
-                      {t("common.delete")}
+                      {lang === "tr" ? "Yeniden Üret ve GitHub'a Gönder" : "Regenerate & Push to GitHub"}
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleDeleteDeployKey}
+                      disabled={deployDeleting}
+                      className="h-8 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 ml-auto"
+                    >
+                      {deployDeleting ? (
+                        <Loader2 className="size-3.5 animate-spin mr-1" />
+                      ) : (
+                        <Trash2 className="size-3.5 mr-1" />
+                      )}
+                      {lang === "tr" ? "Sil (GitHub'dan da Kaldır)" : "Delete (Also from GitHub)"}
                     </Button>
                   </div>
 

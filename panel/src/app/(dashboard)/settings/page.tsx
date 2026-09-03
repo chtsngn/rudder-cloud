@@ -23,6 +23,7 @@ import {
   Palette,
   Check,
   ChevronDown,
+  ChevronRight,
   Copy,
   ExternalLink,
   KeyRound,
@@ -357,26 +358,6 @@ export default function SettingsPage() {
   const [githubSuccess, setGithubSuccess] = useState<string | null>(null)
 
   // Deploy key oluşturma state'leri
-  const [githubRepos, setGithubRepos] = useState<GitHubRepoOption[]>([])
-  const [reposLoading, setReposLoading] = useState(false)
-  const [selectedRepo, setSelectedRepo] = useState("")
-  const [customRepo, setCustomRepo] = useState("")
-  const [selectedSiteId, setSelectedSiteId] = useState("")
-  const [deployKeyTitle, setDeployKeyTitle] = useState("")
-  const [deployKeyReadOnly, setDeployKeyReadOnly] = useState(true)
-  const [creatingDeployKey, setCreatingDeployKey] = useState(false)
-  const [createdKey, setCreatedKey] = useState<CreatedDeployKeyInfo | null>(null)
-  const [deployKeyError, setDeployKeyError] = useState<string | null>(null)
-  const [sites, setSites] = useState<SiteOption[]>([])
-  const [copiedField, setCopiedField] = useState<string | null>(null)
-
-  const copyToClipboard = (field: string, text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedField(field)
-      setTimeout(() => setCopiedField(null), 2000)
-    })
-  }
-
   const loadGitHubAccount = useCallback(async () => {
     setGithubLoading(true)
     try {
@@ -384,9 +365,6 @@ export default function SettingsPage() {
       if (res.ok) {
         const data = (await res.json()) as { connected: boolean; account: GitHubAccountView | null }
         setGithubAccount(data.account)
-        if (data.connected && data.account) {
-          loadGitHubRepos()
-        }
       }
     } catch {
       // sessizce geç
@@ -395,37 +373,9 @@ export default function SettingsPage() {
     }
   }, [])
 
-  const loadGitHubRepos = async () => {
-    setReposLoading(true)
-    try {
-      const res = await fetch("/api/settings/github/repos", { cache: "no-store" })
-      if (res.ok) {
-        const data = (await res.json()) as { repos: GitHubRepoOption[] }
-        setGithubRepos(data.repos || [])
-      }
-    } catch {
-      // sessizce geç
-    } finally {
-      setReposLoading(false)
-    }
-  }
-
-  const loadSitesList = useCallback(async () => {
-    try {
-      const res = await fetch("/api/sites", { cache: "no-store" })
-      if (res.ok) {
-        const data = (await res.json()) as SiteOption[]
-        setSites(data || [])
-      }
-    } catch {
-      // sessizce geç
-    }
-  }, [])
-
   useEffect(() => {
     loadGitHubAccount()
-    loadSitesList()
-  }, [loadGitHubAccount, loadSitesList])
+  }, [loadGitHubAccount])
 
   const handleConnectGitHub = async () => {
     if (!githubTokenInput.trim()) return
@@ -446,7 +396,6 @@ export default function SettingsPage() {
       setGithubAccount(data.account)
       setGithubTokenInput("")
       setGithubSuccess(lang === "en" ? `GitHub account @${data.account.username} connected successfully!` : `GitHub hesabı @${data.account.username} başarıyla bağlandı!`)
-      loadGitHubRepos()
     } catch {
       setGithubError(lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı.")
     } finally {
@@ -469,8 +418,6 @@ export default function SettingsPage() {
         return
       }
       setGithubAccount(null)
-      setGithubRepos([])
-      setCreatedKey(null)
       setGithubSuccess(lang === "en" ? "GitHub account disconnected successfully." : "GitHub bağlantısı başarıyla kaldırıldı.")
     } catch {
       setGithubError(lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı.")
@@ -479,50 +426,6 @@ export default function SettingsPage() {
     }
   }
 
-  const handleCreateGitHubDeployKey = async () => {
-    const repoTarget = selectedRepo || customRepo.trim()
-    if (!repoTarget) {
-      setDeployKeyError(lang === "en" ? "Please select or enter a GitHub repository." : "Lütfen bir GitHub deposu seçin veya girin.")
-      return
-    }
-
-    const parts = repoTarget.split("/")
-    if (parts.length !== 2 || !parts[0] || !parts[1]) {
-      setDeployKeyError(lang === "en" ? "Repository format must be 'owner/repo'." : "Depo formatı 'kullanıcı/depo' (owner/repo) şeklinde olmalıdır.")
-      return
-    }
-
-    const [owner, repo] = parts
-    setCreatingDeployKey(true)
-    setDeployKeyError(null)
-    setCreatedKey(null)
-
-    try {
-      const res = await fetch("/api/settings/github/deploy-key", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          owner,
-          repo,
-          siteId: selectedSiteId || undefined,
-          title: deployKeyTitle.trim() || undefined,
-          readOnly: deployKeyReadOnly,
-        }),
-      })
-
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setDeployKeyError(data?.error ?? (lang === "en" ? "Deploy key could not be created." : "Deploy key oluşturulamadı."))
-        return
-      }
-
-      setCreatedKey(data.deployKey)
-    } catch {
-      setDeployKeyError(lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı.")
-    } finally {
-      setCreatingDeployKey(false)
-    }
-  }
 
   const [openSections, setOpenSections] = useState<{
     language: boolean
@@ -1454,14 +1357,11 @@ export default function SettingsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        loadGitHubRepos()
-                        loadGitHubAccount()
-                      }}
-                      disabled={reposLoading}
+                      onClick={() => loadGitHubAccount()}
+                      disabled={githubLoading}
                       className="h-9 px-3 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300 dark:hover:bg-[#111f40]"
                     >
-                      <RefreshCw className={cn("size-3.5 mr-1 text-[#c8a87c] dark:text-blue-300", reposLoading && "animate-spin")} />
+                      <RefreshCw className={cn("size-3.5 mr-1 text-[#c8a87c] dark:text-blue-300", githubLoading && "animate-spin")} />
                       {t("settings.github.refreshBtn")}
                     </Button>
                     <Button
@@ -1481,205 +1381,30 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* 2. Deploy Key Oluşturma ve GitHub'a Aktarma Bölümü */}
-                <div className="rounded-2xl border border-[#c8a87c]/70 dark:border-[#2a4687] bg-slate-50/40 dark:bg-[#060a17] p-6 space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-[#16223f] pb-3">
-                    <div className="flex items-center gap-2">
-                      <KeyRound className="size-4 text-[#c8a87c] dark:text-blue-300" />
-                      <h3 className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
-                        {t("settings.github.deploySectionTitle")}
-                      </h3>
+                {/* 2. Bilgilendirme ve Site Yönetimine Yönlendirme Kartı */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17]">
+                  <div className="flex items-start gap-3">
+                    <div className="size-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <CheckCircle2 className="size-5" />
                     </div>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-sans">
-                      {t("settings.github.deploySectionDesc")}
-                    </span>
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {/* Depo Seçimi */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                        {t("settings.github.repoLabel")}
-                      </Label>
-                      {githubRepos.length > 0 ? (
-                        <select
-                          value={selectedRepo}
-                          onChange={(e) => {
-                            setSelectedRepo(e.target.value)
-                            if (e.target.value) setCustomRepo("")
-                          }}
-                          className="w-full h-10 px-3 rounded-xl text-xs bg-white dark:bg-[#090e1f] border border-slate-200 dark:border-[#16223f] text-slate-900 dark:text-slate-100 font-mono outline-none focus:ring-1 focus:ring-[#c8a87c] dark:focus:ring-[#2a4687]"
-                        >
-                          <option value="">{t("settings.github.selectRepoPlaceholder", { count: githubRepos.length })}</option>
-                          {githubRepos.map((r) => (
-                            <option key={r.id} value={r.fullName}>
-                              {r.private ? "🔒 " : "🌐 "} {r.fullName} ({r.defaultBranch})
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <Input
-                          value={customRepo}
-                          onChange={(e) => setCustomRepo(e.target.value)}
-                          placeholder="owner/repo"
-                          className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                        />
-                      )}
-                      {githubRepos.length > 0 && (
-                        <div className="pt-1">
-                          <input
-                            type="text"
-                            value={customRepo}
-                            onChange={(e) => {
-                              setCustomRepo(e.target.value)
-                              if (e.target.value) setSelectedRepo("")
-                            }}
-                            placeholder={t("settings.github.orCustomRepo")}
-                            className="w-full h-8 px-3 rounded-lg text-[11px] bg-white/70 dark:bg-[#090e1f]/70 border border-slate-200 dark:border-[#16223f] text-slate-800 dark:text-slate-200 font-mono"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Site ile İlişkilendirme */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                        {t("settings.github.bindSiteLabel")}
-                      </Label>
-                      <select
-                        value={selectedSiteId}
-                        onChange={(e) => setSelectedSiteId(e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl text-xs bg-white dark:bg-[#090e1f] border border-slate-200 dark:border-[#16223f] text-slate-900 dark:text-slate-100 font-mono outline-none focus:ring-1 focus:ring-[#c8a87c] dark:focus:ring-[#2a4687]"
-                      >
-                        <option value="">{t("settings.github.bindSiteNone")}</option>
-                        {sites.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            🌐 {s.domain}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {t("settings.github.bindSiteDesc")}
-                      </p>
-                    </div>
-
-                    {/* Anahtar Başlığı */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                        {t("settings.github.keyTitleLabel")}
-                      </Label>
-                      <Input
-                        value={deployKeyTitle}
-                        onChange={(e) => setDeployKeyTitle(e.target.value)}
-                        placeholder="Rudder Cloud Deploy Key"
-                        className="h-10 rounded-xl text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                      />
-                    </div>
-
-                    {/* Salt Okunur Seçeneği */}
-                    <div className="space-y-1.5 flex flex-col justify-center pt-2">
-                      <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={deployKeyReadOnly}
-                          onChange={(e) => setDeployKeyReadOnly(e.target.checked)}
-                          className="size-4 rounded accent-[#580619] dark:accent-[#162752]"
-                        />
-                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                          {t("settings.github.readOnlyLabel")}
-                        </span>
-                      </label>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {t("settings.github.readOnlyDesc")}
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                        {lang === "en" ? "GitHub Integration Active" : "GitHub Entegrasyonu Aktif"}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl leading-relaxed">
+                        {lang === "en"
+                          ? "You can now assign GitHub repositories and manage Deploy Keys directly from each site's 'Git & Deployment' tab. Deploy keys are generated on the server and automatically pushed to your repository."
+                          : "Artık doğrudan sitelerinizin 'Git & Dağıtım' sekmesinden GitHub depolarınızı seçebilir, deploy key oluşturabilir ve depoya tek tıkla gönderebilirsiniz."}
                       </p>
                     </div>
                   </div>
-
-                  {deployKeyError && (
-                    <p className="text-xs text-red-600 dark:text-red-400 font-mono bg-red-50 dark:bg-red-950/40 p-2.5 rounded-lg border border-red-200 dark:border-red-900">
-                      {deployKeyError}
-                    </p>
-                  )}
-
-                  <div className="flex justify-end pt-1">
-                    <Button
-                      disabled={(!selectedRepo && !customRepo.trim()) || creatingDeployKey}
-                      onClick={handleCreateGitHubDeployKey}
-                      className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 h-10 rounded-xl shadow-md transition-all flex items-center gap-2 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer"
-                    >
-                      {creatingDeployKey ? (
-                        <Loader2 className="size-4 animate-spin text-[#dfc9a0] dark:text-white" />
-                      ) : (
-                        <KeyRound className="size-4 text-[#dfc9a0] dark:text-white" />
-                      )}
-                      {t("settings.github.createAndPushBtn")}
-                    </Button>
-                  </div>
-
-                  {/* Üretilen Anahtar Sonuç Kutusu */}
-                  {createdKey && (
-                    <div className="mt-4 rounded-xl border border-emerald-300/80 dark:border-emerald-800/80 bg-emerald-50/50 dark:bg-emerald-950/30 p-5 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-                      <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold text-xs">
-                        <CheckCircle2 className="size-4.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>{t("settings.github.successAlert")}</span>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                            {t("settings.github.suggestedCloneLabel")}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard("sshUrl", createdKey.suggestedSshUrl)}
-                            className="h-7 text-xs font-semibold"
-                          >
-                            <Copy className="size-3 mr-1" />
-                            {copiedField === "sshUrl" ? t("common.copied") : t("common.copy")}
-                          </Button>
-                        </div>
-                        <pre className="p-2.5 rounded-lg bg-white dark:bg-[#060a17] border border-slate-200 dark:border-[#16223f] font-mono text-xs text-slate-800 dark:text-slate-200 overflow-x-auto">
-                          {createdKey.suggestedSshUrl}
-                        </pre>
-                      </div>
-
-                      <div className="grid sm:grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <span className="text-slate-500 dark:text-slate-400">{t("settings.github.sshAliasLabel")}</span>
-                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200 ml-2">
-                            {createdKey.hostAlias}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 dark:text-slate-400">{t("settings.github.fingerprintLabel")}</span>
-                          <span className="font-mono text-[11px] text-slate-800 dark:text-slate-200 ml-2">
-                            {createdKey.fingerprint}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                            {t("settings.github.publicKeyLabel")}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard("pubKey", createdKey.publicKey)}
-                            className="h-7 text-xs font-semibold"
-                          >
-                            <Copy className="size-3 mr-1" />
-                            {copiedField === "pubKey" ? t("common.copied") : t("common.copy")}
-                          </Button>
-                        </div>
-                        <pre className="p-2.5 rounded-lg bg-white dark:bg-[#060a17] border border-slate-200 dark:border-[#16223f] font-mono text-[11px] text-slate-700 dark:text-slate-300 overflow-x-auto">
-                          {createdKey.publicKey}
-                        </pre>
-                      </div>
-                    </div>
-                  )}
+                  <a
+                    href="/sites"
+                    className="inline-flex items-center justify-center gap-1.5 px-4 h-9 rounded-xl text-xs font-semibold bg-[#580619] dark:bg-[#162752] text-white hover:bg-[#720a22] dark:hover:bg-[#1e346b] transition-all shrink-0 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer shadow-xs"
+                  >
+                    <span>{lang === "en" ? "Manage Sites" : "Siteleri Yönet"}</span>
+                    <ChevronRight className="size-3.5" />
+                  </a>
                 </div>
               </div>
             )}

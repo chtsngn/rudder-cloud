@@ -167,7 +167,10 @@ async function removeHostAlias(hostAlias: string): Promise<void> {
   }
 }
 
-export async function generateDeployKey(domain: string): Promise<DeployKeyInfo> {
+export async function generateDeployKey(
+  domain: string,
+  overwrite = true
+): Promise<DeployKeyInfo> {
   await ensureSshDir()
   const keyName = deployKeyNameFor(domain)
   const keyFile = join(SSH_DIR, keyName)
@@ -175,10 +178,13 @@ export async function generateDeployKey(domain: string): Promise<DeployKeyInfo> 
   const hostAlias = deployHostAlias(keyName)
 
   if (await pathExists(keyFile)) {
-    throw new GithubKeyError(
-      "Bu site için deploy key zaten mevcut. Önce mevcut anahtarı silin.",
-      409
-    )
+    if (!overwrite) {
+      throw new GithubKeyError(
+        "Bu site için deploy key zaten mevcut. Önce mevcut anahtarı silin.",
+        409
+      )
+    }
+    await removeDeployKey(domain)
   }
 
   await generateEd25519KeyPair(keyFile, keyName)

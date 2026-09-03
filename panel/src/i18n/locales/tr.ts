@@ -230,6 +230,12 @@ export const tr = {
       checkIntervalSecLabel: "Kontrol Aralığı (Saniye)",
       processManagerLabel: "Yeniden Başlatma Yöntemi (Process Manager)",
       customRestartScriptLabel: "Özel Restart Betiği (Mutlak Yol)",
+      saveGitSettings: "Git Ayarlarını Kaydet",
+      pullNow: "Şimdi Çek (Pull)",
+      gitSettingsSaved: "Git ayarları kaydedildi.",
+      lastGitPull: "Son Git Pull",
+      gitPullNever: "Henüz yapılmadı",
+      gitPulling: "Çekiliyor...",
     },
   },
   settings: {

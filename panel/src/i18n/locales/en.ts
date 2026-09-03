@@ -232,6 +232,12 @@ export const en: TranslationDict = {
       checkIntervalSecLabel: "Check Interval (Seconds)",
       processManagerLabel: "Restart Method (Process Manager)",
       customRestartScriptLabel: "Custom Restart Script (Absolute Path)",
+      saveGitSettings: "Save Git Settings",
+      pullNow: "Pull Now",
+      gitSettingsSaved: "Git settings saved.",
+      lastGitPull: "Last Git Pull",
+      gitPullNever: "Never",
+      gitPulling: "Pulling...",
     },
   },
   settings: {
