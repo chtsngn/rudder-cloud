@@ -283,7 +283,12 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
     setState("connecting")
     setExitMessage(null)
 
-    const isDark = theme === "dark"
+    const isDark =
+      (typeof window !== "undefined" &&
+        (document.documentElement.classList.contains("dark") ||
+          document.documentElement.getAttribute("data-theme") === "dark" ||
+          localStorage.getItem("rudder:theme") === "dark")) ||
+      theme === "dark"
 
     const term = new Terminal({
       cursorBlink: true,
@@ -405,6 +410,41 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
       wsRef.current = null
     }
   }, [reconnectKey])
+
+  // Tema değiştiğinde açık olan terminal renklerini dinamik güncelle
+  useEffect(() => {
+    if (!termRef.current) return
+    const isDark =
+      (typeof window !== "undefined" &&
+        (document.documentElement.classList.contains("dark") ||
+          document.documentElement.getAttribute("data-theme") === "dark" ||
+          localStorage.getItem("rudder:theme") === "dark")) ||
+      theme === "dark"
+
+    termRef.current.options.theme = {
+      background: isDark ? "#040711" : "#0a0d14",
+      foreground: "#e2e8f0",
+      cursor: isDark ? "#60a5fa" : "#dfc9a0",
+      cursorAccent: isDark ? "#040711" : "#0a0d14",
+      selectionBackground: isDark ? "rgba(37, 99, 235, 0.35)" : "rgba(200, 168, 124, 0.35)",
+      black: "#1e293b",
+      red: "#f87171",
+      green: "#4ade80",
+      yellow: "#fbbf24",
+      blue: "#60a5fa",
+      magenta: "#c084fc",
+      cyan: "#38bdf8",
+      white: "#f8fafc",
+      brightBlack: "#475569",
+      brightRed: "#ef4444",
+      brightGreen: "#22c55e",
+      brightYellow: "#f59e0b",
+      brightBlue: "#3b82f6",
+      brightMagenta: "#a855f7",
+      brightCyan: "#06b6d4",
+      brightWhite: "#ffffff",
+    }
+  }, [theme])
 
   // Yazı boyutunu dinamik güncelleme
   const handleZoom = (delta: number) => {

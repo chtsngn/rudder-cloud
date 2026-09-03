@@ -16,7 +16,16 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 const THEME_STORAGE_KEY = "rudder:theme"
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("light")
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null
+        if (saved === "light" || saved === "dark") return saved
+        if (document.documentElement.classList.contains("dark")) return "dark"
+      } catch {}
+    }
+    return "light"
+  })
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
