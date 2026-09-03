@@ -524,10 +524,10 @@ export default function SettingsPage() {
     s3: boolean
     github: boolean
   }>({
-    theme: true,
-    domain: true,
-    s3: true,
-    github: true,
+    theme: false,
+    domain: false,
+    s3: false,
+    github: false,
   })
 
   const toggleSection = (section: "theme" | "domain" | "s3" | "github") => {
