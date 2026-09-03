@@ -20,27 +20,27 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null
-        if (saved === "light" || saved === "dark") return saved
-        if (document.documentElement.classList.contains("dark")) return "dark"
+        if (saved === "light") return "light"
+        return "dark"
       } catch {}
     }
-    return "light"
+    return "dark"
   })
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     try {
       const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null
-      if (savedTheme === "light" || savedTheme === "dark") {
-        setThemeState(savedTheme)
-        applyTheme(savedTheme)
-      } else {
-        // Varsayılan: açık tema
+      if (savedTheme === "light") {
         setThemeState("light")
         applyTheme("light")
+      } else {
+        // Varsayılan: koyu tema (Gece Mavisi / Okyanus)
+        setThemeState("dark")
+        applyTheme("dark")
       }
     } catch {
-      applyTheme("light")
+      applyTheme("dark")
     }
     setMounted(true)
   }, [])

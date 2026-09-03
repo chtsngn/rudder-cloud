@@ -43,7 +43,11 @@ export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [isSpinning, setIsSpinning] = useState(false)
 
-  const isDark = theme === "dark"
+  const isDark =
+    theme === "dark" ||
+    (typeof window !== "undefined" &&
+      (document.documentElement.classList.contains("dark") ||
+        document.documentElement.getAttribute("data-theme") === "dark"))
 
   useEffect(() => {
     const t = setTimeout(() => {

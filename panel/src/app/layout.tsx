@@ -14,21 +14,21 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" className="h-full antialiased" suppressHydrationWarning>
+    <html lang="tr" className="h-full antialiased dark" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `
               try {
                 const savedTheme = localStorage.getItem('rudder:theme');
-                if (savedTheme === 'dark') {
-                  document.documentElement.classList.add('dark');
-                  document.documentElement.setAttribute('data-theme', 'dark');
-                  document.documentElement.style.colorScheme = 'dark';
-                } else {
+                if (savedTheme === 'light') {
                   document.documentElement.classList.remove('dark');
                   document.documentElement.setAttribute('data-theme', 'light');
                   document.documentElement.style.colorScheme = 'light';
+                } else {
+                  document.documentElement.classList.add('dark');
+                  document.documentElement.setAttribute('data-theme', 'dark');
+                  document.documentElement.style.colorScheme = 'dark';
                 }
               } catch (e) {}
             `,
