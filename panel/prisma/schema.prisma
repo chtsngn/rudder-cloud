@@ -70,6 +70,9 @@ model User {
   // Kullanıcı silinse bile denetim kaydı KALIR (bkz. AuditLog.userId
   // onDelete: SetNull + denormalize edilmiş `username` alanı).
   auditLogs  AuditLog[]
+
+  // GitHub entegrasyonu — kullanıcının bağlı GitHub hesabı
+  githubAccount GitHubAccount?
 }
 
 model Site {
@@ -209,3 +212,24 @@ model PanelSettings {
   lastError   String?
   updatedAt   DateTime @updatedAt
 }
+
+// GitHub Entegrasyonu ve Hesap Bağlantısı
+// Kullanıcının GitHub Personal Access Token'ı (PAT) AES-256-GCM ile şifrelenerek
+// `tokenEnc` alanında saklanır. İstemciye asla token döndürülmez.
+model GitHubAccount {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  githubUserId      String?
+  username          String
+  name              String?
+  avatarUrl         String?
+  htmlUrl           String?
+  tokenEnc          String   // AES-256-GCM şifrelenmiş token (crypto.ts)
+  scopes            String[] @default([])
+  publicRepos       Int      @default(0)
+  totalPrivateRepos Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+

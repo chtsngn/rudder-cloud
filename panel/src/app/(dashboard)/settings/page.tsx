@@ -23,6 +23,11 @@ import {
   Palette,
   Check,
   ChevronDown,
+  Copy,
+  ExternalLink,
+  KeyRound,
+  GitBranch,
+  RefreshCw,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -77,6 +82,52 @@ interface DomainFormState {
 }
 
 const EMPTY_DOMAIN_FORM: DomainFormState = { domain: "", email: "" }
+
+interface GitHubAccountView {
+  id: string
+  username: string
+  name: string | null
+  avatarUrl: string
+  htmlUrl: string
+  scopes: string[]
+  publicRepos: number
+  totalPrivateRepos: number
+  createdAt: string
+  updatedAt: string
+}
+
+interface GitHubRepoOption {
+  id: number
+  name: string
+  fullName: string
+  owner: string
+  private: boolean
+  htmlUrl: string
+  sshUrl: string
+  defaultBranch: string
+  description: string | null
+}
+
+interface SiteOption {
+  id: string
+  domain: string
+  repoUrl: string | null
+}
+
+interface CreatedDeployKeyInfo {
+  keyName: string
+  hostAlias: string
+  publicKey: string
+  fingerprint: string
+  createdAt: string
+  suggestedSshUrl: string
+  githubKey?: {
+    id: number
+    title: string
+    verified: boolean
+    readOnly: boolean
+  }
+}
 
 const SSL_STATUS_CONFIG: Record<
   string,
@@ -293,17 +344,193 @@ export default function SettingsPage() {
     }
   }
 
+  // ═══ GITHUB ENTEGRASYONU STATE'LERİ ═══
+  const [githubAccount, setGithubAccount] = useState<GitHubAccountView | null>(null)
+  const [githubLoading, setGithubLoading] = useState(true)
+  const [githubTokenInput, setGithubTokenInput] = useState("")
+  const [githubConnecting, setGithubConnecting] = useState(false)
+  const [githubDisconnecting, setGithubDisconnecting] = useState(false)
+  const [githubError, setGithubError] = useState<string | null>(null)
+  const [githubSuccess, setGithubSuccess] = useState<string | null>(null)
+
+  // Deploy key oluşturma state'leri
+  const [githubRepos, setGithubRepos] = useState<GitHubRepoOption[]>([])
+  const [reposLoading, setReposLoading] = useState(false)
+  const [selectedRepo, setSelectedRepo] = useState("")
+  const [customRepo, setCustomRepo] = useState("")
+  const [selectedSiteId, setSelectedSiteId] = useState("")
+  const [deployKeyTitle, setDeployKeyTitle] = useState("")
+  const [deployKeyReadOnly, setDeployKeyReadOnly] = useState(true)
+  const [creatingDeployKey, setCreatingDeployKey] = useState(false)
+  const [createdKey, setCreatedKey] = useState<CreatedDeployKeyInfo | null>(null)
+  const [deployKeyError, setDeployKeyError] = useState<string | null>(null)
+  const [sites, setSites] = useState<SiteOption[]>([])
+  const [copiedField, setCopiedField] = useState<string | null>(null)
+
+  const copyToClipboard = (field: string, text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(field)
+      setTimeout(() => setCopiedField(null), 2000)
+    })
+  }
+
+  const loadGitHubAccount = useCallback(async () => {
+    setGithubLoading(true)
+    try {
+      const res = await fetch("/api/settings/github", { cache: "no-store" })
+      if (res.ok) {
+        const data = (await res.json()) as { connected: boolean; account: GitHubAccountView | null }
+        setGithubAccount(data.account)
+        if (data.connected && data.account) {
+          loadGitHubRepos()
+        }
+      }
+    } catch {
+      // sessizce geç
+    } finally {
+      setGithubLoading(false)
+    }
+  }, [])
+
+  const loadGitHubRepos = async () => {
+    setReposLoading(true)
+    try {
+      const res = await fetch("/api/settings/github/repos", { cache: "no-store" })
+      if (res.ok) {
+        const data = (await res.json()) as { repos: GitHubRepoOption[] }
+        setGithubRepos(data.repos || [])
+      }
+    } catch {
+      // sessizce geç
+    } finally {
+      setReposLoading(false)
+    }
+  }
+
+  const loadSitesList = useCallback(async () => {
+    try {
+      const res = await fetch("/api/sites", { cache: "no-store" })
+      if (res.ok) {
+        const data = (await res.json()) as SiteOption[]
+        setSites(data || [])
+      }
+    } catch {
+      // sessizce geç
+    }
+  }, [])
+
+  useEffect(() => {
+    loadGitHubAccount()
+    loadSitesList()
+  }, [loadGitHubAccount, loadSitesList])
+
+  const handleConnectGitHub = async () => {
+    if (!githubTokenInput.trim()) return
+    setGithubConnecting(true)
+    setGithubError(null)
+    setGithubSuccess(null)
+    try {
+      const res = await fetch("/api/settings/github", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: githubTokenInput.trim() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setGithubError(data?.error ?? "GitHub hesabı doğrulanamadı.")
+        return
+      }
+      setGithubAccount(data.account)
+      setGithubTokenInput("")
+      setGithubSuccess(`GitHub hesabı @${data.account.username} başarıyla bağlandı!`)
+      loadGitHubRepos()
+    } catch {
+      setGithubError("Sunucuya bağlanılamadı.")
+    } finally {
+      setGithubConnecting(false)
+    }
+  }
+
+  const handleDisconnectGitHub = async () => {
+    if (!window.confirm("GitHub bağlantısı kaldırılsın mı? Kayıtlı token silinecektir.")) return
+    setGithubDisconnecting(true)
+    setGithubError(null)
+    setGithubSuccess(null)
+    try {
+      const res = await fetch("/api/settings/github", { method: "DELETE" })
+      if (!res.ok) {
+        setGithubError("Bağlantı kaldırılamadı.")
+        return
+      }
+      setGithubAccount(null)
+      setGithubRepos([])
+      setCreatedKey(null)
+      setGithubSuccess("GitHub bağlantısı başarıyla kaldırıldı.")
+    } catch {
+      setGithubError("Sunucuya bağlanılamadı.")
+    } finally {
+      setGithubDisconnecting(false)
+    }
+  }
+
+  const handleCreateGitHubDeployKey = async () => {
+    const repoTarget = selectedRepo || customRepo.trim()
+    if (!repoTarget) {
+      setDeployKeyError("Lütfen bir GitHub deposu seçin veya girin.")
+      return
+    }
+
+    const parts = repoTarget.split("/")
+    if (parts.length !== 2 || !parts[0] || !parts[1]) {
+      setDeployKeyError("Depo formatı 'kullanıcı/depo' (owner/repo) şeklinde olmalıdır.")
+      return
+    }
+
+    const [owner, repo] = parts
+    setCreatingDeployKey(true)
+    setDeployKeyError(null)
+    setCreatedKey(null)
+
+    try {
+      const res = await fetch("/api/settings/github/deploy-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner,
+          repo,
+          siteId: selectedSiteId || undefined,
+          title: deployKeyTitle.trim() || undefined,
+          readOnly: deployKeyReadOnly,
+        }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setDeployKeyError(data?.error ?? "Deploy key oluşturulamadı.")
+        return
+      }
+
+      setCreatedKey(data.deployKey)
+    } catch {
+      setDeployKeyError("Sunucuya bağlanılamadı.")
+    } finally {
+      setCreatingDeployKey(false)
+    }
+  }
+
   const [openSections, setOpenSections] = useState<{
     theme: boolean
     domain: boolean
     s3: boolean
+    github: boolean
   }>({
     theme: true,
     domain: true,
     s3: true,
+    github: true,
   })
 
-  const toggleSection = (section: "theme" | "domain" | "s3") => {
+  const toggleSection = (section: "theme" | "domain" | "s3" | "github") => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }))
   }
 
@@ -911,6 +1138,436 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ═══ 5. GITHUB ENTEGRASYONU VE DEPLOY KEY KARTI (AÇILIR SEKME) ═══ */}
+      <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden transition-all">
+        {/* Tıklanabilir Başlık Çubuğu */}
+        <div
+          onClick={() => toggleSection("github")}
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 md:p-6 select-none cursor-pointer hover:bg-slate-50/50 dark:hover:bg-[#0c1630]/50 transition-colors"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="size-10 rounded-2xl bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 flex items-center justify-center border border-transparent dark:border-[#1e3568]/50 shadow-2xs shrink-0">
+              <svg className="size-5 fill-current" viewBox="0 0 24 24">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                GitHub Entegrasyonu ve Deploy Key Yönetimi
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
+                GitHub hesabınızı bağlayarak depolarınız için sunucudan doğrudan Deploy Key oluşturun ve GitHub&apos;a aktarın.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
+            {githubAccount ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-[#101c38] text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-[#1e3568]/50">
+                <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                @{githubAccount.username}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-[#1e3568]/50">
+                <span className="size-2 rounded-full bg-slate-400" />
+                Bağlantı Yok
+              </span>
+            )}
+
+            <div
+              className={cn(
+                "size-8 rounded-xl flex items-center justify-center border border-slate-200 dark:border-[#16223f] bg-slate-50 dark:bg-[#060a17] text-slate-500 dark:text-slate-300 transition-transform duration-200",
+                openSections.github && "rotate-180 bg-slate-100 dark:bg-[#101c38] text-slate-900 dark:text-blue-300 border-slate-300 dark:border-[#2a4687]"
+              )}
+            >
+              <ChevronDown className="size-4" />
+            </div>
+          </div>
+        </div>
+
+        {/* Aşağı Doğru Açılan İçerik */}
+        {openSections.github && (
+          <div className="p-5 md:p-6 pt-0 border-t border-slate-100 dark:border-[#16223f] space-y-6 animate-in fade-in-0 duration-200">
+            {githubSuccess && (
+              <div className="mt-4 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/60 dark:bg-emerald-950/30 p-3.5 text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>{githubSuccess}</span>
+                </div>
+                <button
+                  onClick={() => setGithubSuccess(null)}
+                  className="text-xs text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
+                >
+                  Kapat
+                </button>
+              </div>
+            )}
+
+            {githubError && (
+              <div className="mt-4 rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50/60 dark:bg-red-950/30 p-3.5 text-xs text-red-700 dark:text-red-400 flex items-center justify-between">
+                <span>{githubError}</span>
+                <button
+                  onClick={() => setGithubError(null)}
+                  className="text-xs text-red-600 dark:text-red-400 hover:underline cursor-pointer"
+                >
+                  Kapat
+                </button>
+              </div>
+            )}
+
+            {githubLoading ? (
+              <div className="flex items-center justify-center py-8 text-slate-400">
+                <Loader2 className="size-6 animate-spin text-[#580619] dark:text-blue-300" />
+              </div>
+            ) : !githubAccount ? (
+              /* --- DURUM 1: HENÜZ BAĞLI DEĞİL --- */
+              <div className="space-y-5 pt-4">
+                <div className="rounded-2xl border border-slate-200/80 dark:border-[#16223f] bg-slate-50/40 dark:bg-[#060a17] p-6 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <h3 className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
+                        GitHub Personal Access Token (PAT) ile Bağlanın
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Depolarınızı otomatik listelemek ve sunucudan tek tıkla Deploy Key eklemek için GitHub erişim token&apos;ınızı girin.
+                      </p>
+                    </div>
+
+                    <a
+                      href="https://github.com/settings/tokens/new?scopes=repo,admin:public_key&description=Rudder+Cloud+Server+Panel"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#101c38] text-slate-700 dark:text-blue-200 border border-slate-200 dark:border-[#1e3568]/50 hover:border-[#c8a87c] dark:hover:border-[#2a4687] shadow-2xs hover:shadow-xs transition-all shrink-0 cursor-pointer"
+                    >
+                      <ExternalLink className="size-3.5 text-[#c8a87c] dark:text-blue-300" />
+                      Gerekli İzinlerle Token Oluştur
+                    </a>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      GitHub Personal Access Token (Classic veya Fine-Grained)
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="password"
+                        value={githubTokenInput}
+                        onChange={(e) => setGithubTokenInput(e.target.value)}
+                        placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                        className="font-mono text-xs h-11 rounded-xl bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100 flex-1"
+                      />
+                      <Button
+                        disabled={!githubTokenInput.trim() || githubConnecting}
+                        onClick={handleConnectGitHub}
+                        className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 h-11 rounded-xl border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer shrink-0"
+                      >
+                        {githubConnecting ? (
+                          <Loader2 className="size-4 animate-spin text-[#dfc9a0] dark:text-white" />
+                        ) : (
+                          <CheckCircle2 className="size-4 text-[#dfc9a0] dark:text-white" />
+                        )}
+                        BAĞLA VE DOĞRULA
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200/60 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-3 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+                    <p className="font-semibold text-slate-700 dark:text-slate-300">
+                      Gerekli GitHub İzinleri:
+                    </p>
+                    <ul className="list-disc list-inside space-y-0.5 text-slate-600 dark:text-slate-400">
+                      <li><strong>repo</strong> — Özel ve genel depoların listelenmesi ve deploy key eklenmesi için.</li>
+                      <li><strong>admin:public_key</strong> — Depoların Deploy Keys bölümüne SSH anahtarının otomatik kaydedilmesi için.</li>
+                    </ul>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-1">
+                      🔒 Token&apos;ınız sunucu tarafında AES-256-GCM ile güvenle şifrelenir ve hiçbir istemciye açık olarak iletilmez.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* --- DURUM 2: GITHUB BAĞLI --- */
+              <div className="space-y-6 pt-4">
+                {/* 1. Profil Bilgi Kartı */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17]">
+                  <div className="flex items-center gap-4">
+                    {githubAccount.avatarUrl ? (
+                      <img
+                        src={githubAccount.avatarUrl}
+                        alt={githubAccount.username}
+                        className="size-14 rounded-2xl border-2 border-slate-200 dark:border-[#2a4687] shadow-sm object-cover"
+                      />
+                    ) : (
+                      <div className="size-14 rounded-2xl bg-slate-200 dark:bg-[#101c38] flex items-center justify-center text-slate-500 font-bold text-lg">
+                        {githubAccount.username.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
+                          {githubAccount.name || githubAccount.username}
+                        </h3>
+                        <a
+                          href={githubAccount.htmlUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-slate-400 hover:text-slate-600 dark:hover:text-blue-300 transition-colors"
+                          title="GitHub Profilini Aç"
+                        >
+                          <ExternalLink className="size-3.5" />
+                        </a>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                        @{githubAccount.username}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <span className="text-[11px] font-mono bg-white dark:bg-[#101c38] px-2.5 py-0.5 rounded-lg border border-slate-200 dark:border-[#1e3568]/50 text-slate-700 dark:text-blue-300">
+                          {githubAccount.publicRepos + githubAccount.totalPrivateRepos} Depo ({githubAccount.totalPrivateRepos} Gizli)
+                        </span>
+                        <span className="text-[11px] font-mono bg-emerald-50 dark:bg-[#101c38] px-2.5 py-0.5 rounded-lg border border-emerald-200/80 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-400">
+                          Aktif PAT Bağlantısı
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        loadGitHubRepos()
+                        loadGitHubAccount()
+                      }}
+                      disabled={reposLoading}
+                      className="h-9 px-3 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300 dark:hover:bg-[#111f40]"
+                    >
+                      <RefreshCw className={cn("size-3.5 mr-1 text-[#c8a87c] dark:text-blue-300", reposLoading && "animate-spin")} />
+                      Yenile
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={githubDisconnecting}
+                      onClick={handleDisconnectGitHub}
+                      className="h-9 px-3 rounded-xl text-xs font-semibold border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
+                    >
+                      {githubDisconnecting ? (
+                        <Loader2 className="size-3.5 animate-spin mr-1" />
+                      ) : (
+                        <Trash2 className="size-3.5 mr-1" />
+                      )}
+                      Bağlantıyı Kaldır
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 2. Deploy Key Oluşturma ve GitHub'a Aktarma Bölümü */}
+                <div className="rounded-2xl border border-[#c8a87c]/70 dark:border-[#2a4687] bg-slate-50/40 dark:bg-[#060a17] p-6 space-y-5">
+                  <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-[#16223f] pb-3">
+                    <div className="flex items-center gap-2">
+                      <KeyRound className="size-4 text-[#c8a87c] dark:text-blue-300" />
+                      <h3 className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
+                        GitHub Deposuna Deploy Key Ekle
+                      </h3>
+                    </div>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-sans">
+                      Sunucuda ed25519 üretilir ve seçilen depoya otomatik yazılır
+                    </span>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {/* Depo Seçimi */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        GitHub Deposu (Repository)
+                      </Label>
+                      {githubRepos.length > 0 ? (
+                        <select
+                          value={selectedRepo}
+                          onChange={(e) => {
+                            setSelectedRepo(e.target.value)
+                            if (e.target.value) setCustomRepo("")
+                          }}
+                          className="w-full h-10 px-3 rounded-xl text-xs bg-white dark:bg-[#090e1f] border border-slate-200 dark:border-[#16223f] text-slate-900 dark:text-slate-100 font-mono outline-none focus:ring-1 focus:ring-[#c8a87c] dark:focus:ring-[#2a4687]"
+                        >
+                          <option value="">Depolarınızdan seçin ({githubRepos.length} depo)...</option>
+                          {githubRepos.map((r) => (
+                            <option key={r.id} value={r.fullName}>
+                              {r.private ? "🔒 " : "🌐 "} {r.fullName} ({r.defaultBranch})
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Input
+                          value={customRepo}
+                          onChange={(e) => setCustomRepo(e.target.value)}
+                          placeholder="kullanici/depo-adi (örn: alisolmazz/projem)"
+                          className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
+                        />
+                      )}
+                      {githubRepos.length > 0 && (
+                        <div className="pt-1">
+                          <input
+                            type="text"
+                            value={customRepo}
+                            onChange={(e) => {
+                              setCustomRepo(e.target.value)
+                              if (e.target.value) setSelectedRepo("")
+                            }}
+                            placeholder="Veya elle yazın: owner/repo"
+                            className="w-full h-8 px-3 rounded-lg text-[11px] bg-white/70 dark:bg-[#090e1f]/70 border border-slate-200 dark:border-[#16223f] text-slate-800 dark:text-slate-200 font-mono"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Site ile İlişkilendirme */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Rudder Sitesi ile Eşleştir (Opsiyonel)
+                      </Label>
+                      <select
+                        value={selectedSiteId}
+                        onChange={(e) => setSelectedSiteId(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl text-xs bg-white dark:bg-[#090e1f] border border-slate-200 dark:border-[#16223f] text-slate-900 dark:text-slate-100 font-mono outline-none focus:ring-1 focus:ring-[#c8a87c] dark:focus:ring-[#2a4687]"
+                      >
+                        <option value="">Bağımsız Anahtar (Hiçbir siteye bağlama)</option>
+                        {sites.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            🌐 {s.domain}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Seçilen sitenin &quot;Git &amp; Dağıtım&quot; ayarlarındaki deploy key otomatik güncellenir.
+                      </p>
+                    </div>
+
+                    {/* Anahtar Başlığı */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        GitHub Anahtar Başlığı (Title)
+                      </Label>
+                      <Input
+                        value={deployKeyTitle}
+                        onChange={(e) => setDeployKeyTitle(e.target.value)}
+                        placeholder="Rudder Cloud Deploy Key"
+                        className="h-10 rounded-xl text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
+                      />
+                    </div>
+
+                    {/* Salt Okunur Seçeneği */}
+                    <div className="space-y-1.5 flex flex-col justify-center pt-2">
+                      <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={deployKeyReadOnly}
+                          onChange={(e) => setDeployKeyReadOnly(e.target.checked)}
+                          className="size-4 rounded accent-[#580619] dark:accent-[#162752]"
+                        />
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          Salt-Okunur (Read-Only) — Önerilen
+                        </span>
+                      </label>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Yalnızca git clone ve pull işlemlerine izin verir, depoya yazma yetkisi vermez.
+                      </p>
+                    </div>
+                  </div>
+
+                  {deployKeyError && (
+                    <p className="text-xs text-red-600 dark:text-red-400 font-mono bg-red-50 dark:bg-red-950/40 p-2.5 rounded-lg border border-red-200 dark:border-red-900">
+                      {deployKeyError}
+                    </p>
+                  )}
+
+                  <div className="flex justify-end pt-1">
+                    <Button
+                      disabled={(!selectedRepo && !customRepo.trim()) || creatingDeployKey}
+                      onClick={handleCreateGitHubDeployKey}
+                      className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 h-10 rounded-xl shadow-md transition-all flex items-center gap-2 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer"
+                    >
+                      {creatingDeployKey ? (
+                        <Loader2 className="size-4 animate-spin text-[#dfc9a0] dark:text-white" />
+                      ) : (
+                        <KeyRound className="size-4 text-[#dfc9a0] dark:text-white" />
+                      )}
+                      DEPLOY KEY OLUŞTUR VE GITHUB&apos;A GÖNDER
+                    </Button>
+                  </div>
+
+                  {/* Üretilen Anahtar Sonuç Kutusu */}
+                  {createdKey && (
+                    <div className="mt-4 rounded-xl border border-emerald-300/80 dark:border-emerald-800/80 bg-emerald-50/50 dark:bg-emerald-950/30 p-5 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold text-xs">
+                        <CheckCircle2 className="size-4.5 text-emerald-600 dark:text-emerald-400" />
+                        <span>Deploy Key başarıyla üretildi ve GitHub deposuna kaydedildi!</span>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Önerilen Git SSH Klonlama Adresi:
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard("sshUrl", createdKey.suggestedSshUrl)}
+                            className="h-7 text-xs font-semibold"
+                          >
+                            <Copy className="size-3 mr-1" />
+                            {copiedField === "sshUrl" ? "Kopyalandı!" : "Kopyala"}
+                          </Button>
+                        </div>
+                        <pre className="p-2.5 rounded-lg bg-white dark:bg-[#060a17] border border-slate-200 dark:border-[#16223f] font-mono text-xs text-slate-800 dark:text-slate-200 overflow-x-auto">
+                          {createdKey.suggestedSshUrl}
+                        </pre>
+                      </div>
+
+                      <div className="grid sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <span className="text-slate-500 dark:text-slate-400">SSH Alias:</span>
+                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200 ml-2">
+                            {createdKey.hostAlias}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 dark:text-slate-400">Parmak İzi:</span>
+                          <span className="font-mono text-[11px] text-slate-800 dark:text-slate-200 ml-2">
+                            {createdKey.fingerprint}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Public Key (GitHub&apos;a eklendi):
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard("pubKey", createdKey.publicKey)}
+                            className="h-7 text-xs font-semibold"
+                          >
+                            <Copy className="size-3 mr-1" />
+                            {copiedField === "pubKey" ? "Kopyalandı!" : "Kopyala"}
+                          </Button>
+                        </div>
+                        <pre className="p-2.5 rounded-lg bg-white dark:bg-[#060a17] border border-slate-200 dark:border-[#16223f] font-mono text-[11px] text-slate-700 dark:text-slate-300 overflow-x-auto">
+                          {createdKey.publicKey}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

@@ -58,7 +58,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
  * bilinçli olarak önce silmesini istiyoruz ki elindeki GitHub Deploy Keys
  * kaydı sessizce geçersiz kalmasın).
  */
-export async function POST(_request: Request, { params }: RouteParams) {
+export async function POST(request: Request, { params }: RouteParams) {
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 })
@@ -71,6 +71,25 @@ export async function POST(_request: Request, { params }: RouteParams) {
   }
   if (!(await canManageSite(session.userId, site, "MANAGE_DEPLOY_KEYS"))) {
     return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 })
+  }
+
+  let body: unknown = {}
+  try {
+    body = await request.json()
+  } catch {
+    // gövde opsiyonel
+  }
+  const input = (body ?? {}) as Record<string, unknown>
+  const autoAddToGithub = input.autoAddToGithub === true
+  let owner = typeof input.owner === "string" ? input.owner.trim() : ""
+  let repo = typeof input.repo === "string" ? input.repo.trim() : ""
+
+  if (autoAddToGithub && (!owner || !repo) && site.repoUrl) {
+    const match = site.repoUrl.match(/github\.com[:/]([^/]+)\/([^/.]+)/)
+    if (match) {
+      owner = match[1]
+      repo = match[2]
+    }
   }
 
   try {
@@ -91,7 +110,32 @@ export async function POST(_request: Request, { params }: RouteParams) {
       targetId: id,
       detail: site.domain,
     })
-    return NextResponse.json({ deployKey: info })
+
+    let githubKey = null
+    let githubError = null
+    if (autoAddToGithub && owner && repo) {
+      try {
+        const { getDecryptedTokenForUser, addDeployKeyToGitHubRepo } = await import("@/lib/github-api")
+        const token = await getDecryptedTokenForUser(session.userId)
+        githubKey = await addDeployKeyToGitHubRepo(
+          token,
+          owner,
+          repo,
+          `Rudder Cloud (${site.domain})`,
+          info.publicKey,
+          true
+        )
+      } catch (ghErr) {
+        githubError = ghErr instanceof Error ? ghErr.message : "GitHub'a otomatik eklenemedi."
+      }
+    }
+
+    return NextResponse.json({
+      deployKey: info,
+      githubAdded: !!githubKey,
+      githubKey,
+      githubError,
+    })
   } catch (error) {
     if (error instanceof GithubKeyError) {
       return NextResponse.json({ error: error.message }, { status: error.status })

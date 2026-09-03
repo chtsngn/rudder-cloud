@@ -75,13 +75,18 @@ export function SiteGithubKeysCard({
   const [ghResult, setGhResult] = useState<GhResult | null>(null)
   const [revealedPrivateKey, setRevealedPrivateKey] = useState<string | null>(null)
 
+  const [ghAccount, setGhAccount] = useState<{ username: string; avatarUrl?: string } | null>(null)
+  const [autoAddDeployKeyToGh, setAutoAddDeployKeyToGh] = useState(true)
+  const [ghDeploySuccess, setGhDeploySuccess] = useState<string | null>(null)
+
   const load = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
     try {
-      const [deployRes, actionsRes] = await Promise.all([
+      const [deployRes, actionsRes, ghRes] = await Promise.all([
         fetch(`/api/sites/${siteId}/deploy-key`, { cache: "no-store" }),
         fetch(`/api/sites/${siteId}/actions-key`, { cache: "no-store" }),
+        fetch(`/api/settings/github`, { cache: "no-store" }).catch(() => null),
       ])
       if (!deployRes.ok) {
         setLoadError(await parseError(deployRes))
@@ -95,6 +100,19 @@ export function SiteGithubKeysCard({
       const actionsData = (await actionsRes.json()) as { actionsKey: ActionsKeyData | null }
       setDeployKey(deployData.deployKey)
       setActionsKey(actionsData.actionsKey)
+
+      if (ghRes && ghRes.ok) {
+        const ghData = (await ghRes.json().catch(() => null)) as {
+          connected?: boolean
+          account?: { username: string; avatarUrl?: string }
+        } | null
+        if (ghData?.connected && ghData.account) {
+          setGhAccount({
+            username: ghData.account.username,
+            avatarUrl: ghData.account.avatarUrl,
+          })
+        }
+      }
     } catch {
       setLoadError("Sunucuya bağlanılamadı.")
     } finally {
@@ -128,14 +146,36 @@ export function SiteGithubKeysCard({
     setDeployCreating(true)
     setDeployError(null)
     setDeployTestResult(null)
+    setGhDeploySuccess(null)
     try {
-      const res = await fetch(`/api/sites/${siteId}/deploy-key`, { method: "POST" })
+      const parts = repoSlug.split("/")
+      const owner = parts[0]?.trim()
+      const repo = parts[1]?.trim()
+
+      const res = await fetch(`/api/sites/${siteId}/deploy-key`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          autoAddToGithub: !!ghAccount && autoAddDeployKeyToGh && !!owner && !!repo,
+          owner: owner || undefined,
+          repo: repo || undefined,
+        }),
+      })
       if (!res.ok) {
         setDeployError(await parseError(res))
         return
       }
-      const data = (await res.json()) as { deployKey: DeployKeyData }
+      const data = (await res.json()) as {
+        deployKey: DeployKeyData
+        githubAdded?: boolean
+        githubError?: string
+      }
       setDeployKey(data.deployKey)
+      if (data.githubAdded) {
+        setGhDeploySuccess(`✅ Deploy Key GitHub deposuna (@${ghAccount?.username}) başarıyla eklendi!`)
+      } else if (data.githubError) {
+        setDeployError(`Deploy Key üretildi fakat GitHub'a eklenemedi: ${data.githubError}`)
+      }
     } catch {
       setDeployError("Sunucuya bağlanılamadı.")
     } finally {
@@ -283,10 +323,48 @@ export function SiteGithubKeysCard({
               </div>
 
               {!deployKey ? (
-                <Button onClick={handleCreateDeployKey} disabled={deployCreating}>
-                  {deployCreating && <Loader2 className="size-4 animate-spin" />}
-                  Deploy Key Oluştur
-                </Button>
+                <div className="space-y-3">
+                  {ghAccount ? (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-slate-50 dark:bg-[#101c38]/70 border border-slate-200 dark:border-[#1e3568]/60 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          GitHub Hesabı: @{ghAccount.username}
+                        </span>
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer select-none text-slate-700 dark:text-slate-300 font-medium">
+                        <input
+                          type="checkbox"
+                          checked={autoAddDeployKeyToGh}
+                          onChange={(e) => setAutoAddDeployKeyToGh(e.target.checked)}
+                          className="size-3.5 rounded accent-[#580619] dark:accent-[#162752]"
+                        />
+                        GitHub Deposuna Otomatik Ekle
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 dark:bg-[#060a17] border border-slate-200/80 dark:border-[#16223f] text-xs text-slate-500 dark:text-slate-400">
+                      <span>GitHub hesabınızı bağlayarak anahtarı tek tıkla depoya ekleyebilirsiniz.</span>
+                      <a
+                        href="/settings"
+                        className="text-[#580619] dark:text-blue-300 font-semibold hover:underline shrink-0 ml-2"
+                      >
+                        Ayarlar &rarr;
+                      </a>
+                    </div>
+                  )}
+
+                  {ghDeploySuccess && (
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-900">
+                      {ghDeploySuccess}
+                    </p>
+                  )}
+
+                  <Button onClick={handleCreateDeployKey} disabled={deployCreating}>
+                    {deployCreating && <Loader2 className="size-4 animate-spin" />}
+                    Deploy Key Oluştur
+                  </Button>
+                </div>
               ) : (
                 <div className="space-y-3">
                   <dl className="divide-y divide-border rounded-lg border border-border">
