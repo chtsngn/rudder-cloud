@@ -24,21 +24,21 @@ export default function LoginPage() {
     })
   }
 
-  // 1. Sahne (Yıldızlı Gece & Solda Sisli Rudder Yazısı) opaklığı
+  // 1. Sahne (Yıldızlı Gece & Solda Puslu Gri Rudder Yazısı) opaklığı
   const introOpacity = Math.max(0, 1 - scrollProgress * 2.8)
   const isIntroVisible = introOpacity > 0.02
 
   return (
-    <div className="relative min-h-[850vh] bg-black selection:bg-[#c8a87c]/30 selection:text-white">
-      {/* ═══ 1. SİNEMATİK KANVAS SAHNESİ (YILDIZLAR, SİS, OKYANUS, DÜMEN, KASIRGA) ═══ */}
+    <div className="relative min-h-[850vh] bg-black selection:bg-slate-700/40 selection:text-white">
+      {/* ═══ 1. SİNEMATİK KANVAS (YILDIZLAR, BULUT DALIŞI, DÜMEN, GERÇEKÇİ KASIRGA) ═══ */}
       <CinematicCanvasScene onProgress={handleProgress} />
 
       {/* ═══ 2. SABİT GÖRÜNÜM ALANI (FIXED VIEWPORT) ═══ */}
       <div className="fixed inset-0 z-20 flex flex-col justify-between p-5 md:p-10 pointer-events-none">
         {/* ── Üst Bar (Header Bar) ── */}
         <header className="flex items-center justify-between w-full pointer-events-auto">
-          {/* Sol: Rudder Minimal Brand */}
-          <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 shadow-lg">
+          {/* Sol: Rudder Minimal Brand (Gümüş Gri Ton) */}
+          <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-black/40 backdrop-blur-md border border-slate-700/50 shadow-lg">
             <Image
               src="/rudder-helm-transparent.png"
               alt="Rudder"
@@ -46,7 +46,7 @@ export default function LoginPage() {
               height={26}
               className="object-contain"
             />
-            <span className="font-heading font-black tracking-[0.2em] text-[#c8a87c] text-xs uppercase">
+            <span className="font-heading font-black tracking-[0.2em] text-slate-200 text-xs uppercase">
               Rudder
             </span>
           </div>
@@ -58,22 +58,22 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={handleSkipToLogin}
-                className="group flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-black/45 backdrop-blur-md border border-white/15 text-slate-300 hover:text-white hover:border-[#c8a87c]/60 text-xs font-semibold shadow-lg transition-all cursor-pointer hover:scale-105 active:scale-95"
+                className="group flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-950/60 backdrop-blur-md border border-slate-700/60 text-slate-300 hover:text-white hover:border-slate-400/80 text-xs font-semibold shadow-lg transition-all cursor-pointer hover:scale-105 active:scale-95"
               >
-                <FastForward className="size-3.5 text-[#c8a87c] transition-transform group-hover:translate-x-0.5" />
+                <FastForward className="size-3.5 text-slate-300 transition-transform group-hover:translate-x-0.5" />
                 <span className="hidden sm:inline">Hızlı Giriş</span>
               </button>
             )}
 
             {/* Dil Seçici */}
-            <div className="flex items-center gap-1 bg-black/45 backdrop-blur-md p-1 rounded-xl border border-white/15 shadow-lg">
+            <div className="flex items-center gap-1 bg-slate-950/60 backdrop-blur-md p-1 rounded-xl border border-slate-700/60 shadow-lg">
               <button
                 type="button"
                 onClick={() => setLang("tr")}
                 className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
                   lang === "tr"
-                    ? "bg-[#c8a87c] text-[#3d0510] shadow-sm font-bold"
-                    : "text-white/70 hover:text-white"
+                    ? "bg-slate-200 text-slate-950 shadow-sm font-bold"
+                    : "text-slate-400 hover:text-white"
                 }`}
               >
                 TR
@@ -83,8 +83,8 @@ export default function LoginPage() {
                 onClick={() => setLang("en")}
                 className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
                   lang === "en"
-                    ? "bg-[#c8a87c] text-[#3d0510] shadow-sm font-bold"
-                    : "text-white/70 hover:text-white"
+                    ? "bg-slate-200 text-slate-950 shadow-sm font-bold"
+                    : "text-slate-400 hover:text-white"
                 }`}
               >
                 EN
@@ -93,9 +93,9 @@ export default function LoginPage() {
           </div>
         </header>
 
-        {/* ── Orta Alan: Solda Sisli Rudder Sahnesi & Kasırgadan Çıkan Login Kartı ── */}
+        {/* ── Orta Alan: Solda Sisli/Puslu Gri Rudder & Kasırgadan Çıkan Login Kartı ── */}
         <main className="flex flex-1 items-center justify-between relative w-full">
-          {/* SAHNE 1: SOLDA SİSLİ/PUSLU EFEKTLİ RUDDER BAŞLIĞI */}
+          {/* SAHNE 1: SOLDA PUSLU GRİ EFEKTLİ RUDDER BAŞLIĞI */}
           <div
             style={{
               opacity: introOpacity,
@@ -104,36 +104,36 @@ export default function LoginPage() {
             }}
             className="flex flex-col items-start text-left max-w-xl select-none pointer-events-none pl-2 md:pl-8 space-y-5"
           >
-            {/* Sis Rozeti */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-[#c8a87c]/30 text-[11px] font-mono tracking-wider text-[#dfc9a0] uppercase shadow-lg">
-              <Compass className="size-3.5 text-[#c8a87c] animate-spin-slow" />
+            {/* Sis Rozeti (Puslu Gri & Arduvaz) */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-950/60 backdrop-blur-md border border-slate-700/60 text-[11px] font-mono tracking-wider text-slate-300 uppercase shadow-lg">
+              <Compass className="size-3.5 text-slate-400 animate-spin-slow" />
               <span>36°58&apos;N • 28°14&apos;E &bull; Seyir Rotası</span>
             </div>
 
-            {/* Duman ve Sis İçinde Parlayan Başlık */}
+            {/* Duman ve Sis İçinde Parlayan Puslu Gri Başlık */}
             <div className="relative">
               {/* Arka Sis Parıltısı */}
-              <div className="absolute -inset-8 bg-radial from-slate-400/20 via-sky-500/10 to-transparent blur-3xl pointer-events-none" />
-              
+              <div className="absolute -inset-8 bg-radial from-slate-400/20 via-slate-600/10 to-transparent blur-3xl pointer-events-none" />
+
               <h1
                 className="font-heading text-5xl sm:text-7xl font-black uppercase tracking-[0.22em] relative z-10"
                 style={{
-                  color: "#c8a87c",
+                  color: "#f1f5f9",
                   textShadow:
-                    "0 0 35px rgba(200, 168, 124, 0.45), 0 0 70px rgba(56, 189, 248, 0.2), 0 4px 20px rgba(0, 0, 0, 0.9)",
+                    "0 0 35px rgba(255, 255, 255, 0.4), 0 0 70px rgba(148, 163, 184, 0.25), 0 4px 20px rgba(0, 0, 0, 0.95)",
                 }}
               >
                 Rudder
               </h1>
             </div>
 
-            <p className="text-sm sm:text-base text-slate-300 font-sans tracking-wide leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)] max-w-md">
-              Bulut sunucularınızın mutlak kontrolü; okyanusun derinliklerinde, sislerin arasından doğan dümenin başında.
+            <p className="text-sm sm:text-base text-slate-300 font-sans tracking-wide leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)] max-w-md">
+              Bulut sunucularınızın mutlak kontrolü; puslu göklerin derinliklerinde, sislerin arasından doğan dümenin başında.
             </p>
 
-            <div className="flex items-center gap-3 pt-2 text-xs font-mono text-[#c8a87c]/70">
+            <div className="flex items-center gap-3 pt-2 text-xs font-mono text-slate-400">
               <span className="flex items-center gap-1.5">
-                <Wind className="size-3.5 text-[#38bdf8]" />
+                <Wind className="size-3.5 text-sky-400" />
                 Kuvvetli Fırtına Uyarısı
               </span>
               <span>&bull;</span>
@@ -141,7 +141,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* SAHNE 4: KASIRGA İÇİNDEN DÖNEREK GELEN LÜKS LOGİN KARTI */}
+          {/* SAHNE 4: GERÇEKÇİ KASIRGA İÇİNDEN GELEN VE DURAN LÜKS LOGİN KARTI */}
           <div className="w-full flex items-center justify-center absolute inset-0 pointer-events-none">
             <GlassLoginCard progress={scrollProgress} />
           </div>
@@ -155,19 +155,19 @@ export default function LoginPage() {
               className="flex flex-col items-center gap-2 pointer-events-auto cursor-pointer animate-bounce"
               onClick={handleSkipToLogin}
             >
-              <span className="text-[11px] tracking-[0.2em] font-mono uppercase text-[#dfc9a0]/80">
+              <span className="text-[11px] tracking-[0.2em] font-mono uppercase text-slate-400">
                 Dümeni Keşfetmek İçin Kaydırın
               </span>
-              <div className="size-8 rounded-full bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center text-[#c8a87c] shadow-lg">
+              <div className="size-8 rounded-full bg-slate-950/60 backdrop-blur-md border border-slate-700/60 flex items-center justify-center text-slate-300 shadow-lg">
                 <ChevronDown className="size-4" />
               </div>
             </div>
           )}
 
           {/* İlerleme Çubuğu */}
-          <div className="w-48 h-1 rounded-full bg-white/10 overflow-hidden mt-3 backdrop-blur-xs">
+          <div className="w-48 h-1 rounded-full bg-slate-800/60 overflow-hidden mt-3 backdrop-blur-xs">
             <div
-              className="h-full bg-gradient-to-r from-[#c8a87c] via-[#38bdf8] to-[#580619] transition-all duration-75"
+              className="h-full bg-gradient-to-r from-slate-400 via-sky-400 to-slate-200 transition-all duration-75"
               style={{ width: `${Math.round(scrollProgress * 100)}%` }}
             />
           </div>
