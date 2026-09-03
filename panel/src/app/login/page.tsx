@@ -143,7 +143,7 @@ export default function LoginPage() {
               transform: `translate3d(0, ${scrollProgress * -70}px, 0)`,
               display: isIntroVisible ? "flex" : "none",
             }}
-            className="hidden md:flex flex-col items-end text-right select-none pointer-events-none pr-2 md:pr-8"
+            className="hidden md:flex flex-1 items-center justify-end select-none pointer-events-none pr-2 lg:pr-6"
           >
             <SailingShipRoute />
           </div>
