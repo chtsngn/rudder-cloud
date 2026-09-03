@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react"
 import Image from "next/image"
-import { Loader2, ShieldCheck, Lock, User, ArrowRight } from "lucide-react"
+import { Loader2, ShieldCheck, Lock, User, ArrowRight, Wind } from "lucide-react"
 import { useTranslation } from "@/components/language-provider"
 
 interface GlassLoginCardProps {
@@ -17,21 +17,26 @@ export function GlassLoginCard({ progress }: GlassLoginCardProps) {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  // Scroll ilerlemesine göre kartın sahneye giriş eşiği (0.65 - 0.95 arası)
-  // 0.65'in altında tamamen gizli, 0.85 ve sonrasında %100 görünür ve etkileşimli
-  const appearStart = 0.70
-  const appearEnd = 0.88
+  // 🌪️ KASIRGA (VORTEX) GİRİŞ EŞİĞİ
+  // Scroll 0.74'te başlar, 0.90'da tam merkeze oturur
+  const appearStart = 0.74
+  const appearEnd = 0.90
   const normalizedProgress = Math.min(
     1,
     Math.max(0, (progress - appearStart) / (appearEnd - appearStart))
   )
 
-  const isVisible = normalizedProgress > 0.02
-  const isInteractive = normalizedProgress > 0.6
+  const isVisible = normalizedProgress > 0.01
+  const isInteractive = normalizedProgress > 0.7
 
-  const opacity = normalizedProgress
-  const scale = 0.92 + normalizedProgress * 0.08
-  const translateY = (1 - normalizedProgress) * 35
+  // Kasırgadan dönerek çıkış parametreleri
+  const remaining = 1 - normalizedProgress
+  const rotateZ = remaining * -20 // -20 dereceden 0'a spiral dönüş
+  const rotateY = remaining * 15 // 3D perspektif eğimi
+  const scale = 0.65 + normalizedProgress * 0.35 // Derinlikten büyüme (0.65 -> 1.0)
+  const translateY = remaining * 60
+  const blur = remaining * 10 // Girdaptan çıkarken netleşme
+  const opacity = Math.min(1, normalizedProgress * 1.3)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -60,23 +65,25 @@ export function GlassLoginCard({ progress }: GlassLoginCardProps) {
     <div
       style={{
         opacity,
-        transform: `translate3d(0, ${translateY}px, 0) scale(${scale})`,
+        transform: `perspective(1200px) translate3d(0, ${translateY}px, 0) scale(${scale}) rotateZ(${rotateZ}deg) rotateY(${rotateY}deg)`,
+        filter: blur > 0.5 ? `blur(${blur}px)` : "none",
         pointerEvents: isInteractive ? "auto" : "none",
         visibility: isVisible ? "visible" : "hidden",
+        willChange: "transform, opacity, filter",
       }}
-      className="relative z-30 w-full max-w-md transition-[opacity,transform] duration-75 ease-out px-4"
+      className="relative z-30 w-full max-w-md transition-all duration-75 ease-out px-4"
     >
-      {/* Lüks Buzlu Cam (Frosted Glass) Kart Gövdesi */}
-      <div className="relative overflow-hidden rounded-3xl backdrop-blur-2xl bg-black/55 border border-white/20 dark:border-[#c8a87c]/35 shadow-[0_25px_70px_rgba(0,0,0,0.85),0_0_50px_rgba(200,168,124,0.12)] p-7 md:p-8 space-y-6">
-        {/* Arka Plan Hafif Işıma Haleleri (Aura Glows) */}
-        <div className="absolute -top-24 -left-24 size-48 rounded-full bg-[#580619]/40 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 size-48 rounded-full bg-[#c8a87c]/20 blur-3xl pointer-events-none" />
+      {/* ── Lüks Buzlu Cam (Frosted Obsidian Glass) Gövde ── */}
+      <div className="relative overflow-hidden rounded-3xl backdrop-blur-2xl bg-black/60 border border-white/20 dark:border-[#c8a87c]/40 shadow-[0_25px_80px_rgba(0,0,0,0.92),0_0_60px_rgba(200,168,124,0.18)] p-7 md:p-8 space-y-6">
+        {/* Kasırga Enerji Işıması (Aura Glows) */}
+        <div className="absolute -top-24 -left-24 size-48 rounded-full bg-[#580619]/50 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 size-48 rounded-full bg-[#38bdf8]/25 blur-3xl pointer-events-none" />
 
         {/* ── 1. LOGO & BAŞLIK ALANI ── */}
         <div className="flex flex-col items-center text-center space-y-3 relative z-10">
           <div className="relative group">
-            {/* Dümen Arkası Parıltı Çemberi */}
-            <div className="absolute -inset-2 rounded-full bg-radial from-[#c8a87c]/40 to-transparent blur-md opacity-80 group-hover:opacity-100 transition-opacity" />
+            {/* Dümen Arkası Altın Işık Halesi */}
+            <div className="absolute -inset-2 rounded-full bg-radial from-[#c8a87c]/45 to-transparent blur-md opacity-80 group-hover:opacity-100 transition-opacity" />
             <Image
               src="/rudder-helm-transparent.png"
               alt="Rudder Dümen"
@@ -92,12 +99,12 @@ export function GlassLoginCard({ progress }: GlassLoginCardProps) {
               className="font-heading text-3xl font-extrabold uppercase tracking-[0.25em]"
               style={{
                 color: "#c8a87c",
-                textShadow: "0 2px 14px rgba(0,0,0,0.7)",
+                textShadow: "0 2px 14px rgba(0,0,0,0.8)",
               }}
             >
               Rudder
             </h1>
-            <p className="text-xs mt-1 tracking-[0.18em] uppercase text-white/75 font-mono font-medium flex items-center justify-center gap-1.5">
+            <p className="text-xs mt-1 tracking-[0.18em] uppercase text-white/80 font-mono font-medium flex items-center justify-center gap-1.5">
               <ShieldCheck className="size-3.5 text-[#38bdf8]" />
               <span>Yönetici Doğrulama Konsolu</span>
             </p>
@@ -131,7 +138,7 @@ export function GlassLoginCard({ progress }: GlassLoginCardProps) {
                 placeholder="admin"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full rounded-xl border border-white/20 bg-black/45 pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none transition-all focus:border-[#c8a87c] focus:bg-black/60 focus:ring-2 focus:ring-[#c8a87c]/30 shadow-inner"
+                className="w-full rounded-xl border border-white/20 bg-black/50 pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none transition-all focus:border-[#c8a87c] focus:bg-black/65 focus:ring-2 focus:ring-[#c8a87c]/30 shadow-inner"
               />
             </div>
           </div>
@@ -154,7 +161,7 @@ export function GlassLoginCard({ progress }: GlassLoginCardProps) {
                 placeholder="••••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-white/20 bg-black/45 pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none transition-all focus:border-[#c8a87c] focus:bg-black/60 focus:ring-2 focus:ring-[#c8a87c]/30 shadow-inner font-mono"
+                className="w-full rounded-xl border border-white/20 bg-black/50 pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none transition-all focus:border-[#c8a87c] focus:bg-black/65 focus:ring-2 focus:ring-[#c8a87c]/30 shadow-inner font-mono"
               />
             </div>
           </div>

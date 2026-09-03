@@ -2,9 +2,9 @@
 
 import { useState, useCallback } from "react"
 import Image from "next/image"
-import { ChevronDown, Compass, FastForward } from "lucide-react"
+import { ChevronDown, Compass, FastForward, Wind } from "lucide-react"
 import { useTranslation } from "@/components/language-provider"
-import { FrameSequencePlayer } from "@/components/auth/frame-sequence-player"
+import { CinematicCanvasScene } from "@/components/auth/cinematic-canvas-scene"
 import { GlassLoginCard } from "@/components/auth/glass-login-card"
 
 export default function LoginPage() {
@@ -16,7 +16,7 @@ export default function LoginPage() {
     setScrollProgress(progress)
   }, [])
 
-  // Hızlıca login penceresine atla
+  // Hızlıca kasırgaya ve login penceresine atla
   const handleSkipToLogin = () => {
     window.scrollTo({
       top: document.documentElement.scrollHeight,
@@ -24,29 +24,26 @@ export default function LoginPage() {
     })
   }
 
-  // İlk sahne (Gökyüzü & Yıldızlar) metin opaklığı
+  // 1. Sahne (Yıldızlı Gece & Solda Sisli Rudder Yazısı) opaklığı
   const introOpacity = Math.max(0, 1 - scrollProgress * 2.8)
   const isIntroVisible = introOpacity > 0.02
 
   return (
     <div className="relative min-h-[850vh] bg-black selection:bg-[#c8a87c]/30 selection:text-white">
-      {/* ═══ 1. ARKA PLAN KARE DİZİSİ (CANVAS FRAME SEQUENCE) ═══ */}
-      <FrameSequencePlayer
-        manifestUrl="/frames/manifest.json"
-        onProgress={handleProgress}
-      />
+      {/* ═══ 1. SİNEMATİK KANVAS SAHNESİ (YILDIZLAR, SİS, OKYANUS, DÜMEN, KASIRGA) ═══ */}
+      <CinematicCanvasScene onProgress={handleProgress} />
 
       {/* ═══ 2. SABİT GÖRÜNÜM ALANI (FIXED VIEWPORT) ═══ */}
-      <div className="fixed inset-0 z-20 flex flex-col justify-between p-5 md:p-8 pointer-events-none">
+      <div className="fixed inset-0 z-20 flex flex-col justify-between p-5 md:p-10 pointer-events-none">
         {/* ── Üst Bar (Header Bar) ── */}
         <header className="flex items-center justify-between w-full pointer-events-auto">
           {/* Sol: Rudder Minimal Brand */}
-          <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 shadow-lg">
+          <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 shadow-lg">
             <Image
               src="/rudder-helm-transparent.png"
               alt="Rudder"
-              width={24}
-              height={24}
+              width={26}
+              height={26}
               className="object-contain"
             />
             <span className="font-heading font-black tracking-[0.2em] text-[#c8a87c] text-xs uppercase">
@@ -56,12 +53,12 @@ export default function LoginPage() {
 
           {/* Sağ: Dil Seçici & Hızlı Giriş Butonu */}
           <div className="flex items-center gap-2.5">
-            {/* Hızlı Giriş Butonu (Animasyonu Atla) */}
+            {/* Hızlı Giriş Butonu */}
             {scrollProgress < 0.7 && (
               <button
                 type="button"
                 onClick={handleSkipToLogin}
-                className="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/45 backdrop-blur-md border border-white/15 text-slate-300 hover:text-white hover:border-[#c8a87c]/60 text-xs font-semibold shadow-lg transition-all cursor-pointer hover:scale-105 active:scale-95"
+                className="group flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-black/45 backdrop-blur-md border border-white/15 text-slate-300 hover:text-white hover:border-[#c8a87c]/60 text-xs font-semibold shadow-lg transition-all cursor-pointer hover:scale-105 active:scale-95"
               >
                 <FastForward className="size-3.5 text-[#c8a87c] transition-transform group-hover:translate-x-0.5" />
                 <span className="hidden sm:inline">Hızlı Giriş</span>
@@ -96,42 +93,61 @@ export default function LoginPage() {
           </div>
         </header>
 
-        {/* ── Orta Alan: Senaryo Başlangıç Yazısı & Login Kartı ── */}
-        <main className="flex flex-1 items-center justify-center relative w-full">
-          {/* SAHNE 1: Gökyüzü Karşılama Yazısı (Scroll ettikçe kaybolur) */}
+        {/* ── Orta Alan: Solda Sisli Rudder Sahnesi & Kasırgadan Çıkan Login Kartı ── */}
+        <main className="flex flex-1 items-center justify-between relative w-full">
+          {/* SAHNE 1: SOLDA SİSLİ/PUSLU EFEKTLİ RUDDER BAŞLIĞI */}
           <div
             style={{
               opacity: introOpacity,
-              transform: `translate3d(0, ${scrollProgress * -60}px, 0)`,
+              transform: `translate3d(0, ${scrollProgress * -70}px, 0)`,
               display: isIntroVisible ? "flex" : "none",
             }}
-            className="flex-col items-center text-center space-y-4 max-w-lg select-none pointer-events-none px-4"
+            className="flex flex-col items-start text-left max-w-xl select-none pointer-events-none pl-2 md:pl-8 space-y-5"
           >
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-[#c8a87c]/30 text-[11px] font-mono tracking-wider text-[#dfc9a0] uppercase shadow-lg animate-pulse">
-              <Compass className="size-3.5 text-[#c8a87c]" />
-              <span>Rotanızı Belirleyin</span>
+            {/* Sis Rozeti */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-[#c8a87c]/30 text-[11px] font-mono tracking-wider text-[#dfc9a0] uppercase shadow-lg">
+              <Compass className="size-3.5 text-[#c8a87c] animate-spin-slow" />
+              <span>36°58&apos;N • 28°14&apos;E &bull; Seyir Rotası</span>
             </div>
 
-            <h1
-              className="font-heading text-4xl sm:text-6xl font-black uppercase tracking-[0.25em]"
-              style={{
-                color: "#c8a87c",
-                textShadow: "0 4px 30px rgba(0,0,0,0.8), 0 0 20px rgba(200,168,124,0.4)",
-              }}
-            >
-              Rudder
-            </h1>
+            {/* Duman ve Sis İçinde Parlayan Başlık */}
+            <div className="relative">
+              {/* Arka Sis Parıltısı */}
+              <div className="absolute -inset-8 bg-radial from-slate-400/20 via-sky-500/10 to-transparent blur-3xl pointer-events-none" />
+              
+              <h1
+                className="font-heading text-5xl sm:text-7xl font-black uppercase tracking-[0.22em] relative z-10"
+                style={{
+                  color: "#c8a87c",
+                  textShadow:
+                    "0 0 35px rgba(200, 168, 124, 0.45), 0 0 70px rgba(56, 189, 248, 0.2), 0 4px 20px rgba(0, 0, 0, 0.9)",
+                }}
+              >
+                Rudder
+              </h1>
+            </div>
 
-            <p className="text-sm sm:text-base text-slate-300 font-sans tracking-wide leading-relaxed drop-shadow-md">
-              Bulut sunucularınızın kontrolü, okyanusun derinliklerinde güvenle dönen dümenin başında.
+            <p className="text-sm sm:text-base text-slate-300 font-sans tracking-wide leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)] max-w-md">
+              Bulut sunucularınızın mutlak kontrolü; okyanusun derinliklerinde, sislerin arasından doğan dümenin başında.
             </p>
+
+            <div className="flex items-center gap-3 pt-2 text-xs font-mono text-[#c8a87c]/70">
+              <span className="flex items-center gap-1.5">
+                <Wind className="size-3.5 text-[#38bdf8]" />
+                Kuvvetli Fırtına Uyarısı
+              </span>
+              <span>&bull;</span>
+              <span>v1.1.0</span>
+            </div>
           </div>
 
-          {/* SAHNE 2: Dümene Varış & Lüks Glassmorphism Login Kartı */}
-          <GlassLoginCard progress={scrollProgress} />
+          {/* SAHNE 4: KASIRGA İÇİNDEN DÖNEREK GELEN LÜKS LOGİN KARTI */}
+          <div className="w-full flex items-center justify-center absolute inset-0 pointer-events-none">
+            <GlassLoginCard progress={scrollProgress} />
+          </div>
         </main>
 
-        {/* ── Alt Bar: Scroll Aşağı İpucu Göstergesi ── */}
+        {/* ── Alt Bar: Scroll İpucu & İlerleme Çizgisi ── */}
         <footer className="flex flex-col items-center justify-center w-full select-none">
           {isIntroVisible && (
             <div
@@ -148,10 +164,10 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* İlerleme Çubuğu (Minimal Alt Çizgi) */}
+          {/* İlerleme Çubuğu */}
           <div className="w-48 h-1 rounded-full bg-white/10 overflow-hidden mt-3 backdrop-blur-xs">
             <div
-              className="h-full bg-gradient-to-r from-[#c8a87c] to-[#38bdf8] transition-all duration-75"
+              className="h-full bg-gradient-to-r from-[#c8a87c] via-[#38bdf8] to-[#580619] transition-all duration-75"
               style={{ width: `${Math.round(scrollProgress * 100)}%` }}
             />
           </div>
