@@ -31,7 +31,7 @@ export function AppSidebar() {
   const { user } = useCurrentUser()
   const { theme } = useTheme()
   const { t, lang, setLang } = useTranslation()
-  const { mobileOpen, closeMobile } = useSidebar()
+  const { mobileOpen, closeMobile, toggleMobile } = useSidebar()
   const [collapsed, setCollapsed] = useState(false)
   const [isSpinning, setIsSpinning] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -67,7 +67,7 @@ export function AppSidebar() {
     setIsSpinning(true)
     setTimeout(() => setIsSpinning(false), 600)
     if (isMobile) {
-      closeMobile()
+      toggleMobile()
     } else {
       setCollapsed(p => {
         const n = !p
@@ -99,6 +99,8 @@ export function AppSidebar() {
   const activeIdx = navItems.findIndex(item =>
     item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
   )
+
+  const isMenuOpen = isMobile ? mobileOpen : !effectivelyCollapsed
 
   return (
     <>
@@ -204,11 +206,15 @@ export function AppSidebar() {
       <button
         type="button"
         onClick={handleToggle}
-        title={isMobile ? "Yelkeni Kapat" : (effectivelyCollapsed ? "Yelkeni Aç" : "Yelkeni Katla")}
+        title={isMenuOpen ? "Yelkeni Katla" : "Yelkeni Aç"}
         className={cn(
           "absolute z-50 top-1/2 -translate-y-1/2 flex items-center justify-center cursor-pointer transition-all duration-300 group",
           "hover:scale-125 active:scale-90",
-          effectivelyCollapsed ? "-right-3.5 size-7.5" : "-right-4 size-9"
+          // Desktop positioning
+          "lg:-right-4 lg:size-9",
+          effectivelyCollapsed && "lg:-right-3.5 lg:size-7.5",
+          // Mobile positioning: protrudes gracefully when closed, attaches to sail when open
+          isMobile && (mobileOpen ? "-right-4 size-9" : "-right-11 size-10 shadow-[0_4px_20px_rgba(0,0,0,0.5)]")
         )}
       >
         {/* Işıma Halosu */}
@@ -217,7 +223,8 @@ export function AppSidebar() {
             "absolute inset-0 rounded-full blur-sm transition-all",
             isDark
               ? "bg-[#38bdf8]/30 group-hover:bg-[#38bdf8]/60"
-              : "bg-[#dfc9a0]/30 group-hover:bg-[#dfc9a0]/60"
+              : "bg-[#dfc9a0]/30 group-hover:bg-[#dfc9a0]/60",
+            !isMenuOpen && isMobile && "bg-[#38bdf8]/50 animate-pulse"
           )}
         />
 
@@ -240,7 +247,7 @@ export function AppSidebar() {
             className={cn(
               "object-contain transition-transform duration-700 ease-out",
               isSpinning && "rotate-[360deg]",
-              effectivelyCollapsed ? "rotate-0" : "rotate-180"
+              isMenuOpen ? "rotate-180" : "rotate-0"
             )}
           />
         </div>
