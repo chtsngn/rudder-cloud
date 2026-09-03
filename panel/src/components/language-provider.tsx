@@ -15,36 +15,38 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 const LANGUAGE_STORAGE_KEY = "rudder:lang"
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Language>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY) as Language | null
-        if (saved === "en" || saved === "tr") return saved
-      } catch {}
-    }
-    return "tr"
-  })
+export function LanguageProvider({
+  children,
+  initialLang = "tr",
+}: {
+  children: React.ReactNode
+  initialLang?: Language
+}) {
+  const [lang, setLangState] = useState<Language>(initialLang)
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY) as Language | null
       if (saved === "en" || saved === "tr") {
-        setLangState(saved)
-        document.documentElement.lang = saved
+        if (saved !== lang) {
+          setLangState(saved)
+          document.documentElement.lang = saved
+        }
+        document.cookie = `rudder_lang=${saved}; path=/; max-age=31536000; SameSite=Lax`
       } else {
-        setLangState("tr")
-        document.documentElement.lang = "tr"
+        localStorage.setItem(LANGUAGE_STORAGE_KEY, initialLang)
+        document.cookie = `rudder_lang=${initialLang}; path=/; max-age=31536000; SameSite=Lax`
       }
     } catch {
-      document.documentElement.lang = "tr"
+      document.documentElement.lang = initialLang
     }
-  }, [])
+  }, [initialLang, lang])
 
   const setLang = useCallback((newLang: Language) => {
     setLangState(newLang)
     if (typeof document !== "undefined") {
       document.documentElement.lang = newLang
+      document.cookie = `rudder_lang=${newLang}; path=/; max-age=31536000; SameSite=Lax`
     }
     try {
       localStorage.setItem(LANGUAGE_STORAGE_KEY, newLang)

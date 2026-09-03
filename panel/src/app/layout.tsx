@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import { ThemeProvider } from "@/components/theme-provider";
+import { cookies } from "next/headers";
+import Script from "next/script";
+import { ThemeProvider, Theme } from "@/components/theme-provider";
 import { LanguageProvider } from "@/components/language-provider";
+import { Language } from "@/i18n";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,35 +16,32 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const themeCookie = cookieStore.get("rudder_theme")?.value;
+  const initialTheme: Theme = themeCookie === "light" ? "light" : "dark";
+
+  const langCookie = cookieStore.get("rudder_lang")?.value;
+  const initialLang: Language = langCookie === "en" || langCookie === "tr" ? langCookie : "tr";
+
   return (
-    <html lang="tr" className="h-full antialiased dark" suppressHydrationWarning>
-      <head>
-        <script
+    <html
+      lang={initialLang}
+      className={`h-full antialiased ${initialTheme === "dark" ? "dark" : ""}`}
+      data-theme={initialTheme}
+      style={{ colorScheme: initialTheme }}
+      suppressHydrationWarning
+    >
+      <body className="min-h-full flex flex-col bg-background text-foreground font-sans transition-colors duration-200">
+        <Script
+          id="rudder-theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                const savedTheme = localStorage.getItem('rudder:theme');
-                if (savedTheme === 'light') {
-                  document.documentElement.classList.remove('dark');
-                  document.documentElement.setAttribute('data-theme', 'light');
-                  document.documentElement.style.colorScheme = 'light';
-                } else {
-                  document.documentElement.classList.add('dark');
-                  document.documentElement.setAttribute('data-theme', 'dark');
-                  document.documentElement.style.colorScheme = 'dark';
-                const savedLang = localStorage.getItem('rudder:lang');
-                if (savedLang) {
-                  document.documentElement.lang = savedLang;
-                }
-              } catch (e) {}
-            `,
+            __html: `try{var t=localStorage.getItem('rudder:theme');if(t==='light'){document.documentElement.classList.remove('dark');document.documentElement.setAttribute('data-theme','light');document.documentElement.style.colorScheme='light'}else if(t==='dark'){document.documentElement.classList.add('dark');document.documentElement.setAttribute('data-theme','dark');document.documentElement.style.colorScheme='dark'}}catch(e){}`,
           }}
         />
-      </head>
-      <body className="min-h-full flex flex-col bg-background text-foreground font-sans transition-colors duration-200">
-        <ThemeProvider>
-          <LanguageProvider>
+        <ThemeProvider initialTheme={initialTheme}>
+          <LanguageProvider initialLang={initialLang}>
             {children}
           </LanguageProvider>
         </ThemeProvider>

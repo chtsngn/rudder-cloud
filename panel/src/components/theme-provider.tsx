@@ -15,35 +15,33 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 const THEME_STORAGE_KEY = "rudder:theme"
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null
-        if (saved === "light") return "light"
-        return "dark"
-      } catch {}
-    }
-    return "dark"
-  })
+export function ThemeProvider({
+  children,
+  initialTheme = "dark",
+}: {
+  children: React.ReactNode
+  initialTheme?: Theme
+}) {
+  const [theme, setThemeState] = useState<Theme>(initialTheme)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     try {
       const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null
-      if (savedTheme === "light") {
-        setThemeState("light")
-        applyTheme("light")
+      if (savedTheme === "light" || savedTheme === "dark") {
+        if (savedTheme !== theme) {
+          setThemeState(savedTheme)
+          applyTheme(savedTheme)
+        }
+        document.cookie = `rudder_theme=${savedTheme}; path=/; max-age=31536000; SameSite=Lax`
       } else {
-        // Varsayılan: koyu tema (Gece Mavisi / Okyanus)
-        setThemeState("dark")
-        applyTheme("dark")
+        document.cookie = `rudder_theme=${initialTheme}; path=/; max-age=31536000; SameSite=Lax`
       }
     } catch {
-      applyTheme("dark")
+      applyTheme(initialTheme)
     }
     setMounted(true)
-  }, [])
+  }, [initialTheme, theme])
 
   const applyTheme = (t: Theme) => {
     const root = document.documentElement
@@ -63,6 +61,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     applyTheme(newTheme)
     try {
       localStorage.setItem(THEME_STORAGE_KEY, newTheme)
+      document.cookie = `rudder_theme=${newTheme}; path=/; max-age=31536000; SameSite=Lax`
     } catch {}
   }
 
