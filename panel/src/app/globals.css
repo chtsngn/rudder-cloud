@@ -7,81 +7,111 @@
 :root {
   --radius: 0.75rem;
 
-  /* Temiz beyaz / aydinlik arka plan */
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  /* Zemin ve Yüzeyler (Koyu Taban - Zinc/Slate) */
+  --surface-0: #09090b;       /* Sayfa arka planı */
+  --surface-1: #0e0e11;       /* Sidebar / Kenar paneli */
+  --surface-2: #18181b;       /* Kartlar ve paneller */
+  --surface-3: #27272a;       /* Butonlar / Vurgulu alanlar */
+  --surface-inset: #121215;   /* İç panel zemini */
 
-  /* Kartlar: Saf beyaz */
-  --card: #ffffff;
-  --card-foreground: #0f172a;
+  /* Kenarlıklar */
+  --border: #27272a;
+  --border-strong: #3f3f46;
 
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  /* Metin Renkleri */
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
 
-  /* Canlı Kraliyet Bordosu (Royal Wine Burgundy - sıfır kahverengi) */
-  --primary: #6e0d25;
-  --primary-hover: #86102e;
-  --primary-foreground: #ffffff;
+  /* Aksan & Marka Renkleri */
+  --accent: #10b981;
+  --accent-hover: #059669;
+  --accent-fg: #ffffff;
+  --accent-text: #34d399;
+  --accent-subtle: rgba(16, 185, 129, 0.15);
+  --accent-veil: rgba(16, 185, 129, 0.3);
+  --brand: var(--accent);
+  --brand-light: #34d399;
+  --brand-dark: var(--accent-hover);
 
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
+  /* Yüzen Paneller & Buzlu Cam */
+  --float-surface: rgba(24, 24, 27, 0.82);
+  --float-surface-strong: rgba(14, 14, 17, 0.94);
 
-  --muted: #f8fafc;
-  --muted-foreground: #64748b;
-
-  /* Aksan: Bronz / Altın */
-  --accent: #c8a87c;
-  --accent-foreground: #6e0d25;
-
-  --destructive: #dc2626;
-  --destructive-foreground: #ffffff;
-
-  --border: #e2e8f0;
-  --input: #cbd5e1;
-  --ring: #c8a87c;
-
-  --success: #16a34a;
-  --warning: #d97706;
-}
-
-.dark {
-  --radius: 0.75rem;
-
-  /* Gece Okyanusu Siyahımsı Zemin (Siyah-Lacivert) */
-  --background: #040711;
-  --foreground: #f1f5f9;
-
-  /* Kartlar & Yüzeyler: Gece Mavisi Arduvaz */
-  --card: #090e1f;
-  --card-foreground: #f1f5f9;
-
-  --popover: #090e1f;
-  --popover-foreground: #f1f5f9;
-
-  /* Koyu Lacivert Buton ve Vurgu */
-  --primary: #162752;
-  --primary-hover: #1e346b;
-  --primary-foreground: #ffffff;
-
-  --secondary: #0d162d;
-  --secondary-foreground: #f1f5f9;
-
-  --muted: #0b1329;
-  --muted-foreground: #94a3b8;
-
-  /* Aksan: Gece Mavisi */
-  --accent: #223e7c;
-  --accent-foreground: #ffffff;
-
+  /* Core Framework Bindings */
+  --background: var(--surface-0);
+  --foreground: var(--text-primary);
+  --card: var(--surface-2);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent);
+  --primary-hover: var(--accent-hover);
+  --primary-foreground: var(--accent-fg);
+  --secondary: var(--surface-3);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--surface-1);
+  --muted-foreground: var(--text-muted);
+  --input: var(--border);
+  --ring: var(--accent);
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-
-  --border: #16223f;
-  --input: #131f3b;
-  --ring: #223e7c;
-
   --success: #10b981;
   --warning: #f59e0b;
+}
+
+.light, [data-theme="light"] {
+  /* Zemin ve Yüzeyler (Açık Taban) */
+  --surface-0: #f4f4f5;
+  --surface-1: #ffffff;
+  --surface-2: #ffffff;
+  --surface-3: #f4f4f5;
+  --surface-inset: #ffffff;
+
+  /* Kenarlıklar */
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+
+  /* Metin Renkleri */
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #71717a;
+
+  /* Aksan Renkleri */
+  --accent: #10b981;
+  --accent-hover: #059669;
+  --accent-fg: #ffffff;
+  --accent-text: #047857;
+  --accent-subtle: rgba(16, 185, 129, 0.12);
+  --accent-veil: rgba(16, 185, 129, 0.25);
+  --brand: var(--accent);
+  --brand-light: #34d399;
+  --brand-dark: var(--accent-hover);
+
+  /* Yüzen Paneller */
+  --float-surface: rgba(255, 255, 255, 0.88);
+  --float-surface-strong: rgba(255, 255, 255, 0.97);
+
+  /* Core Framework Bindings */
+  --background: var(--surface-0);
+  --foreground: var(--text-primary);
+  --card: var(--surface-2);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent);
+  --primary-hover: var(--accent-hover);
+  --primary-foreground: var(--accent-fg);
+  --secondary: var(--surface-3);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--surface-1);
+  --muted-foreground: var(--text-muted);
+  --input: var(--border);
+  --ring: var(--accent);
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --success: #16a34a;
+  --warning: #d97706;
 }
 
 @theme inline {
@@ -103,6 +133,15 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-inset: var(--surface-inset);
+  --color-brand: var(--brand);
+  --color-brand-light: var(--brand-light);
+  --color-brand-dark: var(--brand-dark);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-success: var(--success);

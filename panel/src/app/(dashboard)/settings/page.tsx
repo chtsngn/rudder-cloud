@@ -41,6 +41,7 @@ import { useTheme } from "@/components/theme-provider"
 import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
 import { S3ConfigDialog, type S3ConfigView } from "@/components/s3-config-dialog"
+import { ThemePalettePicker } from "@/components/theme-palette-picker"
 
 interface PanelDomainSettings {
   domain: string | null
@@ -136,7 +137,7 @@ async function parseError(res: Response): Promise<string> {
 }
 
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme, toggleTheme } = useTheme()
   const { t, lang, setLang } = useTranslation()
   const [configs, setConfigs] = useState<S3ConfigView[]>([])
   const [loading, setLoading] = useState(true)
@@ -529,140 +530,54 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* ═══ 2. GÖRÜNÜM VE TEMA SEÇİM KARTI (AÇILIR SEKME) ═══ */}
-      <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden transition-all">
-        {/* Tıklanabilir Başlık Çubuğu */}
-        <div
-          onClick={() => toggleSection("theme")}
-          className="flex items-center justify-between p-5 md:p-6 select-none cursor-pointer hover:bg-slate-50/50 dark:hover:bg-[#0c1630]/50 transition-colors"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="size-10 rounded-2xl bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 flex items-center justify-center border border-transparent dark:border-[#1e3568]/50 shadow-2xs shrink-0">
-              <Palette className="size-5" />
-            </div>
-            <div>
-              <h2 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100">
-                {t("settings.sections.theme")}
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
-                {t("settings.theme.subtitle")}
-              </p>
-            </div>
+      {/* ═══ 2. TEMA VE RENK PALETİ SEÇİM KARTI ═══ */}
+      <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-5 md:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-6 transition-all">
+        {/* Üst Kısım: Tema Seçimi (Koyu / Açık Mod) */}
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100">
+              Tema Seçimi
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
+              Uygulamanın açık veya koyu modda görünmesini ayarlayın.
+            </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-700 dark:text-blue-300 border border-slate-200/80 dark:border-[#1e3568]/50">
-              {theme === "dark" ? (
-                <>
-                  <Moon className="size-3 text-blue-300" /> {t("settings.theme.dark")}
-                </>
-              ) : (
-                <>
-                  <Sun className="size-3 text-amber-600" /> {t("settings.theme.light")}
-                </>
-              )}
-            </span>
-            <div
-              className={cn(
-                "size-8 rounded-xl flex items-center justify-center border border-slate-200 dark:border-[#16223f] bg-slate-50 dark:bg-[#060a17] text-slate-500 dark:text-slate-300 transition-transform duration-200",
-                openSections.theme && "rotate-180 bg-slate-100 dark:bg-[#101c38] text-slate-900 dark:text-blue-300 border-slate-300 dark:border-[#2a4687]"
-              )}
+          <div className="flex items-center gap-2.5 shrink-0">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Değiştir:</span>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Açık Moda Geç" : "Koyu Moda Geç"}
+              className="size-9 rounded-xl border border-slate-200 dark:border-[#1e3568] bg-slate-50 dark:bg-[#101c38] hover:bg-slate-100 dark:hover:bg-[#162752] text-slate-700 dark:text-blue-300 flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-2xs"
             >
-              <ChevronDown className="size-4" />
-            </div>
+              {theme === "dark" ? (
+                <Sun className="size-4.5 text-amber-400" />
+              ) : (
+                <Moon className="size-4.5 text-blue-500" />
+              )}
+            </button>
           </div>
         </div>
 
-        {/* Aşağı Doğru Açılan İçerik */}
-        {openSections.theme && (
-          <div className="p-5 md:p-6 pt-0 border-t border-slate-100 dark:border-[#16223f] space-y-6 animate-in fade-in-0 duration-200">
-            <div className="grid sm:grid-cols-2 gap-4 pt-4">
-              {/* Açık Tema Seçenek Kartı */}
-              <div
-                onClick={() => setTheme("light")}
-                className={cn(
-                  "group relative flex flex-col justify-between p-5 rounded-2xl border-2 transition-all cursor-pointer",
-                  theme === "light"
-                    ? "border-[#580619] bg-[#580619]/5 shadow-sm"
-                    : "border-slate-200 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] hover:border-slate-300 dark:hover:border-[#2a4687]"
-                )}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="size-8 rounded-xl bg-amber-100/80 text-amber-800 flex items-center justify-center">
-                        <Sun className="size-4" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">{t("settings.theme.light")}</h3>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{t("settings.theme.lightDesc")}</p>
-                      </div>
-                    </div>
-                    {theme === "light" && (
-                      <div className="size-6 rounded-full bg-[#580619] text-white flex items-center justify-center shadow-xs">
-                        <Check className="size-3.5" />
-                      </div>
-                    )}
-                  </div>
+        {/* İnce Ayırıcı Çizgi */}
+        <div className="border-t border-slate-100 dark:border-[#16223f]" />
 
-                  {/* Tema Minyatür Önizleme */}
-                  <div className="rounded-xl border border-slate-200 bg-[#f8fafc] p-2.5 flex gap-2">
-                    <div className="w-12 h-14 rounded-lg bg-[#580619] flex flex-col items-center justify-center p-1">
-                      <div className="w-6 h-1 rounded bg-[#dfc9a0] mb-1" />
-                      <div className="w-4 h-1 rounded bg-white/40" />
-                    </div>
-                    <div className="flex-1 space-y-1.5 pt-1">
-                      <div className="w-16 h-2 rounded bg-slate-300" />
-                      <div className="w-full h-8 rounded-lg bg-white border border-slate-200" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Koyu Tema Seçenek Kartı */}
-              <div
-                onClick={() => setTheme("dark")}
-                className={cn(
-                  "group relative flex flex-col justify-between p-5 rounded-2xl border-2 transition-all cursor-pointer",
-                  theme === "dark"
-                    ? "border-[#2a4687] bg-[#101c38] shadow-sm ring-2 ring-[#2a4687]/40"
-                    : "border-slate-200 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] hover:border-slate-300 dark:hover:border-[#2a4687]"
-                )}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="size-8 rounded-xl bg-[#101c38] text-blue-300 border border-[#1e3568]/50 flex items-center justify-center">
-                        <Moon className="size-4" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">{t("settings.theme.dark")}</h3>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{t("settings.theme.darkDesc")}</p>
-                      </div>
-                    </div>
-                    {theme === "dark" && (
-                      <div className="size-6 rounded-full bg-[#162752] text-white flex items-center justify-center shadow-xs border border-[#2a4687]/60">
-                        <Check className="size-3.5 font-bold" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Tema Minyatür Önizleme */}
-                  <div className="rounded-xl border border-slate-800 bg-[#040711] p-2.5 flex gap-2">
-                    <div className="w-12 h-14 rounded-lg bg-[#0b1739] border border-[#16223f] flex flex-col items-center justify-center p-1">
-                      <div className="w-6 h-1 rounded bg-[#cbd5e1] mb-1" />
-                      <div className="w-4 h-1 rounded bg-slate-700" />
-                    </div>
-                    <div className="flex-1 space-y-1.5 pt-1">
-                      <div className="w-16 h-2 rounded bg-slate-700" />
-                      <div className="w-full h-8 rounded-lg bg-[#090e1f] border border-[#16223f]" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Alt Kısım: Renk Teması */}
+        <div className="space-y-3.5">
+          <div>
+            <h3 className="font-heading font-bold text-sm md:text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Palette className="size-4 text-emerald-500 dark:text-emerald-400" />
+              <span>Renk Teması</span>
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-sans leading-relaxed">
+              Uygulamanın renk ailesini seç — zeminler, kartlar, kenarlıklar ve vurgular birlikte o renge uyarlanır. Koyu/açık moddan bağımsızdır: ikisini istediğin gibi birleştirebilirsin.
+            </p>
           </div>
-        )}
+
+          {/* 9 Renk Ailesi Önizleme Kartları */}
+          <ThemePalettePicker />
+        </div>
       </div>
 
       {/* ═══ 3. PANEL ALAN ADI & SSL KARTI (AÇILIR SEKME) ═══ */}

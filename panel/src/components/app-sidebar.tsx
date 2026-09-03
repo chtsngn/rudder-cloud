@@ -326,16 +326,12 @@ export function AppSidebar() {
 
             {!effectivelyCollapsed && (
               <span
-                className={cn(
-                  "font-heading font-extrabold text-[22px] tracking-[0.24em] uppercase select-none leading-none transition-all duration-300",
-                  isDark
-                    ? "text-[#cbd5e1] tracking-[0.26em]"
-                    : "text-[#dfc9a0]"
-                )}
+                className="font-heading font-extrabold text-[22px] tracking-[0.24em] uppercase select-none leading-none transition-all duration-300"
                 style={{
+                  color: "var(--brand-light, var(--accent))",
                   textShadow: isDark
-                    ? "0 0 14px rgba(203, 213, 225, 0.45), 0 2px 6px rgba(0,0,0,0.9)"
-                    : "0 2px 8px rgba(0,0,0,0.7), 0 0 2px rgba(251, 237, 208, 0.4)",
+                    ? "0 0 16px var(--accent-subtle, rgba(203, 213, 225, 0.45)), 0 2px 6px rgba(0,0,0,0.9)"
+                    : "0 0 16px var(--accent-subtle, rgba(223, 201, 160, 0.45)), 0 2px 6px rgba(0,0,0,0.7)",
                 }}
               >
                 RUDDER
