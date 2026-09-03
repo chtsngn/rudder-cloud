@@ -13,7 +13,6 @@ import {
   Settings,
   Terminal,
   Users,
-  X,
 } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -343,18 +342,6 @@ export function AppSidebar() {
               </span>
             )}
           </Link>
-
-          {/* Mobilde sağ üstte Kapat X butonu */}
-          {!effectivelyCollapsed && (
-            <button
-              type="button"
-              onClick={closeMobile}
-              className="lg:hidden size-8 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-colors mr-2 cursor-pointer"
-              aria-label="Menüyü Kapat"
-            >
-              <X className="size-5" />
-            </button>
-          )}
         </div>
 
         {/* İnce Ayırıcı Şerit */}
