@@ -105,6 +105,54 @@ export function AppSidebar() {
 
   return (
     <>
+      {/* ═══ MOBİLDE KAPALIYKEN SOL KENARDAKİ YARIM DÜMEN BUTONU ═══ */}
+      {!mobileOpen && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            toggleMobile()
+          }}
+          title="Yelkeni Aç"
+          aria-label="Menüyü Aç"
+          className="lg:hidden fixed left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-50 size-10 rounded-full flex items-center justify-center cursor-pointer select-none group hover:scale-125 active:scale-90 transition-transform duration-200 shadow-[0_4px_20px_rgba(0,0,0,0.6)]"
+        >
+          {/* Genişletilmiş dokunma alanı */}
+          <span className="absolute -inset-4 rounded-full" aria-hidden="true" />
+
+          {/* Işıma Halosu */}
+          <div
+            className={cn(
+              "absolute inset-0 rounded-full blur-sm transition-all pointer-events-none",
+              isDark
+                ? "bg-[#38bdf8]/50 shadow-[0_0_16px_rgba(56,189,248,0.7)] group-hover:bg-[#38bdf8]/80"
+                : "bg-[#dfc9a0]/50 shadow-[0_0_16px_rgba(223,201,160,0.7)] group-hover:bg-[#dfc9a0]/80"
+            )}
+          />
+
+          {/* Madalyon Gövdesi */}
+          <div
+            className="relative size-full rounded-full flex items-center justify-center p-1 pointer-events-none"
+            style={{
+              background: isDark
+                ? "radial-gradient(circle at 35% 35%, #e2e8f0 0%, #94a3b8 50%, #1e293b 100%)"
+                : "radial-gradient(circle at 35% 35%, #fcedd2 0%, #dfc9a0 50%, #9e7535 100%)",
+              border: isDark ? "2px solid #080d1a" : "2px solid #3d020a",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.9)",
+            }}
+          >
+            <Image
+              src="/rudder-helm-transparent.png"
+              alt="Dümen Kontrolü"
+              width={24}
+              height={24}
+              className="object-contain"
+            />
+          </div>
+        </button>
+      )}
+
       {/* ═══ MOBİL BACKDROP (lg altında sidebar açıkken karartma) ═══ */}
       {mobileOpen && (
         <div
@@ -203,33 +251,29 @@ export function AppSidebar() {
         />
       </svg>
 
-      {/* ═══ MENÜNÜN TAM ORTASINDAKİ ÖZGÜN DÜMEN AÇMA-KAPAMA BUTONU ═══ */}
+      {/* ═══ MENÜNÜN İÇİNDEKİ DÜMEN BUTONU (Masaüstünde toggle, Mobilde açıkken kapatma butonu) ═══ */}
       <button
         type="button"
         onClick={handleToggle}
         title={isMenuOpen ? "Yelkeni Katla" : "Yelkeni Aç"}
         aria-label={isMenuOpen ? "Menüyü Kapat" : "Menüyü Aç"}
         className={cn(
-          "absolute z-50 top-1/2 -translate-y-1/2 flex items-center justify-center cursor-pointer transition-all duration-300 group select-none",
+          "absolute z-50 top-1/2 -translate-y-1/2 items-center justify-center cursor-pointer transition-all duration-300 group select-none",
           "hover:scale-125 active:scale-90",
           // Desktop positioning
-          "lg:-right-4 lg:size-9",
-          effectivelyCollapsed && "lg:-right-3.5 lg:size-7.5",
-          // Mobile positioning: exactly -right-[18px] so half is tucked in when closed (visible on left border), and sits on the sail edge when open
-          "-right-[18px] size-9"
+          "lg:flex",
+          effectivelyCollapsed ? "lg:-right-3.5 lg:size-7.5" : "lg:-right-4 lg:size-9",
+          // Mobile: only visible when sidebar is open
+          mobileOpen ? "flex -right-4 size-9" : "hidden"
         )}
       >
-        {/* Genişletilmiş görünmez dokunma alanı (mobilde rahat tıklanabilmesi için) */}
-        <span className="absolute -inset-4 rounded-full pointer-events-auto" aria-hidden="true" />
-
         {/* Işıma Halosu */}
         <div
           className={cn(
             "absolute inset-0 rounded-full blur-sm transition-all pointer-events-none",
             isDark
               ? "bg-[#38bdf8]/30 group-hover:bg-[#38bdf8]/60"
-              : "bg-[#dfc9a0]/30 group-hover:bg-[#dfc9a0]/60",
-            !isMenuOpen && isMobile && "bg-[#38bdf8]/60 shadow-[0_0_12px_rgba(56,189,248,0.5)]"
+              : "bg-[#dfc9a0]/30 group-hover:bg-[#dfc9a0]/60"
           )}
         />
 
