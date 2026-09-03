@@ -164,6 +164,7 @@ async function parseError(res: Response): Promise<string> {
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
+  const { t, lang, setLang } = useTranslation()
   const [configs, setConfigs] = useState<S3ConfigView[]>([])
   const [loading, setLoading] = useState(true)
   const [listError, setListError] = useState<string | null>(null)
@@ -439,37 +440,40 @@ export default function SettingsPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setGithubError(data?.error ?? "GitHub hesabı doğrulanamadı.")
+        setGithubError(data?.error ?? (lang === "en" ? "GitHub account could not be verified." : "GitHub hesabı doğrulanamadı."))
         return
       }
       setGithubAccount(data.account)
       setGithubTokenInput("")
-      setGithubSuccess(`GitHub hesabı @${data.account.username} başarıyla bağlandı!`)
+      setGithubSuccess(lang === "en" ? `GitHub account @${data.account.username} connected successfully!` : `GitHub hesabı @${data.account.username} başarıyla bağlandı!`)
       loadGitHubRepos()
     } catch {
-      setGithubError("Sunucuya bağlanılamadı.")
+      setGithubError(lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı.")
     } finally {
       setGithubConnecting(false)
     }
   }
 
   const handleDisconnectGitHub = async () => {
-    if (!window.confirm("GitHub bağlantısı kaldırılsın mı? Kayıtlı token silinecektir.")) return
+    const confirmMsg = lang === "en"
+      ? "Disconnect GitHub account? The saved token will be permanently deleted."
+      : "GitHub bağlantısı kaldırılsın mı? Kayıtlı token silinecektir."
+    if (!window.confirm(confirmMsg)) return
     setGithubDisconnecting(true)
     setGithubError(null)
     setGithubSuccess(null)
     try {
       const res = await fetch("/api/settings/github", { method: "DELETE" })
       if (!res.ok) {
-        setGithubError("Bağlantı kaldırılamadı.")
+        setGithubError(lang === "en" ? "Failed to disconnect." : "Bağlantı kaldırılamadı.")
         return
       }
       setGithubAccount(null)
       setGithubRepos([])
       setCreatedKey(null)
-      setGithubSuccess("GitHub bağlantısı başarıyla kaldırıldı.")
+      setGithubSuccess(lang === "en" ? "GitHub account disconnected successfully." : "GitHub bağlantısı başarıyla kaldırıldı.")
     } catch {
-      setGithubError("Sunucuya bağlanılamadı.")
+      setGithubError(lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı.")
     } finally {
       setGithubDisconnecting(false)
     }
@@ -478,13 +482,13 @@ export default function SettingsPage() {
   const handleCreateGitHubDeployKey = async () => {
     const repoTarget = selectedRepo || customRepo.trim()
     if (!repoTarget) {
-      setDeployKeyError("Lütfen bir GitHub deposu seçin veya girin.")
+      setDeployKeyError(lang === "en" ? "Please select or enter a GitHub repository." : "Lütfen bir GitHub deposu seçin veya girin.")
       return
     }
 
     const parts = repoTarget.split("/")
     if (parts.length !== 2 || !parts[0] || !parts[1]) {
-      setDeployKeyError("Depo formatı 'kullanıcı/depo' (owner/repo) şeklinde olmalıdır.")
+      setDeployKeyError(lang === "en" ? "Repository format must be 'owner/repo'." : "Depo formatı 'kullanıcı/depo' (owner/repo) şeklinde olmalıdır.")
       return
     }
 
@@ -508,19 +512,17 @@ export default function SettingsPage() {
 
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setDeployKeyError(data?.error ?? "Deploy key oluşturulamadı.")
+        setDeployKeyError(data?.error ?? (lang === "en" ? "Deploy key could not be created." : "Deploy key oluşturulamadı."))
         return
       }
 
       setCreatedKey(data.deployKey)
     } catch {
-      setDeployKeyError("Sunucuya bağlanılamadı.")
+      setDeployKeyError(lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı.")
     } finally {
       setCreatingDeployKey(false)
     }
   }
-
-  const { t, lang, setLang } = useTranslation()
 
   const [openSections, setOpenSections] = useState<{
     language: boolean

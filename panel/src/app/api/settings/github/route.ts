@@ -126,7 +126,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }
     console.error("GitHub bağlantı hatası:", error)
-    return NextResponse.json({ error: "GitHub hesabı bağlanamadı." }, { status: 500 })
+    const detail = error instanceof Error ? error.message : "Bilinmeyen hata"
+    return NextResponse.json({ error: `GitHub hesabı bağlanamadı: ${detail}` }, { status: 500 })
   }
 }
 
