@@ -86,7 +86,7 @@ export function SideTerminalDock() {
         <aside
           style={{ width: `${width}px` }}
           className={cn(
-            "fixed right-0 top-0 bottom-0 z-40 flex flex-col bg-[#050811] border-l-2 border-[#c8a87c]/70 dark:border-[#2a4687]/80 rounded-l-[28px] shadow-[-20px_0_60px_rgba(0,0,0,0.65)] transition-[width] duration-75 p-3 overflow-hidden",
+            "fixed right-0 top-0 bottom-0 z-40 flex flex-col bg-[#050811] border-l-2 border-[#c8a87c]/70 dark:border-[#2a4687]/80 rounded-l-[28px] max-w-full shadow-[-20px_0_60px_rgba(0,0,0,0.65)] transition-[width] duration-75 p-3 overflow-hidden",
             isDragging && "select-none transition-none"
           )}
         >

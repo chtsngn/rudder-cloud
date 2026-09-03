@@ -680,12 +680,12 @@ export default function SiteDetailPage() {
       </div>
 
       {/* ═══ 2. ŞIK TABLAR (SEKMELER) ═══ */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-[#16223f] pb-px overflow-x-auto">
+      <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-[#16223f] pb-px overflow-x-auto no-scrollbar">
         <button
           type="button"
           onClick={() => setActiveTab("overview")}
           className={cn(
-            "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
+            "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 whitespace-nowrap",
             activeTab === "overview"
               ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
               : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
@@ -700,7 +700,7 @@ export default function SiteDetailPage() {
             type="button"
             onClick={() => setActiveTab("git")}
             className={cn(
-              "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
+              "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 whitespace-nowrap",
               activeTab === "git"
                 ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
                 : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
@@ -715,7 +715,7 @@ export default function SiteDetailPage() {
           type="button"
           onClick={() => setActiveTab("backups")}
           className={cn(
-            "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
+            "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 whitespace-nowrap",
             activeTab === "backups"
               ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
               : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
@@ -729,7 +729,7 @@ export default function SiteDetailPage() {
           type="button"
           onClick={() => setActiveTab("access")}
           className={cn(
-            "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
+            "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 whitespace-nowrap",
             activeTab === "access"
               ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
               : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
@@ -744,7 +744,7 @@ export default function SiteDetailPage() {
             type="button"
             onClick={() => setActiveTab("logs")}
             className={cn(
-              "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer",
+              "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 whitespace-nowrap",
               activeTab === "logs"
                 ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
                 : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
