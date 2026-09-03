@@ -105,33 +105,34 @@ export function AppSidebar() {
 
   return (
     <>
-      {/* ═══ MOBİLDE KAPALIYKEN SOL KENARDAKİ YARIM DÜMEN BUTONU ═══ */}
+      {/* ═══ MOBİLDE KAPALIYKEN SOL ÜSTTEKİ YÜZEN DÜMEN BUTONU ═══ */}
       {!mobileOpen && (
         <div
-          className="lg:hidden fixed left-0 top-1/2 -translate-y-1/2 z-[999] w-12 h-20 flex items-center justify-start cursor-pointer touch-none"
+          className="lg:hidden fixed left-4 top-4 z-[9999] flex items-center justify-center cursor-pointer touch-none animate-in fade-in slide-in-from-left-4 duration-300"
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
             openMobile()
           }}
-          // Mobil Safari ve Android'de anında tepki için:
           onTouchStart={(e) => {
-            // e.preventDefault() bazen scroll sorunları yaratabilir, ama burada sadece tıklama istiyoruz.
             e.stopPropagation()
             openMobile()
           }}
           title="Yelkeni Aç"
           aria-label="Menüyü Aç"
         >
-          {/* Görsel Yarım Dümen (Gövde) - Hitbox'ın içinde ama yarısı dışarıda görünecek */}
-          <div className="absolute left-0 -translate-x-1/2 size-10 rounded-full flex items-center justify-center select-none pointer-events-none shadow-[0_4px_20px_rgba(0,0,0,0.6)]">
+          {/* Yüzen Tam Dümen Butonu */}
+          <div className="relative size-12 rounded-full flex items-center justify-center select-none shadow-[0_8px_30px_rgba(0,0,0,0.6)] group hover:scale-110 active:scale-95 transition-all">
+            {/* Genişletilmiş dokunma alanı */}
+            <div className="absolute -inset-4 rounded-full" />
+            
             {/* Işıma Halosu */}
             <div
               className={cn(
-                "absolute inset-0 rounded-full blur-sm transition-all pointer-events-none",
+                "absolute inset-0 rounded-full blur-md transition-all pointer-events-none",
                 isDark
-                  ? "bg-[#38bdf8]/60 shadow-[0_0_16px_rgba(56,189,248,0.8)]"
-                  : "bg-[#dfc9a0]/60 shadow-[0_0_16px_rgba(223,201,160,0.8)]"
+                  ? "bg-[#38bdf8]/40 group-hover:bg-[#38bdf8]/70"
+                  : "bg-[#dfc9a0]/40 group-hover:bg-[#dfc9a0]/70"
               )}
             />
 
@@ -143,15 +144,15 @@ export function AppSidebar() {
                   ? "radial-gradient(circle at 35% 35%, #e2e8f0 0%, #94a3b8 50%, #1e293b 100%)"
                   : "radial-gradient(circle at 35% 35%, #fcedd2 0%, #dfc9a0 50%, #9e7535 100%)",
                 border: isDark ? "2px solid #080d1a" : "2px solid #3d020a",
-                boxShadow: "0 4px 14px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.9)",
+                boxShadow: "0 4px 14px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.8)",
               }}
             >
               <Image
                 src="/rudder-helm-transparent.png"
                 alt="Dümen Kontrolü"
-                width={24}
-                height={24}
-                className="object-contain"
+                width={28}
+                height={28}
+                className="object-contain drop-shadow-md"
               />
             </div>
           </div>
