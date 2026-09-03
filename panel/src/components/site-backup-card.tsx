@@ -448,20 +448,20 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-                          <div>
-                            <span className="text-slate-400 dark:text-slate-500">{lang === "en" ? "Region: " : "Bölge: "}</span>
+                        <div className="flex flex-col gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-slate-400 dark:text-slate-500 shrink-0">{lang === "en" ? "Region:" : "Bölge:"}</span>
                             <span className="font-mono text-slate-700 dark:text-slate-300">{selectedConfig.region}</span>
                           </div>
-                          <div>
-                            <span className="text-slate-400 dark:text-slate-500">{lang === "en" ? "Endpoint: " : "Endpoint: "}</span>
-                            <span className="font-mono text-slate-700 dark:text-slate-300 truncate inline-block max-w-[140px]" title={selectedConfig.endpoint || "AWS Standard"}>
-                              {selectedConfig.endpoint || "AWS Standard"}
-                            </span>
-                          </div>
+                          {selectedConfig.endpoint && (
+                            <div className="flex items-start gap-1.5">
+                              <span className="text-slate-400 dark:text-slate-500 shrink-0">Endpoint:</span>
+                              <span className="font-mono text-slate-700 dark:text-slate-300 break-all">{selectedConfig.endpoint}</span>
+                            </div>
+                          )}
                           {selectedConfig.pathPrefix && (
-                            <div>
-                              <span className="text-slate-400 dark:text-slate-500">{lang === "en" ? "Prefix: " : "Ön Ek: "}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-400 dark:text-slate-500 shrink-0">{lang === "en" ? "Prefix:" : "Ön Ek:"}</span>
                               <span className="font-mono text-slate-700 dark:text-slate-300">{selectedConfig.pathPrefix}</span>
                             </div>
                           )}

@@ -67,7 +67,7 @@ validate_php_version() {
 
 validate_site_type() {
   case "$1" in
-    WORDPRESS|PHP|NODEJS|STATIC|PYTHON|REVERSE_PROXY) ;;
+    WORDPRESS|PHP|NODEJS|STATIC|PYTHON|REVERSE_PROXY|DOCKER) ;;
     *) die "Geçersiz site türü: $1" ;;
   esac
 }
@@ -357,6 +357,68 @@ server {
 }
 NGINX
       ;;
+
+    DOCKER)
+      require_args 5 "$#" "create-vhost <domain> DOCKER <www> <port> <working_dir> [compose_service]"
+      local port="$4" working_dir="$5" compose_service="${6:-}"
+      validate_port "$port"
+      validate_abs_path "$working_dir" "çalışma dizini"
+
+      # Çalışma dizinini oluştur
+      mkdir -p "$working_dir"
+      chown panel:panel "$working_dir" 2>/dev/null || true
+
+      # docker compose yoksa örnek dosya oluştur
+      if [[ ! -f "${working_dir}/docker-compose.yml" && ! -f "${working_dir}/compose.yml" ]]; then
+        cat > "${working_dir}/docker-compose.yml" <<COMPOSE
+services:
+  app:
+    image: nginx:alpine
+    ports:
+      - "127.0.0.1:${port}:80"
+    restart: unless-stopped
+COMPOSE
+        msg "Örnek docker-compose.yml oluşturuldu: ${working_dir}/docker-compose.yml"
+      else
+        warn "docker-compose.yml zaten mevcut, üzerine yazılmadı."
+      fi
+
+      # Nginx reverse proxy config yaz (NODEJS/PYTHON ile aynı mantık)
+      cat > "$conf" <<NGINX
+server {
+  listen 80;
+  listen [::]:80;
+  server_name ${server_names};
+
+  access_log /var/log/nginx/${domain}.access.log;
+  error_log  /var/log/nginx/${domain}.error.log;
+  client_max_body_size 50m;
+
+  location / {
+    proxy_pass http://127.0.0.1:${port};
+    proxy_http_version 1.1;
+
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection "upgrade";
+  }
+}
+NGINX
+
+      # docker compose up -d çalıştır (docker kurulu değilse uyar ama başarısız olma)
+      if command -v docker >/dev/null 2>&1; then
+        local up_args=("-f" "${working_dir}/docker-compose.yml" "up" "-d" "--remove-orphans")
+        [[ -n "$compose_service" ]] && up_args+=("$compose_service")
+        docker compose "${up_args[@]}" 2>/dev/null && msg "Docker Compose başlatıldı." \
+          || warn "docker compose up başarısız oldu — compose dosyasını kontrol edin."
+      else
+        warn "docker komutu bulunamadı. docker-compose.yml oluşturuldu ama konteyner başlatılmadı."
+      fi
+      ;;
   esac
 
   ln -sf "$conf" "/etc/nginx/sites-enabled/${domain}.conf"
@@ -542,6 +604,67 @@ SQL
 }
 
 # ------------------------------------------------------------
+# docker-action / docker-logs (DOCKER site türü)
+# ------------------------------------------------------------
+_find_compose_dir() {
+  local domain="$1"
+  local working_dir="/var/www/${domain}"
+  echo "$working_dir"
+}
+
+_find_compose_file() {
+  local working_dir="$1"
+  if [[ -f "${working_dir}/docker-compose.yml" ]]; then
+    echo "${working_dir}/docker-compose.yml"
+  elif [[ -f "${working_dir}/compose.yml" ]]; then
+    echo "${working_dir}/compose.yml"
+  else
+    die "docker-compose.yml veya compose.yml bulunamadı: ${working_dir}"
+  fi
+}
+
+cmd_docker_action() {
+  require_args 2 "$#" "docker-action <domain> <up|down|restart|pull> [compose_service]"
+  local domain="$1" action="$2" compose_service="${3:-}"
+  validate_domain "$domain"
+  case "$action" in
+    up|down|restart|pull) ;;
+    *) die "Geçersiz docker-compose eylemi (up|down|restart|pull olmalı): $action" ;;
+  esac
+  command -v docker >/dev/null 2>&1 || die "docker komutu bulunamadı."
+
+  local working_dir compose_file
+  working_dir="$(_find_compose_dir "$domain")"
+  compose_file="$(_find_compose_file "$working_dir")"
+
+  local dc_args=("-f" "$compose_file")
+  case "$action" in
+    up)      dc_args+=("up" "-d" "--remove-orphans") ;;
+    down)    dc_args+=("down") ;;
+    restart) dc_args+=("restart") ;;
+    pull)    dc_args+=("pull") ;;
+  esac
+  [[ -n "$compose_service" ]] && dc_args+=("$compose_service")
+
+  docker compose "${dc_args[@]}"
+  msg "docker compose ${action} tamamlandı: ${domain}"
+}
+
+cmd_docker_logs() {
+  require_args 2 "$#" "docker-logs <domain> <lines>"
+  local domain="$1" lines="$2"
+  validate_domain "$domain"
+  validate_lines "$lines"
+  command -v docker >/dev/null 2>&1 || die "docker komutu bulunamadı."
+
+  local working_dir compose_file
+  working_dir="$(_find_compose_dir "$domain")"
+  compose_file="$(_find_compose_file "$working_dir")"
+
+  docker compose -f "$compose_file" logs --tail="$lines" --no-color
+}
+
+# ------------------------------------------------------------
 # configure-panel-domain / request-panel-ssl / remove-panel-domain
 #
 # Panelin KENDI arayuzunu (varsayilan :24428, bkz. install.sh) EK olarak bir
@@ -697,6 +820,8 @@ Alt komutlar:
   configure-panel-domain <domain>                Panel icin alan adi (HTTP+ACME) yapılandır
   request-panel-ssl <domain> <email>             Panel alan adı için gerçek SSL al (Let's Encrypt)
   remove-panel-domain                             Panel alan adı bağlantısını kaldır
+  docker-action <domain> <up|down|restart|pull> [service]  Docker Compose eylem çalıştır
+  docker-logs <domain> <lines>                   Docker Compose loglarını yazdır
 USAGE
 }
 
@@ -715,6 +840,8 @@ case "$SUBCOMMAND" in
   service-status)  require_args 1 "$#" "service-status <domain>"; cmd_service_status "$@" ;;
   service-logs)    cmd_service_logs "$@" ;;
   create-wp-db)    cmd_create_wp_db "$@" ;;
+  docker-action)   cmd_docker_action "$@" ;;
+  docker-logs)     cmd_docker_logs "$@" ;;
   configure-panel-domain) require_args 1 "$#" "configure-panel-domain <domain>"; cmd_configure_panel_domain "$@" ;;
   request-panel-ssl)      require_args 2 "$#" "request-panel-ssl <domain> <email>"; cmd_request_panel_ssl "$@" ;;
   remove-panel-domain)    cmd_remove_panel_domain "$@" ;;

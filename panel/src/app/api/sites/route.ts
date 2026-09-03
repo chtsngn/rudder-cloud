@@ -10,6 +10,7 @@ import {
   createVhost,
   createWpDb,
   defaultSiteRoot,
+  isValidAbsolutePath,
   isValidDbIdentifier,
   isValidDbPassword,
   isValidEmail,
@@ -82,6 +83,7 @@ type ProvisionPlan =
     }
   | { type: "NODEJS" | "PYTHON"; port: number; startCommand: string; workingDir: string }
   | { type: "REVERSE_PROXY"; upstreamUrl: string }
+  | { type: "DOCKER"; port: number; workingDir: string; composeService: string }
 
 function buildPlan(
   type: string,
@@ -148,6 +150,16 @@ function buildPlan(
       }
       return { plan: { type: "REVERSE_PROXY", upstreamUrl } }
     }
+    case "DOCKER": {
+      const port = toPort(cfg.port)
+      const workingDir = toStr(cfg.workingDir) || defaultSiteRoot(domain)
+      const composeService = toStr(cfg.composeService)
+      if (!port || !isValidPort(port)) return { error: "Geçerli bir port numarası gereklidir (1-65535)." }
+      if (!isValidAbsolutePath(workingDir)) {
+        return { error: "Geçerli bir çalışma dizini gereklidir (/var/www/... altında)." }
+      }
+      return { plan: { type: "DOCKER", port, workingDir, composeService } }
+    }
     default:
       return { error: "Geçerli bir site türü gereklidir." }
   }
@@ -210,6 +222,16 @@ async function runProvisioning(domain: string, www: boolean, plan: ProvisionPlan
       break
     case "REVERSE_PROXY":
       await createVhost({ domain, type: "REVERSE_PROXY", www, upstreamUrl: plan.upstreamUrl })
+      break
+    case "DOCKER":
+      await createVhost({
+        domain,
+        type: "DOCKER",
+        www,
+        port: plan.port,
+        workingDir: plan.workingDir,
+        composeService: plan.composeService || undefined,
+      })
       break
   }
 }

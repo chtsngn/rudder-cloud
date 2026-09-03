@@ -171,12 +171,22 @@ export interface CreateVhostReverseProxyParams {
   upstreamUrl: string
 }
 
+export interface CreateVhostDockerParams {
+  domain: string
+  type: "DOCKER"
+  www: boolean
+  port: number
+  workingDir: string
+  composeService?: string
+}
+
 export type CreateVhostParams =
   | CreateVhostStaticParams
   | CreateVhostPhpParams
   | CreateVhostWordpressParams
   | CreateVhostNodePythonParams
   | CreateVhostReverseProxyParams
+  | CreateVhostDockerParams
 
 function requireDomain(domain: string) {
   if (!isValidDomain(domain)) throw new ProvisionError(`Geçersiz alan adı: ${domain}`)
@@ -285,6 +295,24 @@ export async function createVhost(params: CreateVhostParams): Promise<void> {
         "REVERSE_PROXY",
         www,
         params.upstreamUrl,
+      ])
+      return
+    }
+    case "DOCKER": {
+      if (!isValidPort(params.port)) {
+        throw new ProvisionError(`Geçersiz port: ${params.port}`)
+      }
+      if (!isValidAbsolutePath(params.workingDir)) {
+        throw new ProvisionError(`Geçersiz çalışma dizini: ${params.workingDir}`)
+      }
+      await runProvisionScript([
+        "create-vhost",
+        params.domain,
+        "DOCKER",
+        www,
+        String(params.port),
+        params.workingDir,
+        params.composeService ?? "",
       ])
       return
     }
@@ -422,4 +450,30 @@ export async function createWpDb(params: {
     ["create-wp-db", params.domain, params.dbName, params.dbUser, params.dbPassword],
     WORDPRESS_TIMEOUT_MS
   )
+}
+
+// ------------------------------------------------------------
+// Docker Compose yönetimi (docker site türü)
+// ------------------------------------------------------------
+export type DockerComposeAction = "up" | "down" | "restart" | "pull"
+
+export async function dockerComposeAction(
+  domain: string,
+  action: DockerComposeAction,
+  composeService?: string
+): Promise<void> {
+  requireDomain(domain)
+  if (!["up", "down", "restart", "pull"].includes(action)) {
+    throw new ProvisionError(`Geçersiz docker-compose eylemi: ${action}`)
+  }
+  const args = ["docker-action", domain, action]
+  if (composeService) args.push(composeService)
+  await runProvisionScript(args)
+}
+
+export async function dockerComposeLogs(domain: string, lines: number): Promise<string> {
+  requireDomain(domain)
+  const safeLines = Number.isInteger(lines) && lines >= 1 && lines <= 2000 ? lines : 200
+  const { stdout } = await runProvisionScript(["docker-logs", domain, String(safeLines)])
+  return stdout
 }

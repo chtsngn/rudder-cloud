@@ -18,6 +18,7 @@ export type DbSiteType =
   | "STATIC"
   | "PYTHON"
   | "REVERSE_PROXY"
+  | "DOCKER"
 
 /** Mirrors the Prisma `SiteStatus` enum values. */
 export type DbSiteStatus = "ACTIVE" | "PROVISIONING" | "STOPPED" | "FAILED"
@@ -29,6 +30,7 @@ const UI_TO_DB_TYPE: Record<SiteType, DbSiteType> = {
   static: "STATIC",
   python: "PYTHON",
   proxy: "REVERSE_PROXY",
+  docker: "DOCKER",
 }
 
 const DB_TO_UI_TYPE: Record<DbSiteType, SiteType> = {
@@ -38,6 +40,7 @@ const DB_TO_UI_TYPE: Record<DbSiteType, SiteType> = {
   STATIC: "static",
   PYTHON: "python",
   REVERSE_PROXY: "proxy",
+  DOCKER: "docker",
 }
 
 export function uiTypeToDbType(type: SiteType): DbSiteType {

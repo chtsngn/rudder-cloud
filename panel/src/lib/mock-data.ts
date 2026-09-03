@@ -5,6 +5,7 @@ export type SiteType =
   | "static"
   | "python"
   | "proxy"
+  | "docker"
 
 export interface SiteTypeInfo {
   type: SiteType
@@ -58,6 +59,13 @@ export const SITE_TYPES: SiteTypeInfo[] = [
     abbr: "RP",
     description: "Harici bir adrese yönlendiren Nginx ters proxy.",
     managed: false,
+  },
+  {
+    type: "docker",
+    label: "Docker",
+    abbr: "🐳",
+    description: "Docker Compose ile yönetilen konteyner uygulaması.",
+    managed: true,
   },
 ]
 

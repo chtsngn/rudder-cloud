@@ -151,6 +151,10 @@ export const en: TranslationDict = {
         label: "Reverse Proxy",
         description: "Nginx reverse proxy pointing to an external or local address.",
       },
+      docker: {
+        label: "Docker",
+        description: "Container application managed with Docker Compose.",
+      },
     },
     tabs: {
       overview: "Overview",

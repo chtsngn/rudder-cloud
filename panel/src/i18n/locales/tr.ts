@@ -149,6 +149,10 @@ export const tr = {
         label: "Ters Proxy",
         description: "Harici bir adrese yönlendiren Nginx ters proxy.",
       },
+      docker: {
+        label: "Docker",
+        description: "Docker Compose ile yönetilen konteyner uygulaması.",
+      },
     },
     tabs: {
       overview: "Genel Bakış",
