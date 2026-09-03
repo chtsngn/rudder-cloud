@@ -164,9 +164,12 @@ export function SailingShipRoute() {
           )
         })}
 
-        {/* 3. TAM YANDAN GÖRÜNEN GERÇEKÇİ 3D YELKENLİ GEMİ */}
+        {/* 3. SOYUTLAŞTIRILMIŞ VE YUMUŞATILMIŞ ASİL YELKENLİ SİLÜETİ */}
         <g
-          style={{ opacity: ship.opacity }}
+          style={{
+            opacity: ship.opacity * 0.76, // Gökyüzüyle bütünleşen yarı saydam soyut doku
+            filter: "drop-shadow(0 0 16px rgba(186, 230, 253, 0.22))",
+          }}
           transform={`translate(${ship.x - 70}, ${ship.y - 70}) rotate(${ship.angle}, 70, 70)`}
           className="transition-opacity duration-150"
         >
@@ -174,12 +177,12 @@ export function SailingShipRoute() {
           <ellipse
             cx="70"
             cy="112"
-            rx="55"
-            ry="9"
-            fill="rgba(56, 189, 248, 0.12)"
+            rx="52"
+            ry="8"
+            fill="rgba(56, 189, 248, 0.10)"
           />
 
-          {/* Gerçekçi Yandan (Profil) Görünüşlü 3D Yelkenli Gemi */}
+          {/* Soyutlaştırılmış Gümüş-Sis Tonlarında Yandan Görünüşlü 3D Yelkenli */}
           <image
             href="/sailing-ship-real.png"
             width="140"
