@@ -23,16 +23,16 @@
   --text-secondary: #a1a1aa;
   --text-muted: #71717a;
 
-  /* Aksan & Marka Renkleri */
-  --accent: #10b981;
-  --accent-hover: #059669;
+  /* Aksan & Marka Renkleri (Orijinal Koyu Tema: Gece Mavisi Buton, Gökyüzü Mavisi Aksan) */
+  --accent: #162752;
+  --accent-hover: #1e346b;
   --accent-fg: #ffffff;
-  --accent-text: #34d399;
-  --accent-subtle: rgba(16, 185, 129, 0.15);
-  --accent-veil: rgba(16, 185, 129, 0.3);
-  --brand: var(--accent);
-  --brand-light: #34d399;
-  --brand-dark: var(--accent-hover);
+  --accent-text: #38bdf8;
+  --accent-subtle: rgba(56, 189, 248, 0.15);
+  --accent-veil: rgba(42, 70, 135, 0.6);
+  --brand: #162752;
+  --brand-light: #38bdf8;
+  --brand-dark: #1e346b;
 
   /* Yüzen Paneller & Buzlu Cam */
   --float-surface: rgba(24, 24, 27, 0.82);
@@ -77,16 +77,16 @@
   --text-secondary: #52525b;
   --text-muted: #71717a;
 
-  /* Aksan Renkleri */
-  --accent: #10b981;
-  --accent-hover: #059669;
+  /* Aksan Renkleri (Orijinal Açık Tema: Bordo Buton, Altın Aksan) */
+  --accent: #580619;
+  --accent-hover: #720a22;
   --accent-fg: #ffffff;
-  --accent-text: #047857;
-  --accent-subtle: rgba(16, 185, 129, 0.12);
-  --accent-veil: rgba(16, 185, 129, 0.25);
-  --brand: var(--accent);
-  --brand-light: #34d399;
-  --brand-dark: var(--accent-hover);
+  --accent-text: #580619;
+  --accent-subtle: rgba(200, 168, 124, 0.15);
+  --accent-veil: rgba(200, 168, 124, 0.4);
+  --brand: #580619;
+  --brand-light: #dfc9a0;
+  --brand-dark: #720a22;
 
   /* Yüzen Paneller */
   --float-surface: rgba(255, 255, 255, 0.88);
@@ -150,8 +150,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: 'Plus Jakarta Sans', -apple-system, 'Segoe UI', sans-serif;
-  --font-heading: 'Cinzel', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Cinzel', serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
@@ -164,89 +164,89 @@
   }
 }
 
-/* ═══ DİNAMİK RENK TEMASI EŞLEMELERİ (TÜM SİTEDE VE BUTONLARDA DÖNÜŞÜM) ═══ */
+/* ═══ DİNAMİK RENK TEMASI EŞLEMELERİ (YALNIZCA ÖZEL RENK PALETİ SEÇİLDİĞİNDE UYGULANIR) ═══ */
+/* Varsayılan (default) temadayken kullanıcının orijinal koyu ve açık mod renklerine ASLA dokunulmaz! */
 
 /* 1. Birincil Butonlar & Aksanlar */
-.bg-\[\#580619\], 
-.dark .dark\:bg-\[\#162752\], 
-.bg-\[\#162752\] {
+html:not(.palette-default) .bg-\[\#580619\], 
+html:not(.palette-default) .dark .dark\:bg-\[\#162752\], 
+html:not(.palette-default) .bg-\[\#162752\] {
   background-color: var(--primary) !important;
   color: var(--primary-foreground) !important;
 }
 
-.hover\:bg-\[\#720a22\]:hover, 
-.dark .dark\:hover\:bg-\[\#1e346b\]:hover, 
-.hover\:bg-\[\#1e346b\]:hover {
+html:not(.palette-default) .hover\:bg-\[\#720a22\]:hover, 
+html:not(.palette-default) .dark .dark\:hover\:bg-\[\#1e346b\]:hover, 
+html:not(.palette-default) .hover\:bg-\[\#1e346b\]:hover {
   background-color: var(--primary-hover) !important;
 }
 
 /* 2. Kart Zeminleri (Koyu modda lacivert kalan kart ve paneller) */
-.dark .dark\:bg-\[\#090e1f\],
-.dark .dark\:bg-\[\#040711\],
-.dark .dark\:bg-\[\#0c1630\],
-.dark .dark\:bg-\[\#0c1630\]\/50,
-.dark .dark\:bg-\[\#070c1a\],
-.bg-\[\#090e1f\],
-.bg-\[\#040711\] {
+html:not(.palette-default) .dark .dark\:bg-\[\#090e1f\],
+html:not(.palette-default) .dark .dark\:bg-\[\#040711\],
+html:not(.palette-default) .dark .dark\:bg-\[\#0c1630\],
+html:not(.palette-default) .dark .dark\:bg-\[\#0c1630\]\/50,
+html:not(.palette-default) .dark .dark\:bg-\[\#070c1a\],
+html:not(.palette-default) .bg-\[\#090e1f\],
+html:not(.palette-default) .bg-\[\#040711\] {
   background-color: var(--surface-2) !important;
 }
 
 /* 3. İç Kutular, Form Inputları, Tablo İçleri ve Kod Blokları */
-.dark .dark\:bg-\[\#060a17\],
-.dark .dark\:bg-\[\#060a17\]\/50,
-.dark .dark\:bg-\[\#060a17\]\/70,
-.bg-\[\#060a17\] {
+html:not(.palette-default) .dark .dark\:bg-\[\#060a17\],
+html:not(.palette-default) .dark .dark\:bg-\[\#060a17\]\/50,
+html:not(.palette-default) .dark .dark\:bg-\[\#060a17\]\/70,
+html:not(.palette-default) .bg-\[\#060a17\] {
   background-color: var(--surface-inset) !important;
 }
 
 /* 4. Kenarlıklar & Bölücüler */
-.dark .dark\:border-\[\#16223f\],
-.dark .dark\:border-slate-800,
-.dark .dark\:border-\[\#1e3568\]\/50,
-.dark .dark\:border-\[\#1e3568\],
-.border-\[\#c8a87c\]\/30,
-.dark .dark\:divide-\[\#16223f\] > :not([hidden]) ~ :not([hidden]) {
+html:not(.palette-default) .dark .dark\:border-\[\#16223f\],
+html:not(.palette-default) .dark .dark\:border-slate-800,
+html:not(.palette-default) .dark .dark\:border-\[\#1e3568\]\/50,
+html:not(.palette-default) .dark .dark\:border-\[\#1e3568\],
+html:not(.palette-default) .border-\[\#c8a87c\]\/30,
+html:not(.palette-default) .dark .dark\:divide-\[\#16223f\] > :not([hidden]) ~ :not([hidden]) {
   border-color: var(--border) !important;
 }
 
 /* 5. Vurgulu Kenarlıklar ve Hover Çerçeveleri */
-.border-\[\#c8a87c\]\/40, 
-.border-\[\#c8a87c\]\/50, 
-.dark .dark\:border-\[\#2a4687\]\/60, 
-.dark .dark\:border-\[\#2a4687\],
-.dark .dark\:border-\[\#2a4687\]\/70,
-.dark .dark\:border-\[\#2a4687\]\/80,
-.dark .dark\:border-\[\#2a4687\]\/50,
-.dark .dark\:hover\:border-blue-500\/50:hover,
-.dark .dark\:hover\:border-\[\#385db3\]:hover,
-.dark .dark\:hover\:border-\[\#2a4687\]:hover,
-.hover\:border-\[\#c8a87c\]:hover,
-.hover\:border-\[\#c8a87c\]\/70:hover,
-.hover\:border-\[\#c8a87c\]\/40:hover {
+html:not(.palette-default) .border-\[\#c8a87c\]\/40, 
+html:not(.palette-default) .border-\[\#c8a87c\]\/50, 
+html:not(.palette-default) .dark .dark\:border-\[\#2a4687\]\/60, 
+html:not(.palette-default) .dark .dark\:border-\[\#2a4687\],
+html:not(.palette-default) .dark .dark\:border-\[\#2a4687\]\/70,
+html:not(.palette-default) .dark .dark\:border-\[\#2a4687\]\/80,
+html:not(.palette-default) .dark .dark\:border-\[\#2a4687\]\/50,
+html:not(.palette-default) .dark .dark\:hover\:border-blue-500\/50:hover,
+html:not(.palette-default) .dark .dark\:hover\:border-\[\#385db3\]:hover,
+html:not(.palette-default) .dark .dark\:hover\:border-\[\#2a4687\]:hover,
+html:not(.palette-default) .hover\:border-\[\#c8a87c\]:hover,
+html:not(.palette-default) .hover\:border-\[\#c8a87c\]\/70:hover,
+html:not(.palette-default) .hover\:border-\[\#c8a87c\]\/40:hover {
   border-color: var(--accent) !important;
 }
 
 /* 6. İkonlar, Başlıklar, Rozet Metinleri & Linkler */
-.text-\[\#580619\], 
-.dark .dark\:text-blue-300, 
-.dark .dark\:text-blue-400,
-.text-blue-300,
-.text-blue-400,
-.text-\[\#38bdf8\],
-.text-\[\#c8a87c\],
-.text-\[\#dfc9a0\],
-.hover\:text-\[\#580619\]:hover,
-.dark .dark\:hover\:text-blue-400:hover,
-.dark .dark\:hover\:text-blue-300:hover {
+html:not(.palette-default) .dark .dark\:text-blue-300, 
+html:not(.palette-default) .dark .dark\:text-blue-400,
+html:not(.palette-default) .text-blue-300,
+html:not(.palette-default) .text-blue-400,
+html:not(.palette-default) .text-\[\#38bdf8\],
+html:not(.palette-default) .text-\[\#c8a87c\],
+html:not(.palette-default) .text-\[\#dfc9a0\],
+html:not(.palette-default) .hover\:text-\[\#580619\]:hover,
+html:not(.palette-default) .dark .dark\:hover\:text-blue-400:hover,
+html:not(.palette-default) .dark .dark\:hover\:text-blue-300:hover {
   color: var(--accent-text) !important;
 }
 
 /* 7. Rozet & Hafif Vurgulu Zeminler */
-.bg-\[\#580619\]\/10, 
-.bg-\[\#580619\]\/5, 
-.dark .dark\:bg-\[\#101c38\], 
-.bg-\[\#101c38\],
-.dark .dark\:hover\:bg-\[\#111f40\]:hover {
+html:not(.palette-default) .bg-\[\#580619\]\/10, 
+html:not(.palette-default) .bg-\[\#580619\]\/5, 
+html:not(.palette-default) .dark .dark\:bg-\[\#101c38\], 
+html:not(.palette-default) .bg-\[\#101c38\],
+html:not(.palette-default) .dark .dark\:hover\:bg-\[\#111f40\]:hover {
   background-color: var(--accent-subtle) !important;
 }
 

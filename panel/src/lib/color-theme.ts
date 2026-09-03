@@ -58,7 +58,9 @@ export const THEME_PALETTES: ThemePalette[] = [
     label: 'Varsayılan',
     hue: 226,
     satMul: 1,
-    accent: { 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857' },
+    accent: { 400: '#38bdf8', 500: '#162752', 600: '#1e346b', 700: '#0f1b38' },
+    fg: '#ffffff',
+    light: { accent: '#580619', hover: '#720a22', fg: '#ffffff' },
     ramp: {
       dark: {
         '--surface-0': [40, 4.5],     /* #040711 */
