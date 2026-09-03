@@ -1,174 +1,161 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useCallback } from "react"
 import Image from "next/image"
-import { Loader2 } from "lucide-react"
+import { ChevronDown, Compass, FastForward } from "lucide-react"
 import { useTranslation } from "@/components/language-provider"
+import { VideoScrollEngine } from "@/components/auth/video-scroll-engine"
+import { GlassLoginCard } from "@/components/auth/glass-login-card"
 
 export default function LoginPage() {
-  const router = useRouter()
-  const { t, lang, setLang } = useTranslation()
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+  const { lang, setLang } = useTranslation()
+  const [scrollProgress, setScrollProgress] = useState(0)
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setError(null)
-    setSubmitting(true)
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        setError(body?.error ?? "Kullanıcı adı veya şifre yanlış.")
-        return
-      }
-      router.push("/")
-      router.refresh()
-    } catch {
-      setError("Sunucuya bağlanılamadı. Lütfen tekrar deneyin.")
-    } finally {
-      setSubmitting(false)
-    }
+  // Scroll ilerlemesi değiştikçe state güncelle
+  const handleProgress = useCallback((progress: number) => {
+    setScrollProgress(progress)
+  }, [])
+
+  // Hızlıca login penceresine atla
+  const handleSkipToLogin = () => {
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: "smooth",
+    })
   }
 
-  return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4 relative"
-      style={{
-        background: "linear-gradient(135deg, #3d0510 0%, #6e0d25 50%, #4a0717 100%)",
-      }}
-    >
-      {/* Dil Seçici (Sağ Üst) */}
-      <div className="absolute top-5 right-5 z-20">
-        <div className="flex items-center gap-1 bg-black/30 backdrop-blur-md p-1 rounded-xl border border-white/10">
-          <button
-            type="button"
-            onClick={() => setLang("tr")}
-            className={`px-3 py-1 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
-              lang === "tr"
-                ? "bg-[#c8a87c] text-[#3d0510] shadow-sm font-bold"
-                : "text-white/70 hover:text-white"
-            }`}
-          >
-            🇹🇷 TR
-          </button>
-          <button
-            type="button"
-            onClick={() => setLang("en")}
-            className={`px-3 py-1 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
-              lang === "en"
-                ? "bg-[#c8a87c] text-[#3d0510] shadow-sm font-bold"
-                : "text-white/70 hover:text-white"
-            }`}
-          >
-            🇬🇧 EN
-          </button>
-        </div>
-      </div>
+  // İlk sahne (Gökyüzü & Yıldızlar) metin opaklığı
+  const introOpacity = Math.max(0, 1 - scrollProgress * 3.2)
+  const isIntroVisible = introOpacity > 0.02
 
-      <div className="relative z-10 w-full max-w-sm">
-        {/* Logo + Brand */}
-        <div className="flex flex-col items-center mb-8 gap-3">
-          <Image
-            src="/rudder-helm-transparent.png"
-            alt="Rudder Dümen"
-            width={84}
-            height={84}
-            className="object-contain drop-shadow-[0_6px_24px_rgba(0,0,0,0.6)]"
-            priority
-          />
-          <div className="text-center">
+  return (
+    <div className="relative min-h-[380vh] bg-black selection:bg-[#c8a87c]/30 selection:text-white">
+      {/* ═══ 1. ARKA PLAN SCROLL-DRIVEN VİDEO MOTORU ═══ */}
+      <VideoScrollEngine
+        src="/media/rudder-intro.mp4"
+        onProgress={handleProgress}
+      />
+
+      {/* ═══ 2. SABİT GÖRÜNÜM ALANI (FIXED VIEWPORT) ═══ */}
+      <div className="fixed inset-0 z-20 flex flex-col justify-between p-5 md:p-8 pointer-events-none">
+        {/* ── Üst Bar (Header Bar) ── */}
+        <header className="flex items-center justify-between w-full pointer-events-auto">
+          {/* Sol: Rudder Minimal Brand */}
+          <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 shadow-lg">
+            <Image
+              src="/rudder-helm-transparent.png"
+              alt="Rudder"
+              width={24}
+              height={24}
+              className="object-contain"
+            />
+            <span className="font-heading font-black tracking-[0.2em] text-[#c8a87c] text-xs uppercase">
+              Rudder
+            </span>
+          </div>
+
+          {/* Sağ: Dil Seçici & Hızlı Giriş Butonu */}
+          <div className="flex items-center gap-2.5">
+            {/* Hızlı Giriş Butonu (Animasyonu Atla) */}
+            {scrollProgress < 0.7 && (
+              <button
+                type="button"
+                onClick={handleSkipToLogin}
+                className="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/45 backdrop-blur-md border border-white/15 text-slate-300 hover:text-white hover:border-[#c8a87c]/60 text-xs font-semibold shadow-lg transition-all cursor-pointer hover:scale-105 active:scale-95"
+              >
+                <FastForward className="size-3.5 text-[#c8a87c] transition-transform group-hover:translate-x-0.5" />
+                <span className="hidden sm:inline">Hızlı Giriş</span>
+              </button>
+            )}
+
+            {/* Dil Seçici */}
+            <div className="flex items-center gap-1 bg-black/45 backdrop-blur-md p-1 rounded-xl border border-white/15 shadow-lg">
+              <button
+                type="button"
+                onClick={() => setLang("tr")}
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
+                  lang === "tr"
+                    ? "bg-[#c8a87c] text-[#3d0510] shadow-sm font-bold"
+                    : "text-white/70 hover:text-white"
+                }`}
+              >
+                TR
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang("en")}
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
+                  lang === "en"
+                    ? "bg-[#c8a87c] text-[#3d0510] shadow-sm font-bold"
+                    : "text-white/70 hover:text-white"
+                }`}
+              >
+                EN
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* ── Orta Alan: Senaryo Başlangıç Yazısı & Login Kartı ── */}
+        <main className="flex flex-1 items-center justify-center relative w-full">
+          {/* SAHNE 1: Gökyüzü Karşılama Yazısı (Scroll ettikçe kaybolur) */}
+          <div
+            style={{
+              opacity: introOpacity,
+              transform: `translate3d(0, ${scrollProgress * -60}px, 0)`,
+              display: isIntroVisible ? "flex" : "none",
+            }}
+            className="flex-col items-center text-center space-y-4 max-w-lg select-none pointer-events-none px-4"
+          >
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-[#c8a87c]/30 text-[11px] font-mono tracking-wider text-[#dfc9a0] uppercase shadow-lg animate-pulse">
+              <Compass className="size-3.5 text-[#c8a87c]" />
+              <span>Rotanızı Belirleyin</span>
+            </div>
+
             <h1
-              className="font-heading text-3xl font-bold uppercase tracking-[0.25em]"
+              className="font-heading text-4xl sm:text-6xl font-black uppercase tracking-[0.25em]"
               style={{
                 color: "#c8a87c",
-                textShadow: "0 2px 10px rgba(0,0,0,0.4)",
+                textShadow: "0 4px 30px rgba(0,0,0,0.8), 0 0 20px rgba(200,168,124,0.4)",
               }}
             >
-              rudder
+              Rudder
             </h1>
-            <p className="text-xs mt-1 tracking-[0.15em] uppercase text-white/70 font-medium">
-              Server Panel
-            </p>
-          </div>
-        </div>
 
-        {/* Card */}
-        <div className="rounded-2xl bg-white p-7 shadow-2xl border border-white/20 space-y-5">
-          <div className="mb-1">
-            <h2 className="text-base font-bold text-slate-800 font-heading">
-              {t("auth.loginBtn")}
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5 font-sans">
-              {t("auth.loginSubtitle")}
+            <p className="text-sm sm:text-base text-slate-300 font-sans tracking-wide leading-relaxed drop-shadow-md">
+              Bulut sunucularınızın kontrolü, okyanusun derinliklerinde güvenle dönen dümenin başında.
             </p>
           </div>
 
-          {error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-xs text-red-600 font-medium">
-              {error}
+          {/* SAHNE 2: Dümene Varış & Lüks Glassmorphism Login Kartı */}
+          <GlassLoginCard progress={scrollProgress} />
+        </main>
+
+        {/* ── Alt Bar: Scroll Aşağı İpucu Göstergesi ── */}
+        <footer className="flex flex-col items-center justify-center w-full select-none">
+          {isIntroVisible && (
+            <div
+              style={{ opacity: introOpacity }}
+              className="flex flex-col items-center gap-2 pointer-events-auto cursor-pointer animate-bounce"
+              onClick={handleSkipToLogin}
+            >
+              <span className="text-[11px] tracking-[0.2em] font-mono uppercase text-[#dfc9a0]/80">
+                Dümeni Keşfetmek İçin Kaydırın
+              </span>
+              <div className="size-8 rounded-full bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center text-[#c8a87c] shadow-lg">
+                <ChevronDown className="size-4" />
+              </div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label
-                htmlFor="username"
-                className="block text-xs font-semibold text-slate-700"
-              >
-                {t("auth.usernameLabel")}
-              </label>
-              <input
-                id="username"
-                type="text"
-                autoComplete="username"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 outline-none transition-all focus:border-[#6e0d25] focus:bg-white focus:ring-1 focus:ring-[#6e0d25]"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label
-                htmlFor="password"
-                className="block text-xs font-semibold text-slate-700"
-              >
-                {t("auth.passwordLabel")}
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 outline-none transition-all focus:border-[#6e0d25] focus:bg-white focus:ring-1 focus:ring-[#6e0d25]"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#6e0d25] hover:bg-[#86102e] py-3 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-all disabled:opacity-60 mt-2 border border-[#c8a87c]/30 cursor-pointer"
-            >
-              {submitting && <Loader2 className="size-4 animate-spin" />}
-              {submitting ? t("auth.loggingIn") : t("auth.loginBtn")}
-            </button>
-          </form>
-        </div>
-
-        {/* Footer */}
-        <p className="text-center text-xs mt-6 text-white/40 font-mono">
-          Rudder Server Panel &copy; {new Date().getFullYear()}
-        </p>
+          {/* İlerleme Çubuğu (Minimal Alt Çizgi) */}
+          <div className="w-48 h-1 rounded-full bg-white/10 overflow-hidden mt-3 backdrop-blur-xs">
+            <div
+              className="h-full bg-gradient-to-r from-[#c8a87c] to-[#38bdf8] transition-all duration-75"
+              style={{ width: `${Math.round(scrollProgress * 100)}%` }}
+            />
+          </div>
+        </footer>
       </div>
     </div>
   )
