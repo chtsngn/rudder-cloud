@@ -56,7 +56,7 @@ export function FrameSequencePlayer({
     }
   }, [manifestUrl])
 
-  // ═══ 2. KANVASA KARE ÇİZİMİ (OBJECT-FIT: COVER) ═══
+  // ═══ 2. KANVASA KARE ÇİZİMİ (OBJECT-FIT: COVER + 4K DPR) ═══
   const renderFrame = useCallback((frameIdx: number) => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -70,10 +70,20 @@ export function FrameSequencePlayer({
     // Resim henüz tam decode edilmediyse çizimi atla
     if (!img || !img.complete || img.naturalWidth === 0) return
 
-    if (canvas.width === 0 || canvas.height === 0) {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
+    // 4K / Retina Ekranlar İçin Device Pixel Ratio (DPR) Çözünürlüğü
+    const dpr = Math.min(typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1, 2)
+    const targetW = Math.floor(window.innerWidth * dpr)
+    const targetH = Math.floor(window.innerHeight * dpr)
+
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+      canvas.width = targetW
+      canvas.height = targetH
+      canvas.style.width = `${window.innerWidth}px`
+      canvas.style.height = `${window.innerHeight}px`
     }
+
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = "high"
 
     const cw = canvas.width
     const ch = canvas.height
@@ -138,13 +148,22 @@ export function FrameSequencePlayer({
     }
   }, [manifest, renderFrame])
 
-  // ═══ 4. RESIZE DİNLEYİCİSİ ═══
+  // ═══ 4. RESIZE DİNLEYİCİSİ (4K DPR UYUMLU) ═══
   useEffect(() => {
     const handleResize = () => {
       const canvas = canvasRef.current
       if (!canvas) return
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
+      const dpr = Math.min(typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1, 2)
+      canvas.width = Math.floor(window.innerWidth * dpr)
+      canvas.height = Math.floor(window.innerHeight * dpr)
+      canvas.style.width = `${window.innerWidth}px`
+      canvas.style.height = `${window.innerHeight}px`
+
+      const ctx = canvas.getContext("2d")
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true
+        ctx.imageSmoothingQuality = "high"
+      }
 
       if (currentRenderedFrameRef.current >= 0) {
         renderFrame(currentRenderedFrameRef.current)
