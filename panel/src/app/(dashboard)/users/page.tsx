@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label"
 import { SuperAdminGate } from "@/components/super-admin-gate"
 import { useCurrentUser } from "@/hooks/use-current-user"
 import { CustomSelect } from "@/components/ui/custom-select"
+import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
 
 interface UserView {
@@ -54,6 +55,7 @@ function formatDate(isoStr: string) {
 }
 
 function UsersContent() {
+  const { t } = useTranslation()
   const { user: me } = useCurrentUser()
 
   const [users, setUsers] = useState<UserView[]>([])
@@ -215,14 +217,14 @@ function UsersContent() {
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
-                Kullanıcı Yönetimi
+                {t("users.title")}
               </h1>
               <span className="rounded-full bg-[#580619]/10 dark:bg-[#101c38] border border-[#580619]/20 dark:border-[#1e3568]/50 px-2.5 py-0.5 text-xs font-bold text-[#580619] dark:text-blue-300 font-mono">
                 {users.length}
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-sans mt-0.5">
-              Panele erişebilen hesapları, sistem rollerini ve güvenlik erişim izinlerini yönetin.
+              {t("users.subtitle")}
             </p>
           </div>
         </div>
@@ -233,7 +235,7 @@ function UsersContent() {
           className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] shrink-0 cursor-pointer active:scale-95"
         >
           <Plus className="size-4 text-[#dfc9a0] dark:text-white" />
-          Yeni Kullanıcı Ekle
+          {t("users.addUser")}
         </Button>
       </div>
 

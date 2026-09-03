@@ -28,12 +28,14 @@ import {
   KeyRound,
   GitBranch,
   RefreshCw,
+  Languages,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useTheme } from "@/components/theme-provider"
+import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
 
 interface S3ConfigView {
@@ -518,19 +520,23 @@ export default function SettingsPage() {
     }
   }
 
+  const { t, lang, setLang } = useTranslation()
+
   const [openSections, setOpenSections] = useState<{
+    language: boolean
     theme: boolean
     domain: boolean
     s3: boolean
     github: boolean
   }>({
+    language: false,
     theme: false,
     domain: false,
     s3: false,
     github: false,
   })
 
-  const toggleSection = (section: "theme" | "domain" | "s3" | "github") => {
+  const toggleSection = (section: "language" | "theme" | "domain" | "s3" | "github") => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }))
   }
 
@@ -553,13 +559,109 @@ export default function SettingsPage() {
           </div>
           <div>
             <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
-              Sistem Ayarları
+              {t("settings.title")}
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-sans mt-0.5">
-              Tema görünümü, panel erişim alan adı, SSL sertifikaları ve S3 bulut depolama yapılandırmaları.
+              {t("settings.subtitle")}
             </p>
           </div>
         </div>
+      </div>
+
+      {/* ═══ 1.5 DİL SEÇİMİ KARTI (AÇILIR SEKME) ═══ */}
+      <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden transition-all">
+        <div
+          onClick={() => toggleSection("language")}
+          className="flex items-center justify-between p-5 md:p-6 select-none cursor-pointer hover:bg-slate-50/50 dark:hover:bg-[#0c1630]/50 transition-colors"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="size-10 rounded-2xl bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 flex items-center justify-center border border-transparent dark:border-[#1e3568]/50 shadow-2xs shrink-0">
+              <Languages className="size-5" />
+            </div>
+            <div>
+              <h2 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100">
+                {t("settings.sections.language")}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
+                {t("settings.language.subtitle")}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-700 dark:text-blue-300 border border-slate-200/80 dark:border-[#1e3568]/50">
+              {lang === "tr" ? "🇹🇷 Türkçe" : "🇬🇧 English"}
+            </span>
+            <div
+              className={cn(
+                "size-8 rounded-xl flex items-center justify-center border border-slate-200 dark:border-[#16223f] bg-slate-50 dark:bg-[#060a17] text-slate-500 dark:text-slate-300 transition-transform duration-200",
+                openSections.language && "rotate-180 bg-slate-100 dark:bg-[#101c38] text-slate-900 dark:text-blue-300 border-slate-300 dark:border-[#2a4687]"
+              )}
+            >
+              <ChevronDown className="size-4" />
+            </div>
+          </div>
+        </div>
+
+        {openSections.language && (
+          <div className="p-5 md:p-6 pt-0 border-t border-slate-100 dark:border-[#16223f] space-y-6 animate-in fade-in-0 duration-200">
+            <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Türkçe Kartı */}
+              <button
+                type="button"
+                onClick={() => setLang("tr")}
+                className={cn(
+                  "relative flex flex-col p-5 rounded-2xl text-left border transition-all cursor-pointer",
+                  lang === "tr"
+                    ? "border-[#c8a87c] dark:border-[#38bdf8] bg-slate-50/80 dark:bg-[#0c1630] shadow-md ring-2 ring-[#c8a87c]/30 dark:ring-[#38bdf8]/20"
+                    : "border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#060a17] hover:border-slate-300 dark:hover:border-[#2a4687]"
+                )}
+              >
+                <div className="flex items-center justify-between w-full mb-2">
+                  <span className="text-2xl">🇹🇷</span>
+                  {lang === "tr" && (
+                    <span className="size-6 rounded-full bg-[#580619] dark:bg-[#38bdf8] text-white dark:text-[#060e24] flex items-center justify-center shadow-xs">
+                      <Check className="size-3.5 stroke-[3]" />
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
+                  Türkçe
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Panel arayüzünü Türkçe olarak kullanın.
+                </p>
+              </button>
+
+              {/* English Kartı */}
+              <button
+                type="button"
+                onClick={() => setLang("en")}
+                className={cn(
+                  "relative flex flex-col p-5 rounded-2xl text-left border transition-all cursor-pointer",
+                  lang === "en"
+                    ? "border-[#c8a87c] dark:border-[#38bdf8] bg-slate-50/80 dark:bg-[#0c1630] shadow-md ring-2 ring-[#c8a87c]/30 dark:ring-[#38bdf8]/20"
+                    : "border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#060a17] hover:border-slate-300 dark:hover:border-[#2a4687]"
+                )}
+              >
+                <div className="flex items-center justify-between w-full mb-2">
+                  <span className="text-2xl">🇬🇧</span>
+                  {lang === "en" && (
+                    <span className="size-6 rounded-full bg-[#580619] dark:bg-[#38bdf8] text-white dark:text-[#060e24] flex items-center justify-center shadow-xs">
+                      <Check className="size-3.5 stroke-[3]" />
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
+                  English
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Use the control panel interface in English.
+                </p>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ═══ 2. GÖRÜNÜM VE TEMA SEÇİM KARTI (AÇILIR SEKME) ═══ */}
@@ -575,10 +677,10 @@ export default function SettingsPage() {
             </div>
             <div>
               <h2 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100">
-                Arayüz Teması ve Görünüm
+                {t("settings.sections.theme")}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
-                Panel için tercih ettiğiniz renk paletini ve tema modunu seçin.
+                {t("settings.theme.subtitle")}
               </p>
             </div>
           </div>
@@ -1159,10 +1261,10 @@ export default function SettingsPage() {
             </div>
             <div>
               <h2 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                GitHub Entegrasyonu ve Deploy Key Yönetimi
+                {t("settings.sections.github")}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
-                GitHub hesabınızı bağlayarak depolarınız için sunucudan doğrudan Deploy Key oluşturun ve GitHub&apos;a aktarın.
+                {t("settings.github.subtitle")}
               </p>
             </div>
           </div>

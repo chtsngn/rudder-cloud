@@ -6,6 +6,7 @@ import { Network, RefreshCw } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useTranslation } from "@/components/language-provider"
 
 interface UsedPort {
   port: number
@@ -29,6 +30,7 @@ function sourceBadge(p: UsedPort) {
 }
 
 export default function PortsPage() {
+  const { t } = useTranslation()
   const [data, setData] = useState<PortsResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -62,14 +64,16 @@ export default function PortsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-2xl font-semibold text-foreground">Portlar</h1>
+          <h1 className="font-heading text-2xl font-semibold text-foreground">
+            {t("ports.title")}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Sunucuda dinlenen portlar ve yaygın aralıkta boş port önerileri.
+            {t("ports.subtitle")}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={load} disabled={loading}>
           <RefreshCw className={loading ? "size-4 animate-spin" : "size-4"} />
-          Yenile
+          {t("common.refresh")}
         </Button>
       </div>
 

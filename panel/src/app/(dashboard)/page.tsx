@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import {
@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button"
 import { SiteCard } from "@/components/site-card"
 import type { Site } from "@/lib/mock-data"
 import { apiSiteToUiSite, type ApiSite } from "@/lib/site-adapter"
+import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
 
 interface SystemStats {
@@ -50,10 +51,10 @@ interface PortsResponse {
 
 const STATS_POLL_MS = 5000
 
-function formatUptime(seconds: number): string {
+function formatUptime(seconds: number, daysLabel = "gün", hoursLabel = "saat"): string {
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
-  return `${days} gün ${hours} saat`
+  return `${days} ${daysLabel} ${hours} ${hoursLabel}`
 }
 
 function MetricCard({
@@ -152,52 +153,51 @@ function MetricCard({
 }
 
 export default function DashboardPage() {
+  const { t } = useTranslation()
   const [stats, setStats] = useState<SystemStats | null>(null)
   const [sites, setSites] = useState<Site[] | null>(null)
   const [ports, setPorts] = useState<UsedPort[] | null>(null)
   const [portFilter, setPortFilter] = useState<"all" | "site" | "docker" | "system">("all")
   const [refreshing, setRefreshing] = useState(false)
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
-      const res = await fetch("/api/system/stats", { cache: "no-store" })
-      if (!res.ok) return
-      const data = (await res.json()) as SystemStats
-      setStats(data)
-    } catch {
-      // ignore
-    }
-  }
+      const res = await fetch("/api/system/stats")
+      if (res.ok) {
+        const data = (await res.json()) as SystemStats
+        setStats(data)
+      }
+    } catch {}
+  }, [])
 
-  const loadSites = async () => {
+  const loadSites = useCallback(async () => {
     try {
-      const res = await fetch("/api/sites", { cache: "no-store" })
-      if (!res.ok) throw new Error("failed")
-      const data = (await res.json()) as ApiSite[]
-      setSites(data.map(apiSiteToUiSite))
-    } catch {
-      setSites([])
-    }
-  }
+      const res = await fetch("/api/sites")
+      if (res.ok) {
+        const data = (await res.json()) as ApiSite[]
+        setSites(data.map(apiSiteToUiSite))
+      }
+    } catch {}
+  }, [])
 
-  const loadPorts = async () => {
+  const loadPorts = useCallback(async () => {
     try {
-      const res = await fetch("/api/system/ports", { cache: "no-store" })
-      if (!res.ok) throw new Error("failed")
-      const data = (await res.json()) as PortsResponse
-      setPorts(data.used ?? [])
-    } catch {
-      setPorts([])
-    }
-  }
+      const res = await fetch("/api/system/ports")
+      if (res.ok) {
+        const data = (await res.json()) as PortsResponse
+        setPorts(data.used ?? [])
+      }
+    } catch {}
+  }, [])
 
   useEffect(() => {
     loadStats()
     loadSites()
     loadPorts()
+
     const interval = setInterval(loadStats, STATS_POLL_MS)
     return () => clearInterval(interval)
-  }, [])
+  }, [loadStats, loadSites, loadPorts])
 
   const handleManualRefresh = async () => {
     setRefreshing(true)
@@ -206,10 +206,10 @@ export default function DashboardPage() {
   }
 
   const serverInfo = [
-    { label: "Sunucu Adı", value: stats?.host.hostname ?? "—" },
-    { label: "İşletim Sistemi", value: stats?.host.platform ?? "—" },
-    { label: "Çalışma Süresi", value: stats ? formatUptime(stats.host.uptimeSeconds) : "—" },
-    { label: "IP Adresi", value: stats?.host.ip ?? "—" },
+    { label: t("dashboard.serverSpecs"), value: stats?.host.hostname ?? "—" },
+    { label: t("dashboard.os"), value: stats?.host.platform ?? "—" },
+    { label: t("dashboard.uptime"), value: stats ? formatUptime(stats.host.uptimeSeconds, t("dashboard.days"), t("dashboard.hours")) : "—" },
+    { label: "IP", value: stats?.host.ip ?? "—" },
   ]
 
   const filteredPorts = (ports ?? []).filter((p) => {
@@ -223,10 +223,10 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
         <div>
           <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
-            Anasayfa
+            {t("nav.home")}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-sans">
-            Sunucunuzun gerçek zamanlı donanım telemetrisi, portları ve barındırılan web siteleriniz.
+            {t("dashboard.subtitle")}
           </p>
         </div>
 
@@ -235,7 +235,7 @@ export default function DashboardPage() {
           <button
             type="button"
             onClick={handleManualRefresh}
-            title="Yenile"
+            title={t("common.refresh")}
             className="size-9 rounded-xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-slate-600 dark:text-slate-300 hover:text-[#580619] dark:hover:text-blue-300 hover:border-[#c8a87c] dark:hover:border-[#2a4687] shadow-sm flex items-center justify-center transition-all cursor-pointer active:scale-95"
           >
             <RotateCw className={cn("size-4", refreshing && "animate-spin text-[#580619] dark:text-blue-300")} />
@@ -247,7 +247,7 @@ export default function DashboardPage() {
           >
             <Link href="/sites/new">
               <Plus className="size-4 text-[#dfc9a0] dark:text-white" />
-              YENİ SİTE EKLE
+              {t("sites.newSite")}
             </Link>
           </Button>
         </div>
@@ -494,7 +494,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h2 className="font-heading text-xl font-extrabold text-[#580619] dark:text-slate-100 tracking-tight">
-              Siteleriniz
+              {t("nav.sites")}
             </h2>
             {sites !== null && (
               <span className="rounded-full bg-[#580619]/10 dark:bg-[#101c38] border border-[#580619]/20 dark:border-[#1e3568]/50 px-2.5 py-0.5 text-xs font-bold text-[#580619] dark:text-blue-300 font-mono">
@@ -507,7 +507,7 @@ export default function DashboardPage() {
             href="/sites"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#580619] dark:text-blue-300 hover:text-[#720a22] dark:hover:text-white transition-colors group px-3.5 py-2 rounded-xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] hover:border-[#c8a87c] dark:hover:border-[#2a4687] shadow-2xs"
           >
-            Tüm Siteleri Yönet
+            {t("dashboard.viewAllSites")}
             <ArrowRight className="size-3.5 text-[#c8a87c] dark:text-blue-300 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
@@ -537,7 +537,7 @@ export default function DashboardPage() {
             </div>
 
             <h3 className="font-heading text-xl md:text-2xl font-extrabold text-slate-800 dark:text-slate-100 mb-2 tracking-tight">
-              Henüz bir site eklenmedi.
+              {t("dashboard.noSitesYet")}
             </h3>
             <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-7 font-sans leading-relaxed">
               Sunucunuzda yeni bir WordPress, Node.js, Python veya statik web sitesi yayına alarak self-hosting deneyiminizi başlatın.
@@ -549,7 +549,7 @@ export default function DashboardPage() {
             >
               <Link href="/sites/new">
                 <Plus className="size-4.5 text-[#dfc9a0] dark:text-white" />
-                İLK SİTENİZİ EKLEYİN
+                {t("dashboard.createFirstSite")}
               </Link>
             </Button>
           </div>

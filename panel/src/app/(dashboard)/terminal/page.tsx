@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { ShieldAlert, Terminal as TerminalIcon, Sparkles, Columns2, ArrowRight } from "lucide-react"
 
 import { useTerminalDock } from "@/components/terminal-dock-context"
+import { useTranslation } from "@/components/language-provider"
 import { Button } from "@/components/ui/button"
 
 // xterm.js tarayıcı-özel API'ler kullanıyor (WebSocket, `document`) — Monaco
@@ -27,6 +28,7 @@ const TerminalView = dynamic(
 export default function TerminalPage() {
   const router = useRouter()
   const { openDock } = useTerminalDock()
+  const { t } = useTranslation()
 
   const handleDockToRight = () => {
     openDock()
@@ -44,10 +46,10 @@ export default function TerminalPage() {
             </div>
             <div>
               <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
-                Sunucu Terminali
+                {t("terminal.title")}
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-sans mt-0.5">
-                Doğrudan Linux ana makinenize bağlı gerçek zamanlı Web PTY konsolu.
+                {t("terminal.subtitle")}
               </p>
             </div>
           </div>

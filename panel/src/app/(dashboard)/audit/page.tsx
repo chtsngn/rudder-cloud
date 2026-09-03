@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { SuperAdminGate } from "@/components/super-admin-gate"
+import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
 
 interface AuditLogEntry {
@@ -120,6 +121,7 @@ function getActionBadge(action: string) {
 }
 
 function AuditContent() {
+  const { t } = useTranslation()
   const [logs, setLogs] = useState<AuditLogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -215,10 +217,10 @@ function AuditContent() {
           </div>
           <div>
             <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
-              Denetim Günlüğü & Güvenlik İzleri
+              {t("audit.title")}
             </h1>
             <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 font-sans mt-0.5">
-              Panel üzerindeki tüm yönetimsel aktivitelerin ve kritik olayların kronolojik denetim kaydı.
+              {t("audit.subtitle")}
             </p>
           </div>
         </div>
@@ -226,7 +228,7 @@ function AuditContent() {
         <div className="flex items-center gap-2.5">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-[#090e1f] border border-slate-200 dark:border-[#16223f] font-mono text-xs font-bold text-slate-700 dark:text-slate-300 shadow-2xs">
             <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-            {logs.length} Kayıt
+            {logs.length}
           </span>
 
           <Button
@@ -235,7 +237,7 @@ function AuditContent() {
             className="bg-white dark:bg-[#090e1f] hover:bg-slate-50 dark:hover:bg-[#111f40] text-slate-700 dark:text-slate-200 font-semibold text-xs border border-slate-200 dark:border-[#16223f] shadow-2xs hover:border-[#c8a87c] dark:hover:border-[#2a4687] transition-all flex items-center gap-2 h-9.5 px-3.5 rounded-xl cursor-pointer"
           >
             <RefreshCw className={cn("size-3.5 text-[#580619] dark:text-blue-300", loading && "animate-spin")} />
-            Yenile
+            {t("common.refresh")}
           </Button>
         </div>
       </div>

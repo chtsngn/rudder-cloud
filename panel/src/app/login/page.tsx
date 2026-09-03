@@ -4,9 +4,11 @@ import { useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Loader2 } from "lucide-react"
+import { useTranslation } from "@/components/language-provider"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { t, lang, setLang } = useTranslation()
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -38,11 +40,39 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
+      className="min-h-screen flex items-center justify-center p-4 relative"
       style={{
         background: "linear-gradient(135deg, #3d0510 0%, #6e0d25 50%, #4a0717 100%)",
       }}
     >
+      {/* Dil Seçici (Sağ Üst) */}
+      <div className="absolute top-5 right-5 z-20">
+        <div className="flex items-center gap-1 bg-black/30 backdrop-blur-md p-1 rounded-xl border border-white/10">
+          <button
+            type="button"
+            onClick={() => setLang("tr")}
+            className={`px-3 py-1 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
+              lang === "tr"
+                ? "bg-[#c8a87c] text-[#3d0510] shadow-sm font-bold"
+                : "text-white/70 hover:text-white"
+            }`}
+          >
+            🇹🇷 TR
+          </button>
+          <button
+            type="button"
+            onClick={() => setLang("en")}
+            className={`px-3 py-1 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
+              lang === "en"
+                ? "bg-[#c8a87c] text-[#3d0510] shadow-sm font-bold"
+                : "text-white/70 hover:text-white"
+            }`}
+          >
+            🇬🇧 EN
+          </button>
+        </div>
+      </div>
+
       <div className="relative z-10 w-full max-w-sm">
         {/* Logo + Brand */}
         <div className="flex flex-col items-center mb-8 gap-3">
@@ -74,10 +104,10 @@ export default function LoginPage() {
         <div className="rounded-2xl bg-white p-7 shadow-2xl border border-white/20 space-y-5">
           <div className="mb-1">
             <h2 className="text-base font-bold text-slate-800 font-heading">
-              Giriş Yap
+              {t("auth.loginBtn")}
             </h2>
             <p className="text-xs text-slate-500 mt-0.5 font-sans">
-              Sunucu yönetim paneline erişmek için giriş yapın.
+              {t("auth.loginSubtitle")}
             </p>
           </div>
 
@@ -93,7 +123,7 @@ export default function LoginPage() {
                 htmlFor="username"
                 className="block text-xs font-semibold text-slate-700"
               >
-                Kullanıcı Adı
+                {t("auth.usernameLabel")}
               </label>
               <input
                 id="username"
@@ -111,7 +141,7 @@ export default function LoginPage() {
                 htmlFor="password"
                 className="block text-xs font-semibold text-slate-700"
               >
-                Şifre
+                {t("auth.passwordLabel")}
               </label>
               <input
                 id="password"
@@ -127,10 +157,10 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#6e0d25] hover:bg-[#86102e] py-3 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-all disabled:opacity-60 mt-2 border border-[#c8a87c]/30"
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#6e0d25] hover:bg-[#86102e] py-3 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-all disabled:opacity-60 mt-2 border border-[#c8a87c]/30 cursor-pointer"
             >
               {submitting && <Loader2 className="size-4 animate-spin" />}
-              Giriş Yap
+              {submitting ? t("auth.loggingIn") : t("auth.loginBtn")}
             </button>
           </form>
         </div>

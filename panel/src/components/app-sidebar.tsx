@@ -18,28 +18,17 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useCurrentUser } from "@/hooks/use-current-user"
 import { useTheme } from "@/components/theme-provider"
+import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
 
 const SIDEBAR_KEY = "panel:sidebar-collapsed"
-
-const BASE_NAV = [
-  { href: "/", label: "Anasayfa", icon: Home },
-  { href: "/sites", label: "Siteler", icon: Globe },
-]
-const ADMIN_NAV = [
-  { href: "/terminal", label: "Terminal", icon: Terminal },
-  { href: "/settings", label: "Ayarlar", icon: Settings },
-  { href: "/users", label: "Kullanıcılar", icon: Users },
-  { href: "/audit", label: "Denetim Kaydı", icon: ClipboardList },
-]
-
-const ROLES: Record<string, string> = { SUPER_ADMIN: "Süper Admin", MEMBER: "Üye" }
 
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { user } = useCurrentUser()
   const { theme } = useTheme()
+  const { t, lang, setLang } = useTranslation()
   const [collapsed, setCollapsed] = useState(false)
   const [isSpinning, setIsSpinning] = useState(false)
 
@@ -50,10 +39,10 @@ export function AppSidebar() {
         document.documentElement.getAttribute("data-theme") === "dark"))
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const tTimer = setTimeout(() => {
       try { setCollapsed(localStorage.getItem(SIDEBAR_KEY) === "1") } catch {}
     }, 0)
-    return () => clearTimeout(t)
+    return () => clearTimeout(tTimer)
   }, [])
 
   function toggle() {
@@ -66,7 +55,18 @@ export function AppSidebar() {
     })
   }
 
-  const navItems = user?.role === "SUPER_ADMIN" ? [...BASE_NAV, ...ADMIN_NAV] : BASE_NAV
+  const navItems = [
+    { href: "/", label: t("nav.home"), icon: Home },
+    { href: "/sites", label: t("nav.sites"), icon: Globe },
+    ...(user?.role === "SUPER_ADMIN"
+      ? [
+          { href: "/terminal", label: t("nav.terminal"), icon: Terminal },
+          { href: "/settings", label: t("nav.settings"), icon: Settings },
+          { href: "/users", label: t("nav.users"), icon: Users },
+          { href: "/audit", label: t("nav.audit"), icon: ClipboardList },
+        ]
+      : []),
+  ]
 
   async function logout() {
     try { await fetch("/api/auth/logout", { method: "POST" }) } finally {
@@ -329,6 +329,69 @@ export function AppSidebar() {
           })}
         </nav>
 
+        {/* ── 2.5 DİL GEÇİŞ DÜĞMESİ (TR | EN) ── */}
+        <div className={cn("px-3.5 pb-2 transition-all duration-300", collapsed ? "px-2" : "pr-8 pl-3.5")}>
+          <div
+            className={cn(
+              "flex items-center rounded-xl p-1 shadow-inner",
+              collapsed ? "justify-center" : "max-w-[215px] justify-between"
+            )}
+            style={{
+              background: "rgba(0,0,0,0.3)",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            {collapsed ? (
+              <button
+                type="button"
+                onClick={() => setLang(lang === "tr" ? "en" : "tr")}
+                title={lang === "tr" ? "Switch to English" : "Türkçe'ye Geç"}
+                className={cn(
+                  "size-8 rounded-lg text-xs font-bold font-mono uppercase transition-all flex items-center justify-center cursor-pointer",
+                  isDark
+                    ? "bg-[#101c38] text-[#38bdf8] border border-[#2a4687]/70 shadow-[0_0_8px_rgba(56,189,248,0.3)]"
+                    : "bg-[#580619] text-[#dfc9a0] border border-[#dfc9a0]/40 shadow-[0_0_8px_rgba(223,201,160,0.3)]"
+                )}
+              >
+                {lang.toUpperCase()}
+              </button>
+            ) : (
+              <div className="flex items-center w-full gap-1">
+                <button
+                  type="button"
+                  onClick={() => setLang("tr")}
+                  className={cn(
+                    "flex-1 py-1 px-2 rounded-lg text-xs font-semibold font-mono tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                    lang === "tr"
+                      ? isDark
+                        ? "bg-[#101c38] text-[#38bdf8] border border-[#2a4687]/80 shadow-[0_0_8px_rgba(56,189,248,0.3)]"
+                        : "bg-[#580619] text-[#dfc9a0] border border-[#dfc9a0]/50 shadow-[0_0_8px_rgba(223,201,160,0.3)]"
+                      : "text-white/60 hover:text-white hover:bg-white/5 border border-transparent"
+                  )}
+                >
+                  <span>🇹🇷</span>
+                  <span>TR</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLang("en")}
+                  className={cn(
+                    "flex-1 py-1 px-2 rounded-lg text-xs font-semibold font-mono tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                    lang === "en"
+                      ? isDark
+                        ? "bg-[#101c38] text-[#38bdf8] border border-[#2a4687]/80 shadow-[0_0_8px_rgba(56,189,248,0.3)]"
+                        : "bg-[#580619] text-[#dfc9a0] border border-[#dfc9a0]/50 shadow-[0_0_8px_rgba(223,201,160,0.3)]"
+                      : "text-white/60 hover:text-white hover:bg-white/5 border border-transparent"
+                  )}
+                >
+                  <span>🇬🇧</span>
+                  <span>EN</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* ── 3. ALT PROFİL KARTI (Kavis içine tam oturtulmuş, taşma sıfır) ── */}
         <div
           className={cn(
@@ -368,13 +431,13 @@ export function AppSidebar() {
                     {user?.username ?? "..."}
                   </p>
                   <p className={cn("truncate text-[10.5px] leading-tight mt-0.5", isDark ? "text-slate-300" : "text-[#dfc9a0]/90")}>
-                    {user ? (ROLES[user.role] ?? user.role) : ""}
+                    {user ? (user.role === "SUPER_ADMIN" ? t("nav.superAdmin") : t("nav.member")) : ""}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={logout}
-                  title="Çıkış Yap"
+                  title={t("nav.logout")}
                   className="size-7 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
                 >
                   <LogOut className="size-3.5" />

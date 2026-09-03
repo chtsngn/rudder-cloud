@@ -24,9 +24,11 @@ import { SiteCard } from "@/components/site-card"
 import type { Site, SiteType } from "@/lib/mock-data"
 import { apiSiteToUiSite, type ApiSite } from "@/lib/site-adapter"
 import { CustomSelect } from "@/components/ui/custom-select"
+import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
 
 export default function SitesListPage() {
+  const { t } = useTranslation()
   const [sites, setSites] = useState<Site[] | null>(null)
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState<string>("all")
@@ -76,16 +78,16 @@ export default function SitesListPage() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
-              Siteleriniz
+              {t("sites.title")}
             </h1>
             {sites !== null && (
               <span className="rounded-full bg-[#580619]/10 dark:bg-[#101c38] border border-[#580619]/20 dark:border-[#1e3568]/50 px-3 py-0.5 text-xs font-bold text-[#580619] dark:text-blue-300 font-mono">
-                {sites.length} Toplam Site
+                {sites.length} {t("dashboard.totalSites")}
               </span>
             )}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-sans">
-            Sunucunuzda barındırılan tüm web siteleri, ters proxyler ve mikroservisler.
+            {t("sites.subtitle")}
           </p>
         </div>
 
@@ -93,7 +95,7 @@ export default function SitesListPage() {
           <button
             type="button"
             onClick={handleRefresh}
-            title="Yenile"
+            title={t("common.refresh")}
             className="size-9 rounded-xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-slate-600 dark:text-slate-300 hover:text-[#580619] dark:hover:text-blue-300 hover:border-[#c8a87c] dark:hover:border-[#2a4687] shadow-sm flex items-center justify-center transition-all cursor-pointer active:scale-95"
           >
             <RotateCw className={cn("size-4", refreshing && "animate-spin text-[#580619] dark:text-blue-300")} />
@@ -105,7 +107,7 @@ export default function SitesListPage() {
           >
             <Link href="/sites/new">
               <Plus className="size-4 text-[#dfc9a0] dark:text-white" />
-              YENİ SİTE EKLE
+              {t("sites.newSite")}
             </Link>
           </Button>
         </div>
@@ -120,7 +122,7 @@ export default function SitesListPage() {
             </div>
             <div>
               <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                Çalışan Siteler
+                {t("sites.statusActive")}
               </span>
               <span className="font-mono text-xl font-extrabold text-slate-900 dark:text-slate-100">
                 {runningCount}
@@ -134,7 +136,7 @@ export default function SitesListPage() {
             </div>
             <div>
               <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                Durdurulan Siteler
+                {t("sites.statusStopped")}
               </span>
               <span className="font-mono text-xl font-extrabold text-slate-900 dark:text-slate-100">
                 {stoppedCount}
@@ -148,7 +150,7 @@ export default function SitesListPage() {
             </div>
             <div>
               <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                Hatalı / Dikkat
+                {t("sites.statusFailed")}
               </span>
               <span className="font-mono text-xl font-extrabold text-slate-900 dark:text-slate-100">
                 {errorCount}
@@ -166,7 +168,7 @@ export default function SitesListPage() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Alan adına göre ara (örn. example.com)..."
+            placeholder={t("sites.searchPlaceholder")}
             className="pl-9.5 h-10 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 font-mono text-xs focus-visible:ring-[#580619]/20 dark:focus-visible:ring-blue-500/20"
           />
         </div>
@@ -177,13 +179,13 @@ export default function SitesListPage() {
             value={typeFilter}
             onChange={setTypeFilter}
             options={[
-              { value: "all", label: "Tüm Türler" },
+              { value: "all", label: t("sites.allTypes") },
               { value: "wordpress", label: "WordPress" },
               { value: "nodejs", label: "Node.js" },
               { value: "python", label: "Python" },
               { value: "php", label: "PHP" },
-              { value: "proxy", label: "Ters Proxy" },
-              { value: "static", label: "Statik" },
+              { value: "proxy", label: "Proxy" },
+              { value: "static", label: "Static" },
             ]}
             className="min-w-[130px]"
           />
@@ -192,10 +194,10 @@ export default function SitesListPage() {
             value={statusFilter}
             onChange={setStatusFilter}
             options={[
-              { value: "all", label: "Tüm Durumlar" },
-              { value: "running", label: "Çalışıyor" },
-              { value: "stopped", label: "Durduruldu" },
-              { value: "error", label: "Hatalı" },
+              { value: "all", label: t("common.all") },
+              { value: "running", label: t("sites.statusActive") },
+              { value: "stopped", label: t("sites.statusStopped") },
+              { value: "error", label: t("sites.statusFailed") },
             ]}
             className="min-w-[130px]"
           />
@@ -226,10 +228,10 @@ export default function SitesListPage() {
               />
             </div>
             <h3 className="font-heading text-xl font-extrabold text-slate-800 dark:text-slate-100 mb-2">
-              Henüz bir site oluşturulmadı.
+              {t("dashboard.noSitesYet")}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mb-6 font-sans">
-              Yeni bir WordPress blogu, Node.js servisi, Python backend veya statik web sitesi yayına alın.
+              Sunucunuzda yeni bir WordPress, Node.js, Python veya statik web sitesi yayına alın.
             </p>
             <Button
               asChild
@@ -237,7 +239,7 @@ export default function SitesListPage() {
             >
               <Link href="/sites/new">
                 <Plus className="size-4 text-[#dfc9a0] dark:text-white" />
-                İLK SİTENİZİ EKLEYİN
+                {t("dashboard.createFirstSite")}
               </Link>
             </Button>
           </div>
