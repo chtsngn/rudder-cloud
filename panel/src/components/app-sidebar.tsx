@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
@@ -56,9 +56,13 @@ export function AppSidebar() {
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
 
-  // Close mobile sidebar on route change
+  // Close mobile sidebar on route change only
+  const prevPathname = useRef(pathname)
   useEffect(() => {
-    closeMobile()
+    if (prevPathname.current !== pathname) {
+      prevPathname.current = pathname
+      closeMobile()
+    }
   }, [pathname, closeMobile])
 
   const effectivelyCollapsed = collapsed && !isMobile
@@ -109,11 +113,17 @@ export function AppSidebar() {
       {!mobileOpen && (
         <button
           type="button"
-          onClick={() => openMobile()}
+          onClick={(e) => {
+            e.stopPropagation()
+            openMobile()
+          }}
           className="lg:hidden fixed left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-[9999] size-12 rounded-full cursor-pointer hover:scale-110 active:scale-95 transition-all outline-none"
           title="Menüyü Aç"
           aria-label="Menüyü Aç"
         >
+          {/* Dokunma alanını ekranın içine doğru genişleten görünmez katman */}
+          <span className="absolute -inset-y-3 -left-2 -right-6 pointer-events-auto" aria-hidden="true" />
+
           {/* Işıma Halosu */}
           <div
             className={cn(
@@ -124,7 +134,7 @@ export function AppSidebar() {
 
           {/* Madalyon Gövdesi */}
           <div
-            className="relative size-full rounded-full flex items-center justify-center p-1"
+            className="relative size-full rounded-full flex items-center justify-center p-1 pointer-events-none"
             style={{
               background: isDark
                 ? "radial-gradient(circle at 35% 35%, #e2e8f0 0%, #94a3b8 50%, #1e293b 100%)"
