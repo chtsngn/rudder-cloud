@@ -684,7 +684,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
             onClick={() => setIsAddModalOpen(true)}
             className="inline-flex items-center gap-1.5 rounded-full border border-[#c8a87c]/80 dark:border-[#2a4687]/60 bg-[#580619] dark:bg-[#162752] px-3 py-1.5 font-bold text-[11px] text-white shadow-xs hover:bg-[#720a22] dark:hover:bg-[#1e346b] hover:border-[#dfc9a0] dark:hover:border-[#385db3] transition-all cursor-pointer shrink-0 active:scale-95"
           >
-            <Plus className="size-3.5 text-[#dfc9a0] dark:text-white" />
+            <Plus className="size-3.5 text-inherit" />
             {t("terminal.addCommand")}
           </button>
 
@@ -1009,7 +1009,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                             }}
                             className="h-7 text-[11px] px-3 rounded-lg bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-bold border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer"
                           >
-                            <CornerDownLeft className="size-3 mr-1 text-[#dfc9a0] dark:text-white" />
+                            <CornerDownLeft className="size-3 mr-1 text-inherit" />
                             {lang === "en" ? "Run" : "Çalıştır"}
                           </Button>
                         </div>

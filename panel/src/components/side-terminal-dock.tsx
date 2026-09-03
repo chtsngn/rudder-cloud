@@ -132,7 +132,7 @@ export function SideTerminalDock() {
             className="relative size-12 rounded-2xl border border-[#c8a87c]/60 dark:border-[#2a4687]/70 bg-[#2b040d] dark:bg-[#162752] hover:bg-[#420614] dark:hover:bg-[#1e346b] text-[#dfc9a0] dark:text-white shadow-[0_8px_24px_rgba(43,4,13,0.5)] dark:shadow-[0_8px_24px_rgba(22,39,82,0.5)] hover:border-[#dfc9a0] dark:hover:border-[#385db3] flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95"
           >
             {/* Terminal Prompt Icon */}
-            <TerminalIcon className="size-5 text-[#dfc9a0] dark:text-white" />
+            <TerminalIcon className="size-5 text-inherit" />
           </button>
         </div>
       )}

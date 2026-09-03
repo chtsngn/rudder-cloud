@@ -479,15 +479,15 @@ export default function SettingsPage() {
                 className={cn(
                   "relative flex flex-col p-5 rounded-2xl text-left border transition-all cursor-pointer",
                   lang === "tr"
-                    ? "border-[#c8a87c] dark:border-[#38bdf8] bg-slate-50/80 dark:bg-[#0c1630] shadow-md ring-2 ring-[#c8a87c]/30 dark:ring-[#38bdf8]/20"
-                    : "border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#060a17] hover:border-slate-300 dark:hover:border-[#2a4687]"
+                    ? "border-primary bg-primary/10 shadow-md ring-2 ring-primary/20"
+                    : "border-border bg-card hover:border-primary/50"
                 )}
               >
                 <div className="flex items-center justify-between w-full mb-2">
                   <span className="text-2xl">🇹🇷</span>
                   {lang === "tr" && (
-                    <span className="size-6 rounded-full bg-[#580619] dark:bg-[#38bdf8] text-white dark:text-[#060e24] flex items-center justify-center shadow-xs">
-                      <Check className="size-3.5 stroke-[3]" />
+                    <span className="size-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
+                      <Check className="size-3.5 stroke-[3] text-primary-foreground" />
                     </span>
                   )}
                 </div>
@@ -506,15 +506,15 @@ export default function SettingsPage() {
                 className={cn(
                   "relative flex flex-col p-5 rounded-2xl text-left border transition-all cursor-pointer",
                   lang === "en"
-                    ? "border-[#c8a87c] dark:border-[#38bdf8] bg-slate-50/80 dark:bg-[#0c1630] shadow-md ring-2 ring-[#c8a87c]/30 dark:ring-[#38bdf8]/20"
-                    : "border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#060a17] hover:border-slate-300 dark:hover:border-[#2a4687]"
+                    ? "border-primary bg-primary/10 shadow-md ring-2 ring-primary/20"
+                    : "border-border bg-card hover:border-primary/50"
                 )}
               >
                 <div className="flex items-center justify-between w-full mb-2">
                   <span className="text-2xl">🇬🇧</span>
                   {lang === "en" && (
-                    <span className="size-6 rounded-full bg-[#580619] dark:bg-[#38bdf8] text-white dark:text-[#060e24] flex items-center justify-center shadow-xs">
-                      <Check className="size-3.5 stroke-[3]" />
+                    <span className="size-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
+                      <Check className="size-3.5 stroke-[3] text-primary-foreground" />
                     </span>
                   )}
                 </div>
@@ -736,9 +736,9 @@ export default function SettingsPage() {
                     className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] disabled:opacity-40 cursor-pointer"
                   >
                     {domainSaving ? (
-                      <Loader2 className="size-4 animate-spin text-[#dfc9a0] dark:text-white" />
+                      <Loader2 className="size-4 animate-spin text-inherit" />
                     ) : (
-                      <CheckCircle2 className="size-4 text-[#dfc9a0] dark:text-white" />
+                      <CheckCircle2 className="size-4 text-inherit" />
                     )}
                     {domainSaving ? t("settings.domain.bindingBtn") : (domainSettings?.domain ? t("common.save") : t("settings.domain.bindBtn"))}
                   </Button>
@@ -784,7 +784,7 @@ export default function SettingsPage() {
               }}
               className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-3.5 py-1.5 rounded-xl shadow-sm transition-all flex items-center gap-1.5 h-8.5 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] shrink-0 cursor-pointer"
             >
-              <Plus className="size-3.5 text-[#dfc9a0] dark:text-white" />
+              <Plus className="size-3.5 text-inherit" />
               <span className="hidden xs:inline">{t("settings.s3.newConfigBtn")}</span>
             </Button>
 
@@ -829,7 +829,7 @@ export default function SettingsPage() {
                   onClick={openCreateForm}
                   className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white text-xs font-semibold px-4 h-9 rounded-xl border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer"
                 >
-                  <Plus className="size-3.5 mr-1 text-[#dfc9a0] dark:text-white" />
+                  <Plus className="size-3.5 mr-1 text-inherit" />
                   {t("settings.s3.createFirstBtn")}
                 </Button>
               </div>
@@ -1112,9 +1112,9 @@ export default function SettingsPage() {
                         className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 h-11 rounded-xl border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer shrink-0"
                       >
                         {githubConnecting ? (
-                          <Loader2 className="size-4 animate-spin text-[#dfc9a0] dark:text-white" />
+                          <Loader2 className="size-4 animate-spin text-inherit" />
                         ) : (
-                          <CheckCircle2 className="size-4 text-[#dfc9a0] dark:text-white" />
+                          <CheckCircle2 className="size-4 text-inherit" />
                         )}
                         {t("settings.github.connectBtn")}
                       </Button>

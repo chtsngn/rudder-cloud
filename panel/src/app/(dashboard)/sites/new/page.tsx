@@ -294,7 +294,7 @@ export default function NewSitePage() {
               className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] disabled:opacity-40 cursor-pointer"
             >
               {t("sites.wizard.next")}
-              <ArrowRight className="size-4 text-[#dfc9a0] dark:text-white" />
+              <ArrowRight className="size-4 text-inherit" />
             </Button>
           </div>
         </div>
@@ -387,9 +387,9 @@ export default function NewSitePage() {
               className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-7 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] disabled:opacity-40 cursor-pointer"
             >
               {submitting ? (
-                <Loader2 className="size-4 animate-spin text-[#dfc9a0] dark:text-white" />
+                <Loader2 className="size-4 animate-spin text-inherit" />
               ) : (
-                <Check className="size-4 text-[#dfc9a0] dark:text-white" />
+                <Check className="size-4 text-inherit" />
               )}
               {t("sites.wizard.createSiteBtn")}
             </Button>

@@ -269,3 +269,36 @@ html:not(.palette-default) .bg-slate-50\/50,
 html:not(.palette-default) .bg-slate-100 {
   background-color: var(--surface-inset) !important;
 }
+
+/* 9. İkon Görünürlüğü & Kontrast Koruması (Tüm Temalarda Buton İkonlarının Görünürlüğü) */
+html:not(.palette-default) .bg-\[\#580619\] svg, 
+html:not(.palette-default) .dark .dark\:bg-\[\#162752\] svg, 
+html:not(.palette-default) .bg-\[\#162752\] svg,
+html:not(.palette-default) button.bg-primary svg,
+html:not(.palette-default) .bg-primary svg,
+html:not(.palette-default) [class*="bg-[#580619]"] svg,
+html:not(.palette-default) .dark [class*="dark:bg-[#162752]"] svg,
+html:not(.palette-default) [class*="rounded-full"][class*="bg-primary"] svg,
+html:not(.palette-default) [class*="rounded-full"][class*="bg-[#580619]"] svg,
+html:not(.palette-default) .dark [class*="rounded-full"][class*="dark:bg-[#38bdf8]"] svg {
+  color: currentColor !important;
+  stroke: currentColor !important;
+}
+
+html:not(.palette-default) .bg-\[\#580619\] .text-\[\#dfc9a0\],
+html:not(.palette-default) .dark .dark\:bg-\[\#162752\] .dark\:text-white,
+html:not(.palette-default) .dark .dark\:bg-\[\#162752\] .text-\[\#dfc9a0\],
+html:not(.palette-default) .bg-\[\#162752\] .dark\:text-white,
+html:not(.palette-default) .bg-\[\#162752\] .text-\[\#dfc9a0\],
+html:not(.palette-default) .bg-primary .dark\:text-white,
+html:not(.palette-default) .bg-primary .text-\[\#dfc9a0\] {
+  color: currentColor !important;
+  stroke: currentColor !important;
+}
+
+html:not(.palette-default) [class*="rounded-full"][class*="bg-[#580619]"],
+html:not(.palette-default) .dark [class*="rounded-full"][class*="dark:bg-[#38bdf8]"],
+html:not(.palette-default) [class*="rounded-full"][class*="bg-primary"] {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}

@@ -499,7 +499,7 @@ export function S3ConfigDialog({
               onClick={handleSave}
               className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-10 px-6 rounded-xl text-xs font-semibold border border-[#c8a87c]/40 dark:border-[#2a4687]/60"
             >
-              {saving && <Loader2 className="size-3.5 animate-spin mr-1.5 text-[#dfc9a0] dark:text-white" />}
+              {saving && <Loader2 className="size-3.5 animate-spin mr-1.5 text-inherit" />}
               {isEdit ? t("common.save") : (lang === "tr" ? "Kaydet ve Kullan" : "Save & Use")}
             </Button>
           </div>
