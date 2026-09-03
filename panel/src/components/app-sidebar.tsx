@@ -66,7 +66,8 @@ export function AppSidebar() {
   function handleToggle() {
     setIsSpinning(true)
     setTimeout(() => setIsSpinning(false), 600)
-    if (isMobile) {
+    const isMobileNow = typeof window !== "undefined" ? window.innerWidth < 1024 : isMobile
+    if (isMobileNow) {
       toggleMobile()
     } else {
       setCollapsed(p => {
@@ -119,7 +120,7 @@ export function AppSidebar() {
       */}
       <aside
         className={cn(
-          "flex h-screen shrink-0 flex-col select-none overflow-visible",
+          "flex h-screen shrink-0 flex-col select-none overflow-visible pointer-events-auto",
           "transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
           // --- Desktop: sticky, push content ---
           "lg:sticky lg:top-0 lg:z-30 lg:relative lg:translate-x-0",
@@ -207,30 +208,34 @@ export function AppSidebar() {
         type="button"
         onClick={handleToggle}
         title={isMenuOpen ? "Yelkeni Katla" : "Yelkeni Aç"}
+        aria-label={isMenuOpen ? "Menüyü Kapat" : "Menüyü Aç"}
         className={cn(
-          "absolute z-50 top-1/2 -translate-y-1/2 flex items-center justify-center cursor-pointer transition-all duration-300 group",
+          "absolute z-50 top-1/2 -translate-y-1/2 flex items-center justify-center cursor-pointer transition-all duration-300 group select-none",
           "hover:scale-125 active:scale-90",
           // Desktop positioning
           "lg:-right-4 lg:size-9",
           effectivelyCollapsed && "lg:-right-3.5 lg:size-7.5",
-          // Mobile positioning: protrudes gracefully when closed, attaches to sail when open
-          isMobile && (mobileOpen ? "-right-4 size-9" : "-right-11 size-10 shadow-[0_4px_20px_rgba(0,0,0,0.5)]")
+          // Mobile positioning: exactly -right-[18px] so half is tucked in when closed (visible on left border), and sits on the sail edge when open
+          "-right-[18px] size-9"
         )}
       >
+        {/* Genişletilmiş görünmez dokunma alanı (mobilde rahat tıklanabilmesi için) */}
+        <span className="absolute -inset-4 rounded-full pointer-events-auto" aria-hidden="true" />
+
         {/* Işıma Halosu */}
         <div
           className={cn(
-            "absolute inset-0 rounded-full blur-sm transition-all",
+            "absolute inset-0 rounded-full blur-sm transition-all pointer-events-none",
             isDark
               ? "bg-[#38bdf8]/30 group-hover:bg-[#38bdf8]/60"
               : "bg-[#dfc9a0]/30 group-hover:bg-[#dfc9a0]/60",
-            !isMenuOpen && isMobile && "bg-[#38bdf8]/50 animate-pulse"
+            !isMenuOpen && isMobile && "bg-[#38bdf8]/60 shadow-[0_0_12px_rgba(56,189,248,0.5)]"
           )}
         />
 
         {/* Madalyon Gövdesi */}
         <div
-          className="relative size-full rounded-full flex items-center justify-center p-1"
+          className="relative size-full rounded-full flex items-center justify-center p-1 pointer-events-none"
           style={{
             background: isDark
               ? "radial-gradient(circle at 35% 35%, #e2e8f0 0%, #94a3b8 50%, #1e293b 100%)"
