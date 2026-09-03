@@ -136,14 +136,14 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* SAHNE 1 SAĞ: DOLAŞAN ASİL YELKENLİ GEMİ ROTASI */}
+          {/* SAHNE 1 SAĞ: DOLAŞAN GERÇEKÇİ YELKENLİ GEMİ ROTASI */}
           <div
             style={{
               opacity: introOpacity,
               transform: `translate3d(0, ${scrollProgress * -70}px, 0)`,
               display: isIntroVisible ? "flex" : "none",
             }}
-            className="hidden lg:flex flex-col items-end text-right select-none pointer-events-none pr-2 md:pr-8"
+            className="hidden md:flex flex-col items-end text-right select-none pointer-events-none pr-2 md:pr-8"
           >
             <SailingShipRoute />
           </div>
