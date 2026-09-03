@@ -4,7 +4,7 @@ import { useState, useCallback } from "react"
 import Image from "next/image"
 import { ChevronDown, Compass, FastForward } from "lucide-react"
 import { useTranslation } from "@/components/language-provider"
-import { VideoScrollEngine } from "@/components/auth/video-scroll-engine"
+import { FrameSequencePlayer } from "@/components/auth/frame-sequence-player"
 import { GlassLoginCard } from "@/components/auth/glass-login-card"
 
 export default function LoginPage() {
@@ -30,9 +30,9 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-[380vh] bg-black selection:bg-[#c8a87c]/30 selection:text-white">
-      {/* ═══ 1. ARKA PLAN SCROLL-DRIVEN VİDEO MOTORU ═══ */}
-      <VideoScrollEngine
-        src="/media/rudder-intro.mp4"
+      {/* ═══ 1. ARKA PLAN KARE DİZİSİ (CANVAS FRAME SEQUENCE) ═══ */}
+      <FrameSequencePlayer
+        manifestUrl="/frames/manifest.json"
         onProgress={handleProgress}
       />
 
