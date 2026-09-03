@@ -31,7 +31,7 @@ export function AppSidebar() {
   const { user } = useCurrentUser()
   const { theme } = useTheme()
   const { t, lang, setLang } = useTranslation()
-  const { mobileOpen, closeMobile, toggleMobile } = useSidebar()
+  const { mobileOpen, closeMobile, toggleMobile, openMobile } = useSidebar()
   const [collapsed, setCollapsed] = useState(false)
   const [isSpinning, setIsSpinning] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -112,13 +112,13 @@ export function AppSidebar() {
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            toggleMobile()
+            openMobile()
           }}
           // Mobil Safari ve Android'de anında tepki için:
           onTouchStart={(e) => {
-            e.preventDefault() // kaydırmayı veya system gesture'u engelle
+            // e.preventDefault() bazen scroll sorunları yaratabilir, ama burada sadece tıklama istiyoruz.
             e.stopPropagation()
-            toggleMobile()
+            openMobile()
           }}
           title="Yelkeni Aç"
           aria-label="Menüyü Aç"
