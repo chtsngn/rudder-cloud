@@ -47,37 +47,39 @@ export interface QuickCommandItem {
   label: string
   cmd: string
   desc?: string
+  descEn?: string
+  descTr?: string
   category: "custom" | "system" | "docker" | "nginx" | "network"
   isCustom?: boolean
   isPinned?: boolean
 }
 
 const DEFAULT_PRESETS: QuickCommandItem[] = [
-  { id: "htop", label: "htop", cmd: "htop", desc: "Sistem Kaynakları & İşlem İzleme", category: "system" },
-  { id: "docker-ps", label: "docker ps", cmd: "docker ps", desc: "Aktif Docker Konteynerleri", category: "docker" },
-  { id: "nginx-t", label: "nginx -t", cmd: "nginx -t", desc: "Nginx Sözdizim Testi", category: "nginx" },
-  { id: "df-h", label: "df -h", cmd: "df -h", desc: "Disk Kullanım Oranları", category: "system" },
-  { id: "free-m", label: "free -m", cmd: "free -m -h", desc: "Bellek (RAM & Swap) Durumu", category: "system" },
-  { id: "uptime", label: "uptime", cmd: "uptime", desc: "Sistem Çalışma Süresi & Yükü", category: "system" },
-  { id: "journalctl", label: "journalctl", cmd: "journalctl -n 50 --no-pager", desc: "Son Sistem Günlükleri", category: "system" },
-  { id: "clear", label: "clear", cmd: "clear", desc: "Konsol Ekranını Temizle", category: "system" },
+  { id: "htop", label: "htop", cmd: "htop", desc: "Sistem Kaynakları & İşlem İzleme", descTr: "Sistem Kaynakları & İşlem İzleme", descEn: "System Resources & Process Monitor", category: "system" },
+  { id: "docker-ps", label: "docker ps", cmd: "docker ps", desc: "Aktif Docker Konteynerleri", descTr: "Aktif Docker Konteynerleri", descEn: "Active Docker Containers", category: "docker" },
+  { id: "nginx-t", label: "nginx -t", cmd: "nginx -t", desc: "Nginx Sözdizim Testi", descTr: "Nginx Sözdizim Testi", descEn: "Nginx Syntax Test", category: "nginx" },
+  { id: "df-h", label: "df -h", cmd: "df -h", desc: "Disk Kullanım Oranları", descTr: "Disk Kullanım Oranları", descEn: "Disk Usage Rates", category: "system" },
+  { id: "free-m", label: "free -m", cmd: "free -m -h", desc: "Bellek (RAM & Swap) Durumu", descTr: "Bellek (RAM & Swap) Durumu", descEn: "Memory (RAM & Swap) Status", category: "system" },
+  { id: "uptime", label: "uptime", cmd: "uptime", desc: "Sistem Çalışma Süresi & Yükü", descTr: "Sistem Çalışma Süresi & Yükü", descEn: "System Uptime & Load", category: "system" },
+  { id: "journalctl", label: "journalctl", cmd: "journalctl -n 50 --no-pager", desc: "Son Sistem Günlükleri", descTr: "Son Sistem Günlükleri", descEn: "Recent System Logs", category: "system" },
+  { id: "clear", label: "clear", cmd: "clear", desc: "Konsol Ekranını Temizle", descTr: "Konsol Ekranını Temizle", descEn: "Clear Console Screen", category: "system" },
 ]
 
 const LIBRARY_PRESETS: QuickCommandItem[] = [
   // Docker
-  { id: "d-stats", label: "docker stats", cmd: "docker stats --no-stream", desc: "Konteyner CPU/RAM tüketim özeti", category: "docker" },
-  { id: "d-logs", label: "docker logs", cmd: "docker logs --tail 100 -f <container_name>", desc: "Konteyner canlı log akışı", category: "docker" },
-  { id: "d-prune", label: "docker prune", cmd: "docker system prune -f", desc: "Kullanılmayan imaj ve önbellekleri temizle", category: "docker" },
-  { id: "d-compose-restart", label: "docker compose restart", cmd: "docker compose restart", desc: "Compose servislerini yeniden başlat", category: "docker" },
+  { id: "d-stats", label: "docker stats", cmd: "docker stats --no-stream", desc: "Konteyner CPU/RAM tüketim özeti", descTr: "Konteyner CPU/RAM tüketim özeti", descEn: "Container CPU/RAM usage summary", category: "docker" },
+  { id: "d-logs", label: "docker logs", cmd: "docker logs --tail 100 -f <container_name>", desc: "Konteyner canlı log akışı", descTr: "Konteyner canlı log akışı", descEn: "Container live log stream", category: "docker" },
+  { id: "d-prune", label: "docker prune", cmd: "docker system prune -f", desc: "Kullanılmayan imaj ve önbellekleri temizle", descTr: "Kullanılmayan imaj ve önbellekleri temizle", descEn: "Clean unused images and build caches", category: "docker" },
+  { id: "d-compose-restart", label: "docker compose restart", cmd: "docker compose restart", desc: "Compose servislerini yeniden başlat", descTr: "Compose servislerini yeniden başlat", descEn: "Restart compose services", category: "docker" },
   // Nginx
-  { id: "nginx-reload", label: "nginx reload", cmd: "systemctl reload nginx", desc: "Nginx yapılandırmasını kesintisiz uygula", category: "nginx" },
-  { id: "nginx-logs", label: "nginx error logs", cmd: "tail -n 50 /var/log/nginx/error.log", desc: "Son Nginx hata kayıtları", category: "nginx" },
-  { id: "certbot-renew", label: "certbot dry-run", cmd: "certbot renew --dry-run", desc: "SSL sertifika yenileme simülasyonu", category: "nginx" },
+  { id: "nginx-reload", label: "nginx reload", cmd: "systemctl reload nginx", desc: "Nginx yapılandırmasını kesintisiz uygula", descTr: "Nginx yapılandırmasını kesintisiz uygula", descEn: "Seamlessly reload Nginx configuration", category: "nginx" },
+  { id: "nginx-logs", label: "nginx error logs", cmd: "tail -n 50 /var/log/nginx/error.log", desc: "Son Nginx hata kayıtları", descTr: "Son Nginx hata kayıtları", descEn: "Recent Nginx error logs", category: "nginx" },
+  { id: "certbot-renew", label: "certbot dry-run", cmd: "certbot renew --dry-run", desc: "SSL sertifika yenileme simülasyonu", descTr: "SSL sertifika yenileme simülasyonu", descEn: "Simulate SSL certificate renewal", category: "nginx" },
   // Ağ & Portlar
-  { id: "ss-ports", label: "ss listening ports", cmd: "ss -tulpn", desc: "Dinlenen tüm TCP/UDP portları", category: "network" },
-  { id: "ufw-status", label: "ufw status", cmd: "ufw status verbose", desc: "Güvenlik duvarı kuralları", category: "network" },
-  { id: "curl-ip", label: "external ip", cmd: "curl -s https://ifconfig.me", desc: "Sunucunun harici IP adresini öğren", category: "network" },
-  { id: "ping-test", label: "ping gateway", cmd: "ping -c 4 1.1.1.1", desc: "İnternet bağlantı gecikme testi", category: "network" },
+  { id: "ss-ports", label: "ss listening ports", cmd: "ss -tulpn", desc: "Dinlenen tüm TCP/UDP portları", descTr: "Dinlenen tüm TCP/UDP portları", descEn: "All listening TCP/UDP ports", category: "network" },
+  { id: "ufw-status", label: "ufw status", cmd: "ufw status verbose", desc: "Güvenlik duvarı kuralları", descTr: "Güvenlik duvarı kuralları", descEn: "Firewall rules & status", category: "network" },
+  { id: "curl-ip", label: "external ip", cmd: "curl -s https://ifconfig.me", desc: "Sunucunun harici IP adresini öğren", descTr: "Sunucunun harici IP adresini öğren", descEn: "Query server external IP address", category: "network" },
+  { id: "ping-test", label: "ping gateway", cmd: "ping -c 4 1.1.1.1", desc: "İnternet bağlantı gecikme testi", descTr: "İnternet bağlantı gecikme testi", descEn: "Internet latency & connectivity test", category: "network" },
 ]
 
 const STORAGE_KEY = "rudder:terminal:custom-commands"
@@ -239,7 +241,9 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
         return (
           item.label.toLowerCase().includes(q) ||
           item.cmd.toLowerCase().includes(q) ||
-          (item.desc && item.desc.toLowerCase().includes(q))
+          (item.desc && item.desc.toLowerCase().includes(q)) ||
+          (item.descEn && item.descEn.toLowerCase().includes(q)) ||
+          (item.descTr && item.descTr.toLowerCase().includes(q))
         )
       }
       return true
@@ -254,7 +258,9 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
       (c) =>
         c.label.toLowerCase().includes(q) ||
         c.cmd.toLowerCase().includes(q) ||
-        (c.desc && c.desc.toLowerCase().includes(q))
+        (c.desc && c.desc.toLowerCase().includes(q)) ||
+        (c.descEn && c.descEn.toLowerCase().includes(q)) ||
+        (c.descTr && c.descTr.toLowerCase().includes(q))
     )
   }, [allCommands, paletteQuery])
 
@@ -693,7 +699,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
             className="inline-flex items-center gap-1.5 rounded-full border border-slate-700/80 dark:border-[#2a4687]/50 bg-[#161d2d] dark:bg-[#0e1730] px-3 py-1.5 font-bold text-[11px] text-[#dfc9a0] dark:text-blue-300 shadow-2xs hover:border-[#c8a87c] dark:hover:border-[#2a4687] hover:text-white hover:bg-[#1f283d] dark:hover:bg-[#142145] transition-all cursor-pointer shrink-0 active:scale-95"
           >
             <BookOpen className="size-3.5 text-[#c8a87c] dark:text-blue-300" />
-            Komut Kitaplığı
+            {lang === "en" ? "Command Library" : "Komut Kitaplığı"}
           </button>
         </div>
 
@@ -702,6 +708,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
           {sortedQuickCommands.map((qc) => {
             const isCustom = qc.isCustom
             const isPinned = qc.isPinned
+            const desc = (lang === "en" ? qc.descEn : qc.descTr) || qc.desc || qc.label
 
             return (
               <div
@@ -718,7 +725,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                 <button
                   type="button"
                   onClick={() => handleExecuteCommand(qc.cmd, qc.id)}
-                  title={`${qc.desc || qc.label} (${commandUsage[qc.id] || 0} kez çalıştırıldı)`}
+                  title={`${desc} (${commandUsage[qc.id] || 0} ${lang === "en" ? "times run" : "kez çalıştırıldı"})`}
                   className="flex items-center gap-1.5 cursor-pointer pr-0.5 active:scale-95"
                 >
                   {isPinned ? (
@@ -735,7 +742,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                     <button
                       type="button"
                       onClick={(e) => togglePinCommand(qc.id, e)}
-                      title={isPinned ? "Sabitlemeyi Kaldır" : "Hızlı Bar'a Sabitle"}
+                      title={isPinned ? (lang === "en" ? "Unpin" : "Sabitlemeyi Kaldır") : (lang === "en" ? "Pin to Quick Bar" : "Hızlı Bar'a Sabitle")}
                       className={cn(
                         "size-4 rounded-full flex items-center justify-center transition-colors cursor-pointer",
                         isPinned
@@ -748,7 +755,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                     <button
                       type="button"
                       onClick={(e) => handleDeleteCustomCommand(qc.id, e)}
-                      title="Özel komutu sil"
+                      title={lang === "en" ? "Delete custom command" : "Özel komutu sil"}
                       className="size-4 rounded-full flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-950/50 transition-colors cursor-pointer"
                     >
                       <X className="size-2.5" />
@@ -771,7 +778,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                   <Plus className="size-4" />
                 </div>
                 <h3 className="font-heading font-bold text-base text-slate-900 dark:text-slate-100">
-                  Özel Hızlı Komut Ekle
+                  {lang === "en" ? "Add Custom Quick Command" : "Özel Hızlı Komut Ekle"}
                 </h3>
               </div>
               <button
@@ -786,11 +793,11 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
             <form onSubmit={handleAddCommand} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="cmd-label" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Komut Başlığı / Kısa Adı
+                  {lang === "en" ? "Command Title / Short Name" : "Komut Başlığı / Kısa Adı"}
                 </Label>
                 <Input
                   id="cmd-label"
-                  placeholder="Örn: PM2 Restart, Git Pull, Nginx Test"
+                  placeholder={lang === "en" ? "e.g. PM2 Restart, Git Pull, Nginx Test" : "Örn: PM2 Restart, Git Pull, Nginx Test"}
                   value={newLabel}
                   onChange={(e) => setNewLabel(e.target.value)}
                   className="h-10 rounded-xl font-medium text-xs bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
@@ -800,11 +807,11 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
 
               <div className="space-y-1.5">
                 <Label htmlFor="cmd-text" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Çalıştırılacak Bash / Terminal Komutu
+                  {lang === "en" ? "Bash / Terminal Command to Run" : "Çalıştırılacak Bash / Terminal Komutu"}
                 </Label>
                 <Input
                   id="cmd-text"
-                  placeholder="Örn: pm2 restart all veya cd /var/www && git pull"
+                  placeholder={lang === "en" ? "e.g. pm2 restart all or cd /var/www && git pull" : "Örn: pm2 restart all veya cd /var/www && git pull"}
                   value={newCmd}
                   onChange={(e) => setNewCmd(e.target.value)}
                   className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
@@ -814,11 +821,11 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
 
               <div className="space-y-1.5">
                 <Label htmlFor="cmd-desc" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Açıklama (İsteğe bağlı)
+                  {lang === "en" ? "Description (Optional)" : "Açıklama (İsteğe bağlı)"}
                 </Label>
                 <Input
                   id="cmd-desc"
-                  placeholder="Örn: Projeyi günceller ve sunucuyu yeniden başlatır"
+                  placeholder={lang === "en" ? "e.g. Updates project and restarts server" : "Örn: Projeyi günceller ve sunucuyu yeniden başlatır"}
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   className="h-10 rounded-xl text-xs bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
@@ -836,7 +843,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                 />
                 <Label htmlFor="cmd-pin" className="text-xs font-bold text-slate-800 dark:text-slate-200 cursor-pointer flex items-center gap-1.5 select-none">
                   <Pin className="size-3.5 text-[#580619] dark:text-blue-300 shrink-0" />
-                  <span>Hızlı Bar'a Sabitle (Her zaman en önde dursun)</span>
+                  <span>{lang === "en" ? "Pin to Quick Bar (Always stays first)" : "Hızlı Bar'a Sabitle (Her zaman en önde dursun)"}</span>
                 </Label>
               </div>
 
@@ -847,13 +854,13 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                   onClick={() => setIsAddModalOpen(false)}
                   className="h-9 px-4 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300 dark:hover:bg-[#111f40]"
                 >
-                  İptal
+                  {lang === "en" ? "Cancel" : "İptal"}
                 </Button>
                 <Button
                   type="submit"
                   className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-9 px-5 rounded-xl text-xs font-semibold border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer"
                 >
-                  Komutu Kaydet
+                  {lang === "en" ? "Save Command" : "Komutu Kaydet"}
                 </Button>
               </div>
             </form>
@@ -873,10 +880,10 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                 </div>
                 <div>
                   <h3 className="font-heading font-extrabold text-lg text-slate-900 dark:text-slate-100">
-                    Sunucu Komut Kitaplığı
+                    {lang === "en" ? "Server Command Library" : "Sunucu Komut Kitaplığı"}
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Sık kullanılan DevOps &amp; Sistem Yöneticisi hazır komut reçeteleri.
+                    {lang === "en" ? "Frequently used DevOps & Sysadmin ready command recipes." : "Sık kullanılan DevOps & Sistem Yöneticisi hazır komut reçeteleri."}
                   </p>
                 </div>
               </div>
@@ -896,7 +903,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                 <Input
                   value={librarySearchQuery}
                   onChange={(e) => setLibrarySearchQuery(e.target.value)}
-                  placeholder="Kitaplıkta komut veya açıklama ara (örn: logs, prune, port, ssl)..."
+                  placeholder={lang === "en" ? "Search commands or description (e.g. logs, prune, port, ssl)..." : "Kitaplıkta komut veya açıklama ara (örn: logs, prune, port, ssl)..."}
                   className="pl-10 h-10 rounded-xl bg-slate-50 dark:bg-[#060a17] border-slate-200 dark:border-[#16223f] text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:bg-white dark:focus:bg-[#060a17] transition-all"
                 />
                 {librarySearchQuery && (
@@ -912,10 +919,10 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
               {/* Kategori Seçim Butonları */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
                 {[
-                  { id: "all", label: "Tümü" },
+                  { id: "all", label: lang === "en" ? "All" : "Tümü" },
                   { id: "docker", label: "Docker" },
                   { id: "nginx", label: "Nginx" },
-                  { id: "network", label: "Ağ & Portlar" },
+                  { id: "network", label: lang === "en" ? "Network & Ports" : "Ağ & Portlar" },
                 ].map((cat) => (
                   <button
                     key={cat.id}
@@ -940,8 +947,12 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                   <div className="size-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
                     <Search className="size-5" />
                   </div>
-                  <p className="font-heading font-bold text-sm text-slate-800 dark:text-slate-200">Eşleşen Komut Bulunamadı</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Farklı bir anahtar kelime ile aramayı deneyebilirsiniz.</p>
+                  <p className="font-heading font-bold text-sm text-slate-800 dark:text-slate-200">
+                    {lang === "en" ? "No Matching Commands Found" : "Eşleşen Komut Bulunamadı"}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {lang === "en" ? "You can try searching with a different keyword." : "Farklı bir anahtar kelime ile aramayı deneyebilirsiniz."}
+                  </p>
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -957,7 +968,9 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                             {item.category}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">{item.desc}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                          {(lang === "en" ? item.descEn : item.descTr) || item.desc}
+                        </p>
                         <code className="block mt-2 font-mono text-[10px] text-slate-800 dark:text-slate-200 bg-white dark:bg-[#030610] p-2 rounded-xl border border-slate-200/80 dark:border-[#16223f] select-all truncate">
                           {item.cmd}
                         </code>
@@ -968,11 +981,11 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                         <button
                           type="button"
                           onClick={() => handlePinFromLibrary(item)}
-                          title="Hızlı Komut Barı'na Sabitle"
+                          title={lang === "en" ? "Pin to Quick Command Bar" : "Hızlı Komut Barı'na Sabitle"}
                           className="h-7 px-2.5 rounded-lg bg-slate-100 dark:bg-[#0e1730] hover:bg-[#580619]/10 dark:hover:bg-[#162752] text-slate-700 dark:text-slate-300 hover:text-[#580619] dark:hover:text-blue-300 text-[10px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-transparent dark:border-[#16223f]"
                         >
                           <Pin className="size-3 text-[#580619] dark:text-blue-300" />
-                          <span>Sabitle</span>
+                          <span>{lang === "en" ? "Pin" : "Sabitle"}</span>
                         </button>
 
                         <div className="flex items-center gap-1.5">
@@ -986,7 +999,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                             className="h-7 text-[11px] px-2.5 rounded-lg border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#070c1a] hover:bg-slate-100 dark:hover:bg-[#111f40] text-slate-700 dark:text-slate-200"
                           >
                             <Copy className="size-3 mr-1 text-slate-400" />
-                            Yapıştır
+                            {lang === "en" ? "Paste" : "Yapıştır"}
                           </Button>
                           <Button
                             size="sm"
@@ -997,7 +1010,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                             className="h-7 text-[11px] px-3 rounded-lg bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-bold border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer"
                           >
                             <CornerDownLeft className="size-3 mr-1 text-[#dfc9a0] dark:text-white" />
-                            Çalıştır
+                            {lang === "en" ? "Run" : "Çalıştır"}
                           </Button>
                         </div>
                       </div>
@@ -1025,7 +1038,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
               <input
                 type="text"
                 autoFocus
-                placeholder="Komut ara (örn: docker, htop, nginx, git...)"
+                placeholder={lang === "en" ? "Search command (e.g. docker, htop, nginx, git...)" : "Komut ara (örn: docker, htop, nginx, git...)"}
                 value={paletteQuery}
                 onChange={(e) => {
                   setPaletteQuery(e.target.value)
@@ -1061,7 +1074,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
               <button
                 type="button"
                 onClick={() => setIsPaletteOpen(false)}
-                title="Pencereyi Kapat"
+                title={lang === "en" ? "Close Window" : "Pencereyi Kapat"}
                 className="size-7 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/80 dark:border-[#16223f] flex items-center justify-center transition-colors cursor-pointer shrink-0"
               >
                 <X className="size-4" />
@@ -1072,11 +1085,12 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
             <div className="max-h-80 overflow-y-auto p-2 space-y-1">
               {filteredPaletteCommands.length === 0 ? (
                 <div className="py-8 text-center text-xs text-slate-500">
-                  Eşleşen komut bulunamadı.
+                  {lang === "en" ? "No matching commands found." : "Eşleşen komut bulunamadı."}
                 </div>
               ) : (
                 filteredPaletteCommands.map((item, index) => {
                   const isSelected = index === paletteSelectedIndex
+                  const desc = (lang === "en" ? item.descEn : item.descTr) || item.desc
                   return (
                     <button
                       key={item.id}
@@ -1104,18 +1118,18 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                             <span className="font-mono text-xs font-bold">{item.label}</span>
                             {item.isCustom && (
                               <span className="text-[9px] bg-[#c8a87c]/20 dark:bg-[#101c38] text-[#dfc9a0] dark:text-blue-300 px-1.5 py-0.2 rounded font-sans uppercase border border-[#c8a87c]/30 dark:border-[#1e3568]/50">
-                                Özel
+                                {lang === "en" ? "Custom" : "Özel"}
                               </span>
                             )}
                           </div>
-                          {item.desc && (
+                          {desc && (
                             <p
                               className={cn(
                                 "text-[11px] truncate",
                                 isSelected ? "text-slate-200" : "text-slate-400"
                               )}
                             >
-                              {item.desc}
+                              {desc}
                             </p>
                           )}
                         </div>
@@ -1140,11 +1154,11 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
             {/* Alt Bilgi Çubuğu */}
             <div className="flex items-center justify-between border-t border-slate-800/80 bg-[#141a27] px-4 py-2 text-[11px] text-slate-400">
               <div className="flex items-center gap-3">
-                <span><kbd className="font-mono bg-slate-800 px-1 rounded text-slate-300">↑↓</kbd> Gezin</span>
-                <span><kbd className="font-mono bg-slate-800 px-1 rounded text-slate-300">Enter</kbd> Çalıştır</span>
-                <span><kbd className="font-mono bg-slate-800 px-1 rounded text-slate-300">Shift+Enter</kbd> Yapıştır</span>
+                <span><kbd className="font-mono bg-slate-800 px-1 rounded text-slate-300">↑↓</kbd> {lang === "en" ? "Navigate" : "Gezin"}</span>
+                <span><kbd className="font-mono bg-slate-800 px-1 rounded text-slate-300">Enter</kbd> {lang === "en" ? "Run" : "Çalıştır"}</span>
+                <span><kbd className="font-mono bg-slate-800 px-1 rounded text-slate-300">Shift+Enter</kbd> {lang === "en" ? "Paste" : "Yapıştır"}</span>
               </div>
-              <span>{filteredPaletteCommands.length} komut</span>
+              <span>{filteredPaletteCommands.length} {lang === "en" ? "commands" : "komut"}</span>
             </div>
           </div>
         </div>

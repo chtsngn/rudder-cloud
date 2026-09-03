@@ -104,7 +104,7 @@ export function SiteCard({ site }: { site: Site }) {
             </div>
             <div>
               <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block leading-tight">
-                {typeInfo.label}
+                {t(`sites.types.${site.type}.label`) || typeInfo.label}
               </span>
               <span className="text-[10.5px] text-slate-400 dark:text-slate-500 font-mono">
                 {typeInfo.managed ? "systemd" : "Nginx"}
@@ -134,7 +134,7 @@ export function SiteCard({ site }: { site: Site }) {
             <ArrowUpRight className="size-4 text-slate-400 group-hover/link:text-[#580619] dark:group-hover/link:text-blue-300 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-all shrink-0" />
           </Link>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
-            {typeInfo.description || `${typeInfo.label} ${t("sites.siteSuffix")}`}
+            {t(`sites.types.${site.type}.description`) || typeInfo.description || `${t(`sites.types.${site.type}.label`) || typeInfo.label} ${t("sites.siteSuffix")}`}
           </p>
         </div>
       </div>
