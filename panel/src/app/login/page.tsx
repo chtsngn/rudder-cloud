@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react"
 import Image from "next/image"
-import { ChevronDown, Compass, FastForward, Wind } from "lucide-react"
+import { ChevronDown, Compass, FastForward } from "lucide-react"
 import { useTranslation } from "@/components/language-provider"
 import { CinematicCanvasScene } from "@/components/auth/cinematic-canvas-scene"
 import { GlassLoginCard } from "@/components/auth/glass-login-card"
@@ -37,8 +37,8 @@ export default function LoginPage() {
       <div className="fixed inset-0 z-20 flex flex-col justify-between p-5 md:p-10 pointer-events-none">
         {/* ── Üst Bar (Header Bar) ── */}
         <header className="flex items-center justify-between w-full pointer-events-auto">
-          {/* Sol: Rudder Minimal Brand (Gümüş Gri Ton) */}
-          <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-black/40 backdrop-blur-md border border-slate-700/50 shadow-lg">
+          {/* Sol: SADECE LOGO (Rudder yazısı olmadan) */}
+          <div className="flex items-center justify-center p-2 rounded-2xl bg-black/40 backdrop-blur-md border border-slate-700/50 shadow-lg">
             <Image
               src="/rudder-helm-transparent.png"
               alt="Rudder"
@@ -46,9 +46,6 @@ export default function LoginPage() {
               height={26}
               className="object-contain"
             />
-            <span className="font-heading font-black tracking-[0.2em] text-slate-200 text-xs uppercase">
-              Rudder
-            </span>
           </div>
 
           {/* Sağ: Dil Seçici & Hızlı Giriş Butonu */}
@@ -93,9 +90,9 @@ export default function LoginPage() {
           </div>
         </header>
 
-        {/* ── Orta Alan: Solda Sisli/Puslu Gri Rudder & Kasırgadan Çıkan Login Kartı ── */}
+        {/* ── Orta Alan: Solda Sisli Gri Rudder, Sağda Sade Telemetri, Merkezde Login Kartı ── */}
         <main className="flex flex-1 items-center justify-between relative w-full">
-          {/* SAHNE 1: SOLDA PUSLU GRİ EFEKTLİ RUDDER BAŞLIĞI */}
+          {/* SAHNE 1 SOL: PUSLU GRİ EFEKTLİ GRENZE FONTUYLA RUDDER BAŞLIĞI */}
           <div
             style={{
               opacity: introOpacity,
@@ -110,17 +107,17 @@ export default function LoginPage() {
               <span>36°58&apos;N • 28°14&apos;E &bull; Seyir Rotası</span>
             </div>
 
-            {/* Duman ve Sis İçinde Parlayan Puslu Gri Başlık */}
+            {/* Duman ve Sis İçinde Parlayan Puslu Gri Başlık (Grenze Fontu) */}
             <div className="relative">
               {/* Arka Sis Parıltısı */}
               <div className="absolute -inset-8 bg-radial from-slate-400/20 via-slate-600/10 to-transparent blur-3xl pointer-events-none" />
 
               <h1
-                className="font-heading text-5xl sm:text-7xl font-black uppercase tracking-[0.22em] relative z-10"
+                className="font-grenze text-6xl sm:text-8xl font-black uppercase tracking-[0.2em] relative z-10"
                 style={{
-                  color: "#f1f5f9",
+                  color: "#cbd5e1",
                   textShadow:
-                    "0 0 35px rgba(255, 255, 255, 0.4), 0 0 70px rgba(148, 163, 184, 0.25), 0 4px 20px rgba(0, 0, 0, 0.95)",
+                    "0 0 35px rgba(203, 213, 225, 0.45), 0 0 70px rgba(148, 163, 184, 0.25), 0 4px 20px rgba(0, 0, 0, 0.95)",
                 }}
               >
                 Rudder
@@ -131,13 +128,45 @@ export default function LoginPage() {
               Bulut sunucularınızın mutlak kontrolü; puslu göklerin derinliklerinde, sislerin arasından doğan dümenin başında.
             </p>
 
-            <div className="flex items-center gap-3 pt-2 text-xs font-mono text-slate-400">
-              <span className="flex items-center gap-1.5">
-                <Wind className="size-3.5 text-sky-400" />
-                Kuvvetli Fırtına Uyarısı
-              </span>
-              <span>&bull;</span>
+            {/* Sade Version Bilgisi (Fırtına yazısı kaldırıldı) */}
+            <div className="flex items-center gap-2 pt-1 text-xs font-mono text-slate-400">
+              <span className="size-1.5 rounded-full bg-slate-400/80" />
               <span>v1.1.0</span>
+            </div>
+          </div>
+
+          {/* SAHNE 1 SAĞ: SADE, TEMATİK SEYİR & SİSTEM TELEMETRİSİ (Aşırı Olmayan, Sade Denge) */}
+          <div
+            style={{
+              opacity: introOpacity,
+              transform: `translate3d(0, ${scrollProgress * -70}px, 0)`,
+              display: isIntroVisible ? "flex" : "none",
+            }}
+            className="hidden lg:flex flex-col items-end text-right select-none pointer-events-none pr-2 md:pr-8"
+          >
+            <div className="p-4 rounded-2xl bg-slate-950/45 backdrop-blur-md border border-slate-800/60 shadow-xl space-y-2.5 max-w-[260px]">
+              <div className="flex items-center justify-end gap-2 text-[10px] font-mono text-slate-400 uppercase tracking-widest">
+                <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Sistemler Çevrimiçi</span>
+              </div>
+              <div className="space-y-1.5 text-xs font-mono">
+                <div className="flex justify-between gap-6 text-slate-400">
+                  <span>ROTA</span>
+                  <span className="text-slate-200">042° • KUZEYDOĞU</span>
+                </div>
+                <div className="flex justify-between gap-6 text-slate-400">
+                  <span>ATMOSFER</span>
+                  <span className="text-slate-200">1014 hPa • SİSLİ</span>
+                </div>
+                <div className="flex justify-between gap-6 text-slate-400">
+                  <span>BAĞLANTI</span>
+                  <span className="text-sky-300 font-semibold">TLS 1.3 GÜVENLİ</span>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-slate-800/80 flex justify-between items-center text-[10px] font-mono text-slate-500">
+                <span>RUDDER CLOUD</span>
+                <span>v1.1.0</span>
+              </div>
             </div>
           </div>
 
@@ -155,8 +184,9 @@ export default function LoginPage() {
               className="flex flex-col items-center gap-2 pointer-events-auto cursor-pointer animate-bounce"
               onClick={handleSkipToLogin}
             >
+              {/* "Dümeni" kaldırıldı, sadece "Keşfetmek İçin Kaydırın" */}
               <span className="text-[11px] tracking-[0.2em] font-mono uppercase text-slate-400">
-                Dümeni Keşfetmek İçin Kaydırın
+                Keşfetmek İçin Kaydırın
               </span>
               <div className="size-8 rounded-full bg-slate-950/60 backdrop-blur-md border border-slate-700/60 flex items-center justify-center text-slate-300 shadow-lg">
                 <ChevronDown className="size-4" />
