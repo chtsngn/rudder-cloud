@@ -25,11 +25,11 @@ export default function LoginPage() {
   }
 
   // İlk sahne (Gökyüzü & Yıldızlar) metin opaklığı
-  const introOpacity = Math.max(0, 1 - scrollProgress * 3.2)
+  const introOpacity = Math.max(0, 1 - scrollProgress * 2.8)
   const isIntroVisible = introOpacity > 0.02
 
   return (
-    <div className="relative min-h-[380vh] bg-black selection:bg-[#c8a87c]/30 selection:text-white">
+    <div className="relative min-h-[850vh] bg-black selection:bg-[#c8a87c]/30 selection:text-white">
       {/* ═══ 1. ARKA PLAN KARE DİZİSİ (CANVAS FRAME SEQUENCE) ═══ */}
       <FrameSequencePlayer
         manifestUrl="/frames/manifest.json"

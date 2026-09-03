@@ -72,14 +72,12 @@ export function FrameSequencePlayer({
 
     // 4K / Retina Ekranlar İçin Device Pixel Ratio (DPR) Çözünürlüğü
     const dpr = Math.min(typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1, 2)
-    const targetW = Math.floor(window.innerWidth * dpr)
-    const targetH = Math.floor(window.innerHeight * dpr)
+    const targetW = Math.round(window.innerWidth * dpr)
+    const targetH = Math.round(window.innerHeight * dpr)
 
     if (canvas.width !== targetW || canvas.height !== targetH) {
       canvas.width = targetW
       canvas.height = targetH
-      canvas.style.width = `${window.innerWidth}px`
-      canvas.style.height = `${window.innerHeight}px`
     }
 
     ctx.imageSmoothingEnabled = true
@@ -90,12 +88,12 @@ export function FrameSequencePlayer({
     const iw = img.naturalWidth
     const ih = img.naturalHeight
 
-    // Object-fit: cover oranı hesaplama
+    // Object-fit: cover oranı hesaplama (Alt-piksel bulanıklığını önlemek için Math.round)
     const scale = Math.max(cw / iw, ch / ih)
-    const nw = iw * scale
-    const nh = ih * scale
-    const ox = (cw - nw) / 2
-    const oy = (ch - nh) / 2
+    const nw = Math.round(iw * scale)
+    const nh = Math.round(ih * scale)
+    const ox = Math.round((cw - nw) / 2)
+    const oy = Math.round((ch - nh) / 2)
 
     ctx.clearRect(0, 0, cw, ch)
     ctx.drawImage(img, ox, oy, nw, nh)
@@ -112,7 +110,6 @@ export function FrameSequencePlayer({
 
     for (let i = 1; i <= total; i++) {
       const img = new Image()
-      // format: /frames/frame_0001.jpg
       const padNum = String(i).padStart(4, "0")
       const src = manifest.pattern
         ? manifest.pattern.replace("%04d", padNum)
@@ -123,11 +120,10 @@ export function FrameSequencePlayer({
         count++
         setLoadedCount(count)
         if (i === 1) {
-          // İlk kare iner inmez hemen çiz
           renderFrame(0)
           setIsReady(true)
         }
-        if (count >= Math.min(total, 15)) {
+        if (count >= Math.min(total, 20)) {
           setIsReady(true)
         }
       }
@@ -154,10 +150,8 @@ export function FrameSequencePlayer({
       const canvas = canvasRef.current
       if (!canvas) return
       const dpr = Math.min(typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1, 2)
-      canvas.width = Math.floor(window.innerWidth * dpr)
-      canvas.height = Math.floor(window.innerHeight * dpr)
-      canvas.style.width = `${window.innerWidth}px`
-      canvas.style.height = `${window.innerHeight}px`
+      canvas.width = Math.round(window.innerWidth * dpr)
+      canvas.height = Math.round(window.innerHeight * dpr)
 
       const ctx = canvas.getContext("2d")
       if (ctx) {
@@ -175,7 +169,7 @@ export function FrameSequencePlayer({
     return () => window.removeEventListener("resize", handleResize)
   }, [renderFrame])
 
-  // ═══ 5. SCROLL & LERP MOTORU ═══
+  // ═══ 5. SCROLL & LERP MOTORU (60HZ / 120HZ / 144HZ ADAPTİF) ═══
   useEffect(() => {
     const handleScroll = () => {
       const scrollY = window.scrollY || window.pageYOffset || 0
@@ -190,10 +184,16 @@ export function FrameSequencePlayer({
     window.addEventListener("scroll", handleScroll, { passive: true })
     handleScroll()
 
-    const updateLoop = () => {
+    let lastTime = performance.now()
+    const updateLoop = (now: number) => {
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000))
+      lastTime = now
+
       const diff = targetProgressRef.current - progressRef.current
-      if (Math.abs(diff) > 0.0003) {
-        progressRef.current += diff * 0.15 // Apple tarzı pürüzsüz yaylanma
+      if (Math.abs(diff) > 0.0001) {
+        // 60/120/144 FPS sönümleme: daha yavaş, daha akıcı ve ağırbaşlı sinematik his
+        const damping = 1 - Math.exp(-dt * 3.5)
+        progressRef.current += diff * damping
       } else {
         progressRef.current = targetProgressRef.current
       }
@@ -226,14 +226,14 @@ export function FrameSequencePlayer({
 
   return (
     <div className="fixed inset-0 w-full h-full pointer-events-none z-0 overflow-hidden bg-black select-none">
-      {/* Kare Dizisinin Çizildiği Ana Kanvas */}
+      {/* Kare Dizisinin Çizildiği Ana Kanvas (Bulanıklık yaratmayan doğrudan çizim) */}
       <canvas
         ref={canvasRef}
-        className="w-full h-full object-cover transition-opacity duration-300"
+        className="absolute inset-0 block w-full h-full"
+        style={{
+          imageRendering: "-webkit-optimize-contrast",
+        }}
       />
-
-      {/* Hafif Sinematik Vinyet (Kenar Karartma) */}
-      <div className="absolute inset-0 bg-radial-[ellipse_at_center,_rgba(0,0,0,0)_20%,_rgba(0,0,0,0.5)_75%,_rgba(0,0,0,0.85)_100%] pointer-events-none" />
 
       {/* Kareler henüz yoksa bilgilendirici temiz mesaj */}
       {!manifest && (

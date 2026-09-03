@@ -1,8 +1,8 @@
 {
-  "totalFrames": 150,
+  "totalFrames": 160,
   "extension": "jpg",
   "pattern": "/frames/frame_%04d.jpg",
-  "width": 2560,
-  "height": 1440,
-  "superResolution": true
+  "width": 3840,
+  "height": 2160,
+  "ultraHD": true
 }
