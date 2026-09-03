@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input"
 import { FILE_TEMPLATES } from "@/lib/file-templates"
 import { CustomSelect } from "@/components/ui/custom-select"
 import { cn } from "@/lib/utils"
+import { useTranslation } from "@/components/language-provider"
 
 interface SiteEntry {
   name: string
@@ -59,6 +60,7 @@ function triggerDownload(url: string) {
 }
 
 export default function SiteFilesPage() {
+  const { t, lang } = useTranslation()
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const siteId = params.id
@@ -336,8 +338,9 @@ export default function SiteFilesPage() {
         <BackLink siteId={siteId} />
         <Card>
           <CardContent className="pt-6 text-sm text-muted-foreground">
-            Bu site türü için dosya yöneticisi desteklenmiyor (Ters Proxy siteleri yerel
-            dosya bulundurmaz).
+            {lang === "en"
+              ? "File manager is not supported for this site type (Reverse Proxy sites do not store local files)."
+              : "Bu site türü için dosya yöneticisi desteklenmiyor (Ters Proxy siteleri yerel dosya bulundurmaz)."}
           </CardContent>
         </Card>
       </div>
@@ -350,7 +353,7 @@ export default function SiteFilesPage() {
         <div>
           <BackLink siteId={siteId} />
           <h1 className="mt-2 font-mono text-xl font-semibold text-foreground">
-            Dosyalar {domain && <span className="text-muted-foreground">— {domain}</span>}
+            {lang === "en" ? "Files" : "Dosyalar"} {domain && <span className="text-muted-foreground">— {domain}</span>}
           </h1>
         </div>
       </div>
@@ -358,7 +361,7 @@ export default function SiteFilesPage() {
       {envOverview && (envOverview.files.length > 0 || envOverview.availableExample) && (
         <Card>
           <CardHeader>
-            <CardTitle>.env Dosyaları</CardTitle>
+            <CardTitle>{lang === "en" ? ".env Files" : ".env Dosyaları"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {envError && <p className="text-sm text-destructive">{envError}</p>}
@@ -370,7 +373,7 @@ export default function SiteFilesPage() {
                     <Button variant="ghost" size="sm" asChild>
                       <Link href={`/sites/${siteId}/files/edit?path=${encodeURIComponent(f.path)}`}>
                         <Pencil className="size-3.5" />
-                        Düzenle
+                        {t("common.edit")}
                       </Link>
                     </Button>
                   </li>
@@ -380,8 +383,8 @@ export default function SiteFilesPage() {
             {envOverview.availableExample && (
               <div className="flex items-center justify-between rounded-lg border border-dashed border-border p-3 text-sm">
                 <span className="text-muted-foreground">
-                  <span className="font-mono text-foreground">.env</span> yok — {" "}
-                  <span className="font-mono">{envOverview.availableExample}</span> mevcut.
+                  <span className="font-mono text-foreground">.env</span> {lang === "en" ? "not found —" : "yok —"}{" "}
+                  <span className="font-mono">{envOverview.availableExample}</span> {lang === "en" ? "exists." : "mevcut."}
                 </span>
                 <Button
                   size="sm"
@@ -390,7 +393,7 @@ export default function SiteFilesPage() {
                   onClick={() => handleEnvCopy(envOverview.availableExample!)}
                 >
                   {envCopying && <Loader2 className="size-3.5 animate-spin" />}
-                  Örnekten kopyala
+                  {lang === "en" ? "Copy from example" : "Örnekten kopyala"}
                 </Button>
               </div>
             )}
@@ -442,7 +445,7 @@ export default function SiteFilesPage() {
                 }}
               >
                 <FolderPlus className="size-3.5" />
-                Yeni Klasör
+                {lang === "en" ? "New Folder" : "Yeni Klasör"}
               </Button>
               <Button
                 variant="outline"
@@ -453,11 +456,11 @@ export default function SiteFilesPage() {
                 }}
               >
                 <Plus className="size-3.5" />
-                Yeni Dosya
+                {lang === "en" ? "New File" : "Yeni Dosya"}
               </Button>
               <Button variant="outline" size="sm" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
                 {uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
-                Yükle
+                {lang === "en" ? "Upload" : "Yükle"}
               </Button>
               <input
                 ref={fileInputRef}
@@ -475,40 +478,40 @@ export default function SiteFilesPage() {
               {newFolderOpen && (
                 <>
                   <div className="flex-1 space-y-1">
-                    <label className="text-xs text-muted-foreground">Klasör adı</label>
+                    <label className="text-xs text-muted-foreground">{lang === "en" ? "Folder name" : "Klasör adı"}</label>
                     <Input
                       autoFocus
                       value={newFolderName}
                       onChange={(e) => setNewFolderName(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleCreateFolder()}
-                      placeholder="yeni-klasor"
+                      placeholder={lang === "en" ? "new-folder" : "yeni-klasor"}
                     />
                   </div>
                   <Button size="sm" disabled={creating || !newFolderName.trim()} onClick={handleCreateFolder}>
                     {creating && <Loader2 className="size-3.5 animate-spin" />}
-                    Oluştur
+                    {t("common.create")}
                   </Button>
                 </>
               )}
               {newFileOpen && (
                 <>
                   <div className="flex-1 space-y-1">
-                    <label className="text-xs text-muted-foreground">Dosya adı</label>
+                    <label className="text-xs text-muted-foreground">{lang === "en" ? "File name" : "Dosya adı"}</label>
                     <Input
                       autoFocus
                       value={newFileName}
                       onChange={(e) => setNewFileName(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleCreateFile()}
-                      placeholder="dosya.js"
+                      placeholder="file.js"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Şablon (opsiyonel)</label>
+                    <label className="text-xs text-muted-foreground">{lang === "en" ? "Template (optional)" : "Şablon (opsiyonel)"}</label>
                     <CustomSelect
                       value={newFileTemplate}
                       onChange={setNewFileTemplate}
                       options={[
-                        { value: "", label: "Boş dosya" },
+                        { value: "", label: lang === "en" ? "Empty file" : "Boş dosya" },
                         ...FILE_TEMPLATES.map((t) => ({
                           value: t.extension,
                           label: `${t.label} (${t.extension})`,
@@ -520,7 +523,7 @@ export default function SiteFilesPage() {
                   </div>
                   <Button size="sm" disabled={creating || !newFileName.trim()} onClick={handleCreateFile}>
                     {creating && <Loader2 className="size-3.5 animate-spin" />}
-                    Oluştur
+                    {t("common.create")}
                   </Button>
                 </>
               )}
@@ -531,14 +534,14 @@ export default function SiteFilesPage() {
 
           {selected.size > 0 && (
             <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-sm">
-              <span>{selected.size} öğe seçildi</span>
+              <span>{selected.size} {lang === "en" ? "items selected" : "öğe seçildi"}</span>
               <div className="flex items-center gap-2">
                 <Button size="sm" variant="outline" onClick={handleDownloadSelected}>
-                  İndir (zip)
+                  {lang === "en" ? "Download (zip)" : "İndir (zip)"}
                 </Button>
                 <Button size="sm" variant="destructive" disabled={deleting} onClick={handleDeleteSelected}>
                   {deleting && <Loader2 className="size-3.5 animate-spin" />}
-                  Sil
+                  {t("common.delete")}
                 </Button>
               </div>
             </div>
@@ -551,7 +554,7 @@ export default function SiteFilesPage() {
               <Loader2 className="size-5 animate-spin" />
             </div>
           ) : entries.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">Bu dizin boş.</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">{lang === "en" ? "This directory is empty." : "Bu dizin boş."}</p>
           ) : (
             <div className="divide-y divide-border">
               {entries.map((entry) => (
@@ -580,7 +583,7 @@ export default function SiteFilesPage() {
                     {entry.type === "file" ? formatBytes(entry.size) : "—"}
                   </span>
                   <span className="w-36 shrink-0 text-right text-xs text-muted-foreground">
-                    {new Date(entry.modifiedAt).toLocaleDateString("tr-TR")}
+                    {new Date(entry.modifiedAt).toLocaleDateString(lang === "en" ? "en-US" : "tr-TR")}
                   </span>
                   <div className="flex shrink-0 items-center gap-1">
                     {entry.type === "file" && (
@@ -588,7 +591,7 @@ export default function SiteFilesPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDownloadOne(entry.path)}
-                        title="İndir"
+                        title={lang === "en" ? "Download" : "İndir"}
                       >
                         <FileIcon className="size-3.5" />
                       </Button>
@@ -598,7 +601,7 @@ export default function SiteFilesPage() {
                       size="sm"
                       disabled={rowBusy === entry.path}
                       onClick={() => handleDeleteOne(entry.path)}
-                      title="Sil"
+                      title={t("common.delete")}
                     >
                       {rowBusy === entry.path ? (
                         <Loader2 className="size-3.5 animate-spin" />
@@ -618,13 +621,14 @@ export default function SiteFilesPage() {
 }
 
 function BackLink({ siteId }: { siteId: string }) {
+  const { lang } = useTranslation()
   return (
     <Link
       href={`/sites/${siteId}`}
       className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
     >
       <ArrowLeft className="size-4" />
-      Site detayına dön
+      {lang === "en" ? "Back to site details" : "Site detayına dön"}
     </Link>
   )
 }

@@ -70,13 +70,14 @@ function MetricCard({
   subValue: string
   percentage: number
 }) {
+  const { t } = useTranslation()
   const safePct = Math.max(0, Math.min(100, Math.round(percentage)))
   const isHigh = safePct >= 85
   const isWarning = safePct >= 70 && safePct < 85
 
   const statusConfig = isHigh
     ? {
-        label: "Yüksek Yük",
+        label: t("dashboard.highLoad"),
         dotColor: "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]",
         textColor: "text-red-700 dark:text-red-400 font-bold",
         pctColor: "text-red-600 dark:text-red-400 font-bold",
@@ -85,7 +86,7 @@ function MetricCard({
       }
     : isWarning
     ? {
-        label: "Orta Yük",
+        label: t("dashboard.mediumLoad"),
         dotColor: "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]",
         textColor: "text-amber-700 dark:text-amber-400 font-semibold",
         pctColor: "text-amber-800 dark:text-amber-300 font-bold",
@@ -93,7 +94,7 @@ function MetricCard({
         cardBorderHover: "hover:border-amber-300 dark:hover:border-amber-800",
       }
     : {
-        label: "Normal",
+        label: t("dashboard.normalLoad"),
         dotColor: "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]",
         textColor: "text-emerald-700 dark:text-emerald-400 font-medium",
         pctColor: "text-slate-800 dark:text-slate-200 font-bold",
@@ -153,7 +154,7 @@ function MetricCard({
 }
 
 export default function DashboardPage() {
-  const { t } = useTranslation()
+  const { t, lang } = useTranslation()
   const [stats, setStats] = useState<SystemStats | null>(null)
   const [sites, setSites] = useState<Site[] | null>(null)
   const [ports, setPorts] = useState<UsedPort[] | null>(null)
@@ -261,9 +262,9 @@ export default function DashboardPage() {
         ) : (
           <MetricCard
             icon={Cpu}
-            title="İşlemci (CPU)"
+            title={t("dashboard.cpuUsage")}
             mainValue={`${Math.round(stats.cpu.usedPercent)}%`}
-            subValue={`${stats.cpu.cores} Çekirdek • Yük: ${(stats.cpu.loadAvg[0] ?? 0).toFixed(2)}`}
+            subValue={`${stats.cpu.cores} ${t("dashboard.cores")} • ${t("dashboard.load")}: ${(stats.cpu.loadAvg[0] ?? 0).toFixed(2)}`}
             percentage={stats.cpu.usedPercent}
           />
         )}
@@ -274,7 +275,7 @@ export default function DashboardPage() {
         ) : (
           <MetricCard
             icon={MemoryStick}
-            title="Bellek (RAM)"
+            title={t("dashboard.ramUsage")}
             mainValue={`${Math.round(stats.mem.usedPercent)}%`}
             subValue={`${stats.mem.usedGB.toFixed(1)} GB / ${stats.mem.totalGB.toFixed(1)} GB`}
             percentage={stats.mem.usedPercent}
@@ -287,7 +288,7 @@ export default function DashboardPage() {
         ) : (
           <MetricCard
             icon={HardDrive}
-            title="Depolama (Disk)"
+            title={t("dashboard.diskUsage")}
             mainValue={`${Math.round(stats.disk.usedPercent)}%`}
             subValue={`${stats.disk.usedGB.toFixed(1)} GB / ${stats.disk.totalGB.toFixed(1)} GB`}
             percentage={stats.disk.usedPercent}
@@ -302,7 +303,7 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center justify-between gap-2 mb-3.5">
                 <span className="font-heading text-[12px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                  Sunucu Bilgisi
+                  {t("dashboard.serverInfo")}
                 </span>
                 <div className="size-9 rounded-xl bg-[#580619]/5 dark:bg-[#101c38] border border-[#c8a87c]/30 dark:border-[#1e3568]/50 flex items-center justify-center text-[#580619] dark:text-blue-300 group-hover:bg-[#580619] dark:group-hover:bg-[#162752] group-hover:text-white group-hover:border-[#580619] dark:group-hover:border-[#2a4687] transition-all duration-300 shadow-sm">
                   <Server className="size-4.5" />
@@ -326,7 +327,7 @@ export default function DashboardPage() {
             <div className="pt-3.5 border-t border-slate-100 dark:border-[#16223f] flex items-center justify-between text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                Sistem Aktif
+                {t("dashboard.systemActive")}
               </span>
               <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">Port 3001</span>
             </div>
@@ -340,11 +341,11 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             <h2 className="font-heading text-xl font-extrabold text-[#580619] dark:text-slate-100 tracking-tight flex items-center gap-2">
               <Network className="size-5 text-[#c8a87c] dark:text-blue-300" />
-              Kullanılan Portlar
+              {t("dashboard.portsInUse")}
             </h2>
             {ports !== null && (
               <span className="rounded-full bg-[#580619]/10 dark:bg-[#101c38] border border-[#580619]/20 dark:border-[#1e3568]/50 px-2.5 py-0.5 text-xs font-bold text-[#580619] dark:text-blue-300 font-mono">
-                {ports.length} Aktif
+                {ports.length} {t("common.active")}
               </span>
             )}
           </div>
@@ -362,7 +363,7 @@ export default function DashboardPage() {
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                 )}
               >
-                Tümü ({ports.length})
+                {t("common.all")} ({ports.length})
               </button>
               <button
                 type="button"
@@ -374,7 +375,7 @@ export default function DashboardPage() {
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                 )}
               >
-                Siteler ({ports.filter((p) => p.source === "site").length})
+                {t("nav.sites")} ({ports.filter((p) => p.source === "site").length})
               </button>
               <button
                 type="button"
@@ -398,7 +399,7 @@ export default function DashboardPage() {
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                 )}
               >
-                Sistem ({ports.filter((p) => p.source === "system").length})
+                {lang === "en" ? "System" : "Sistem"} ({ports.filter((p) => p.source === "system").length})
               </button>
             </div>
           )}
@@ -416,11 +417,11 @@ export default function DashboardPage() {
           </div>
         ) : ports.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 text-center text-xs text-slate-500 dark:text-slate-400">
-            Sunucuda dinlenen aktif port bulunamadı.
+            {t("dashboard.noActivePorts")}
           </div>
         ) : filteredPorts.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 text-center text-xs text-slate-500 dark:text-slate-400">
-            Seçilen filtrede port bulunamadı.
+            {t("dashboard.noPortsForFilter")}
           </div>
         ) : (
           <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -444,7 +445,7 @@ export default function DashboardPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <span className="truncate text-xs font-bold text-slate-800 dark:text-slate-200 leading-tight">
-                        {p.label ?? p.process ?? "Sistem Süreci"}
+                        {p.label ?? p.process ?? (lang === "en" ? "System Process" : "Sistem Süreci")}
                       </span>
                     </div>
 
@@ -465,7 +466,7 @@ export default function DashboardPage() {
                       {p.source === "system" && (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                           <Server className="size-2.5" />
-                          Sistem
+                          {lang === "en" ? "System" : "Sistem"}
                         </span>
                       )}
 
@@ -480,7 +481,7 @@ export default function DashboardPage() {
                 <div className="shrink-0 pl-2">
                   <span
                     className="size-2 rounded-full bg-emerald-500 block shadow-[0_0_6px_rgba(16,185,129,0.5)]"
-                    title="Dinleniyor (Listening)"
+                    title={lang === "en" ? "Listening" : "Dinleniyor"}
                   />
                 </div>
               </div>
@@ -540,7 +541,7 @@ export default function DashboardPage() {
               {t("dashboard.noSitesYet")}
             </h3>
             <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-7 font-sans leading-relaxed">
-              Sunucunuzda yeni bir WordPress, Node.js, Python veya statik web sitesi yayına alarak self-hosting deneyiminizi başlatın.
+              {t("dashboard.noSitesDesc")}
             </p>
 
             <Button

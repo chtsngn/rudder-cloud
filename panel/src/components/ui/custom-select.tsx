@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
+import { createPortal } from "react-dom"
 import { ChevronDown, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -34,14 +35,69 @@ export function CustomSelect({
   size = "md",
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [mounted, setMounted] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [coords, setCoords] = useState<{
+    top: number
+    left: number
+    width: number
+    placeAbove: boolean
+  } | null>(null)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const selectedOption = options.find((opt) => opt.value === value)
+
+  const updateCoords = useCallback(() => {
+    if (!triggerRef.current) return
+    const rect = triggerRef.current.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const dropdownHeight = 240
+    const placeAbove = spaceBelow < dropdownHeight && rect.top > dropdownHeight
+
+    const minWidth = Math.max(rect.width, 180)
+    let left = rect.left
+    if (left + minWidth > window.innerWidth - 12) {
+      left = Math.max(12, window.innerWidth - minWidth - 12)
+    }
+
+    setCoords({
+      top: placeAbove ? rect.top - 6 : rect.bottom + 6,
+      left,
+      width: minWidth,
+      placeAbove,
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen) return
+    updateCoords()
+
+    const handleScrollOrResize = () => {
+      updateCoords()
+    }
+
+    window.addEventListener("scroll", handleScrollOrResize, true)
+    window.addEventListener("resize", handleScrollOrResize)
+    return () => {
+      window.removeEventListener("scroll", handleScrollOrResize, true)
+      window.removeEventListener("resize", handleScrollOrResize)
+    }
+  }, [isOpen, updateCoords])
 
   // Dışarı tıklandığında veya ESC basıldığında menüyü kapat
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (
+        triggerRef.current &&
+        !triggerRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
+      ) {
         setIsOpen(false)
       }
     }
@@ -70,9 +126,10 @@ export function CustomSelect({
   }
 
   return (
-    <div ref={containerRef} className="relative inline-block text-left">
+    <div className="relative inline-block text-left">
       {/* ── 1. TRIGGER BUTONU ── */}
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
@@ -97,52 +154,65 @@ export function CustomSelect({
         />
       </button>
 
-      {/* ── 2. LÜKS DROPDOWN MENÜSÜ ── */}
-      {isOpen && (
-        <div
-          className={cn(
-            "absolute left-0 top-full mt-1.5 z-50 min-w-[180px] max-h-64 overflow-y-auto rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.12)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.7)] animate-in fade-in-0 zoom-in-95 duration-150 scrollbar-none",
-            dropdownClassName
-          )}
-        >
-          <div className="space-y-0.5">
-            {options.map((option) => {
-              const isSelected = option.value === value
+      {/* ── 2. PORTAL İLE TAŞMAYAN / KESİLMEYEN DROPDOWN MENÜSÜ ── */}
+      {isOpen &&
+        mounted &&
+        coords &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            style={{
+              position: "fixed",
+              top: coords.placeAbove ? undefined : coords.top,
+              bottom: coords.placeAbove ? window.innerHeight - coords.top : undefined,
+              left: coords.left,
+              minWidth: coords.width,
+              zIndex: 99999,
+            }}
+            className={cn(
+              "max-h-64 overflow-y-auto rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.18)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.85)] animate-in fade-in-0 zoom-in-95 duration-150 scrollbar-none",
+              dropdownClassName
+            )}
+          >
+            <div className="space-y-0.5">
+              {options.map((option) => {
+                const isSelected = option.value === value
 
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => {
-                    onChange(option.value)
-                    setIsOpen(false)
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-left text-xs font-semibold transition-all cursor-pointer select-none",
-                    isSelected
-                      ? "bg-[#580619]/10 text-[#580619] dark:bg-[#101c38] dark:text-blue-200 font-bold border border-transparent dark:border-[#1e3568]/50"
-                      : "text-slate-700 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-[#0c1630] hover:text-slate-900 dark:hover:text-white"
-                  )}
-                >
-                  <span className="flex items-center gap-2 truncate">
-                    {option.icon}
-                    <span>{option.label}</span>
-                  </span>
-
-                  {isSelected && (
-                    <Check className="size-3.5 text-[#580619] dark:text-blue-300 shrink-0" />
-                  )}
-                  {!isSelected && option.badge && (
-                    <span className="text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-[#060a17] px-1.5 py-0.5 rounded border border-transparent dark:border-[#16223f]">
-                      {option.badge}
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(option.value)
+                      setIsOpen(false)
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-left text-xs font-semibold transition-all cursor-pointer select-none",
+                      isSelected
+                        ? "bg-[#580619]/10 text-[#580619] dark:bg-[#101c38] dark:text-blue-200 font-bold border border-transparent dark:border-[#1e3568]/50"
+                        : "text-slate-700 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-[#0c1630] hover:text-slate-900 dark:hover:text-white"
+                    )}
+                  >
+                    <span className="flex items-center gap-2 truncate">
+                      {option.icon}
+                      <span>{option.label}</span>
                     </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
+
+                    {isSelected && (
+                      <Check className="size-3.5 text-[#580619] dark:text-blue-300 shrink-0" />
+                    )}
+                    {!isSelected && option.badge && (
+                      <span className="text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-[#060a17] px-1.5 py-0.5 rounded border border-transparent dark:border-[#16223f]">
+                        {option.badge}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

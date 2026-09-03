@@ -49,14 +49,14 @@ async function parseError(res: Response): Promise<string> {
   return data?.error ?? `İstek başarısız oldu (${res.status}).`
 }
 
-function formatDate(iso: string): { full: string; time: string; relative: string } {
+function formatDate(iso: string, lang: "tr" | "en" = "tr"): { full: string; time: string; relative: string } {
   const date = new Date(iso)
-  const full = date.toLocaleDateString("tr-TR", {
+  const full = date.toLocaleDateString(lang === "en" ? "en-US" : "tr-TR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   })
-  const time = date.toLocaleTimeString("tr-TR", {
+  const time = date.toLocaleTimeString(lang === "en" ? "en-US" : "tr-TR", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -69,10 +69,10 @@ function formatDate(iso: string): { full: string; time: string; relative: string
   const diffHour = Math.floor(diffMin / 60)
   const diffDay = Math.floor(diffHour / 24)
 
-  let relative = "Az önce"
-  if (diffDay > 0) relative = `${diffDay} gün önce`
-  else if (diffHour > 0) relative = `${diffHour} saat önce`
-  else if (diffMin > 0) relative = `${diffMin} dk önce`
+  let relative = lang === "en" ? "Just now" : "Az önce"
+  if (diffDay > 0) relative = lang === "en" ? `${diffDay}d ago` : `${diffDay} gün önce`
+  else if (diffHour > 0) relative = lang === "en" ? `${diffHour}h ago` : `${diffHour} saat önce`
+  else if (diffMin > 0) relative = lang === "en" ? `${diffMin}m ago` : `${diffMin} dk önce`
 
   return { full, time, relative }
 }
@@ -121,7 +121,7 @@ function getActionBadge(action: string) {
 }
 
 function AuditContent() {
-  const { t } = useTranslation()
+  const { t, lang } = useTranslation()
   const [logs, setLogs] = useState<AuditLogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -249,7 +249,7 @@ function AuditContent() {
             <Activity className="size-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Toplam Olay</p>
+            <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{lang === "en" ? "Total Events" : "Toplam Olay"}</p>
             <p className="font-heading text-xl font-extrabold text-slate-900 dark:text-slate-100 mt-0.5">{stats.total}</p>
           </div>
         </div>
@@ -259,7 +259,7 @@ function AuditContent() {
             <CheckCircle2 className="size-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Başarılı İşlem</p>
+            <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">{lang === "en" ? "Successful Actions" : "Başarılı İşlem"}</p>
             <p className="font-heading text-xl font-extrabold text-slate-900 dark:text-slate-100 mt-0.5">{stats.success}</p>
           </div>
         </div>
@@ -269,7 +269,7 @@ function AuditContent() {
             <AlertTriangle className="size-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">Hata / Uyarı</p>
+            <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">{lang === "en" ? "Errors / Warnings" : "Hata / Uyarı"}</p>
             <p className="font-heading text-xl font-extrabold text-slate-900 dark:text-slate-100 mt-0.5">{stats.failed}</p>
           </div>
         </div>
@@ -279,7 +279,7 @@ function AuditContent() {
             <Users className="size-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Aktif Operatör</p>
+            <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">{lang === "en" ? "Active Operators" : "Aktif Operatör"}</p>
             <p className="font-heading text-xl font-extrabold text-slate-900 dark:text-slate-100 mt-0.5">{stats.uniqueUsers}</p>
           </div>
         </div>
@@ -293,7 +293,7 @@ function AuditContent() {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Kullanıcı adı, eylem (SITE_CREATE), hedef veya detay ara..."
+            placeholder={lang === "en" ? "Search by username, action (SITE_CREATE), target or details..." : "Kullanıcı adı, eylem (SITE_CREATE), hedef veya detay ara..."}
             className="pl-10 h-10 rounded-xl bg-slate-50 dark:bg-[#060a17] border-slate-200 dark:border-[#16223f] text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:bg-white dark:focus:bg-[#060a17] transition-all"
           />
           {searchQuery && (
@@ -309,11 +309,11 @@ function AuditContent() {
         {/* Kategori Seçim Hapları */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
           {[
-            { id: "all", label: "Tümü" },
-            { id: "site", label: "Siteler" },
-            { id: "user", label: "Kullanıcılar" },
-            { id: "security", label: "Güvenlik & SSL" },
-            { id: "failed", label: "Hatalı Olaylar" },
+            { id: "all", label: t("common.all") },
+            { id: "site", label: t("nav.sites") },
+            { id: "user", label: t("nav.users") },
+            { id: "security", label: lang === "en" ? "Security & SSL" : "Güvenlik & SSL" },
+            { id: "failed", label: lang === "en" ? "Failed Events" : "Hatalı Olaylar" },
           ].map((cat) => (
             <button
               key={cat.id}
@@ -337,7 +337,7 @@ function AuditContent() {
           {loading ? (
             <div className="py-24 text-center space-y-3">
               <RefreshCw className="size-6 text-[#580619] dark:text-blue-400 animate-spin mx-auto" />
-              <p className="text-xs font-mono text-slate-500 dark:text-slate-400">Denetim kayıtları yükleniyor...</p>
+              <p className="text-xs font-mono text-slate-500 dark:text-slate-400">{lang === "en" ? "Loading audit logs..." : "Denetim kayıtları yükleniyor..."}</p>
             </div>
           ) : error ? (
             <div className="p-8 text-center space-y-3">
@@ -346,7 +346,7 @@ function AuditContent() {
               </div>
               <p className="text-sm font-bold text-red-600 dark:text-red-400">{error}</p>
               <Button variant="outline" size="sm" onClick={load} className="rounded-xl">
-                Tekrar Dene
+                {lang === "en" ? "Try Again" : "Tekrar Dene"}
               </Button>
             </div>
           ) : filteredLogs.length === 0 ? (
@@ -354,11 +354,11 @@ function AuditContent() {
               <div className="size-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400 dark:text-slate-500">
                 <Filter className="size-6" />
               </div>
-              <p className="font-heading font-bold text-base text-slate-800 dark:text-slate-200">Kayıt Bulunamadı</p>
+              <p className="font-heading font-bold text-base text-slate-800 dark:text-slate-200">{lang === "en" ? "No Logs Found" : "Kayıt Bulunamadı"}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                 {searchQuery || selectedCategory !== "all"
-                  ? "Seçtiğiniz filtrelere veya arama sorgusuna uygun herhangi bir denetim kaydı bulunamadı."
-                  : "Sistemde henüz kaydedilmiş bir denetim olayı yok."}
+                  ? (lang === "en" ? "No audit logs matched your selected filters or search query." : "Seçtiğiniz filtrelere veya arama sorgusuna uygun herhangi bir denetim kaydı bulunamadı.")
+                  : (lang === "en" ? "No audit events recorded yet." : "Sistemde henüz kaydedilmiş bir denetim olayı yok.")}
               </p>
               {(searchQuery || selectedCategory !== "all") && (
                 <Button
@@ -370,7 +370,7 @@ function AuditContent() {
                   }}
                   className="rounded-xl mt-2 text-xs"
                 >
-                  Filtreleri Sıfırla
+                  {lang === "en" ? "Reset Filters" : "Filtreleri Sıfırla"}
                 </Button>
               )}
             </div>
@@ -379,18 +379,18 @@ function AuditContent() {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/60 text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase select-none">
-                    <th className="py-3 px-4 font-mono">ZAMAN DAMGASI</th>
-                    <th className="py-3 px-4">OPERATÖR</th>
-                    <th className="py-3 px-4">EYLEM</th>
-                    <th className="py-3 px-4">HEDEF & DETAY</th>
-                    <th className="py-3 px-4 text-center">DURUM</th>
-                    <th className="py-3 px-4 text-right">AYRINTI</th>
+                    <th className="py-3 px-4 font-mono">{lang === "en" ? "TIMESTAMP" : "ZAMAN DAMGASI"}</th>
+                    <th className="py-3 px-4">{lang === "en" ? "OPERATOR" : "OPERATÖR"}</th>
+                    <th className="py-3 px-4">{lang === "en" ? "ACTION" : "EYLEM"}</th>
+                    <th className="py-3 px-4">{lang === "en" ? "TARGET & DETAIL" : "HEDEF & DETAY"}</th>
+                    <th className="py-3 px-4 text-center">{lang === "en" ? "STATUS" : "DURUM"}</th>
+                    <th className="py-3 px-4 text-right">{lang === "en" ? "DETAILS" : "AYRINTI"}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {filteredLogs.map((log) => {
                     const badge = getActionBadge(log.action)
-                    const dateInfo = formatDate(log.createdAt)
+                    const dateInfo = formatDate(log.createdAt, lang)
                     const isFailed =
                       (log.detail && log.detail.toUpperCase().includes("FAILED")) ||
                       log.action.toUpperCase().includes("FAIL")
@@ -423,7 +423,7 @@ function AuditContent() {
                             <div>
                               <p className="font-bold text-slate-900 dark:text-slate-100">{log.username}</p>
                               <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
-                                {log.userId ? log.userId.slice(0, 8) + "..." : "Sistem"}
+                                {log.userId ? log.userId.slice(0, 8) + "..." : (lang === "en" ? "System" : "Sistem")}
                               </p>
                             </div>
                           </div>
@@ -505,7 +505,7 @@ function AuditContent() {
                 </div>
                 <div>
                   <h3 className="font-heading font-bold text-base text-slate-900 dark:text-slate-100">
-                    Denetim Kaydı Detayları
+                    {lang === "en" ? "Audit Log Details" : "Denetim Kaydı Detayları"}
                   </h3>
                   <p className="text-[11px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">ID: {selectedLog.id}</p>
                 </div>
@@ -522,32 +522,32 @@ function AuditContent() {
             <div className="space-y-3.5 text-xs">
               <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-[#060a17] p-3.5 rounded-xl border border-slate-200/80 dark:border-[#16223f]">
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Operatör</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">{lang === "en" ? "Operator" : "Operatör"}</p>
                   <p className="font-bold text-slate-900 dark:text-slate-100 mt-0.5">{selectedLog.username}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Zaman Damgası</p>
-                  <p className="font-mono text-slate-900 dark:text-slate-100 mt-0.5">{formatDate(selectedLog.createdAt).full} {formatDate(selectedLog.createdAt).time}</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">{lang === "en" ? "Timestamp" : "Zaman Damgası"}</p>
+                  <p className="font-mono text-slate-900 dark:text-slate-100 mt-0.5">{formatDate(selectedLog.createdAt, lang).full} {formatDate(selectedLog.createdAt, lang).time}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Eylem</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">{lang === "en" ? "Action" : "Eylem"}</p>
                   <p className="font-mono font-bold text-emerald-700 dark:text-emerald-400 mt-0.5">{selectedLog.action}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Hedef Türü</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">{lang === "en" ? "Target Type" : "Hedef Türü"}</p>
                   <p className="font-mono text-slate-900 dark:text-slate-100 mt-0.5">{selectedLog.targetType || "—"}</p>
                 </div>
               </div>
 
               <div>
-                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Açıklama ve Operasyon Detayı</p>
+                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">{lang === "en" ? "Description & Operation Details" : "Açıklama ve Operasyon Detayı"}</p>
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#060a17] border border-slate-200 dark:border-[#16223f] text-slate-800 dark:text-slate-200 font-mono text-xs break-all leading-relaxed">
-                  {selectedLog.detail || "Detay bilgisi kaydedilmemiş."}
+                  {selectedLog.detail || (lang === "en" ? "No detail information recorded." : "Detay bilgisi kaydedilmemiş.")}
                 </div>
               </div>
 
               <div>
-                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Kayıt Verisi (JSON)</p>
+                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">{lang === "en" ? "Log Data (JSON)" : "Kayıt Verisi (JSON)"}</p>
                 <div className="relative">
                   <pre className="p-3 rounded-xl bg-slate-50 dark:bg-[#060a17] text-slate-800 dark:text-slate-200 font-mono text-[11px] overflow-x-auto max-h-48 border border-slate-200 dark:border-[#16223f]">
                     {JSON.stringify(selectedLog, null, 2)}
@@ -558,7 +558,7 @@ function AuditContent() {
                     className="absolute right-2.5 top-2.5 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-mono text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
                   >
                     {copiedId === "modal-json" ? <Check className="size-3 text-emerald-600 dark:text-emerald-400" /> : <Copy className="size-3 text-slate-500" />}
-                    Kopyala
+                    {t("common.copy")}
                   </button>
                 </div>
               </div>
@@ -571,7 +571,7 @@ function AuditContent() {
                 onClick={() => setSelectedLog(null)}
                 className="rounded-xl px-4 text-xs font-semibold"
               >
-                Kapat
+                {t("common.close")}
               </Button>
             </div>
           </div>

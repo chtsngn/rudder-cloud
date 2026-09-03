@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { CustomSelect } from "@/components/ui/custom-select"
+import { useTranslation } from "@/components/language-provider"
 
 interface DetectedDatabase {
   engine: "postgres" | "mysql" | "mongo"
@@ -61,6 +62,7 @@ async function parseError(res: Response): Promise<string> {
 }
 
 export function SiteBackupCard({ siteId }: { siteId: string }) {
+  const { t, lang } = useTranslation()
   const [data, setData] = useState<BackupData | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -242,9 +244,9 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
 
             <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div className="space-y-0.5 pr-4">
-                <Label htmlFor="backupEnabled">Periyodik yedekleme</Label>
+                <Label htmlFor="backupEnabled">{lang === "en" ? "Periodic Backups" : "Periyodik yedekleme"}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Etkinleştirilirse panel bu veritabanını düzenli aralıklarla yedekler.
+                  {lang === "en" ? "When enabled, the panel backs up this database at scheduled intervals." : "Etkinleştirilirse panel bu veritabanını düzenli aralıklarla yedekler."}
                 </p>
               </div>
               <Switch
@@ -257,7 +259,7 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
             {form.backupEnabled && (
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="backupInterval">Aralık (saniye)</Label>
+                  <Label htmlFor="backupInterval">{lang === "en" ? "Interval (seconds)" : "Aralık (saniye)"}</Label>
                   <Input
                     id="backupInterval"
                     type="number"
@@ -267,10 +269,10 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
                       setForm((f) => ({ ...f, backupIntervalSeconds: Number(e.target.value) || 86400 }))
                     }
                   />
-                  <p className="text-xs text-muted-foreground">86400 = günde bir.</p>
+                  <p className="text-xs text-muted-foreground">{lang === "en" ? "86400 = once a day." : "86400 = günde bir."}</p>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="backupRetention">Saklanacak yedek sayısı</Label>
+                  <Label htmlFor="backupRetention">{lang === "en" ? "Backups to retain" : "Saklanacak yedek sayısı"}</Label>
                   <Input
                     id="backupRetention"
                     type="number"
@@ -287,9 +289,9 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
 
             <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div className="space-y-0.5 pr-4">
-                <Label htmlFor="uploadToS3">S3&apos;e de yükle</Label>
+                <Label htmlFor="uploadToS3">{lang === "en" ? "Also upload to S3" : "S3'e de yükle"}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Ayarlar sayfasında tanımlı bir S3 yapılandırması seçilmeli.
+                  {lang === "en" ? "An S3 configuration configured in Settings must be selected." : "Ayarlar sayfasında tanımlı bir S3 yapılandırması seçilmeli."}
                 </p>
               </div>
               <Switch
@@ -301,20 +303,20 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
 
             {form.backupUploadToS3 && (
               <div className="space-y-1.5">
-                <Label htmlFor="s3Config" className="text-xs font-bold text-slate-700 dark:text-slate-300">S3 Yapılandırması</Label>
+                <Label htmlFor="s3Config" className="text-xs font-bold text-slate-700 dark:text-slate-300">{lang === "en" ? "S3 Configuration" : "S3 Yapılandırması"}</Label>
                 <CustomSelect
                   value={form.s3ConfigId}
                   onChange={(val) => setForm((f) => ({ ...f, s3ConfigId: val }))}
                   options={[
-                    { value: "", label: "Seçilmedi (Varsayılan)" },
+                    { value: "", label: lang === "en" ? "Not selected (Default)" : "Seçilmedi (Varsayılan)" },
                     ...s3Configs.map((c) => ({ value: c.id, label: c.label })),
                   ]}
-                  placeholder="S3 Yapılandırması Seçiniz..."
+                  placeholder={lang === "en" ? "Select S3 Configuration..." : "S3 Yapılandırması Seçiniz..."}
                   className="w-full"
                 />
                 {s3Configs.length === 0 && (
                   <p className="text-xs text-muted-foreground">
-                    Henüz S3 yapılandırması yok — Ayarlar sayfasından ekleyebilirsin.
+                    {lang === "en" ? "No S3 configurations yet — you can add one in Settings." : "Henüz S3 yapılandırması yok — Ayarlar sayfasından ekleyebilirsin."}
                   </p>
                 )}
               </div>
@@ -325,13 +327,13 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
             <div className="flex flex-wrap items-center gap-2">
               <Button onClick={handleSave} disabled={saving}>
                 {saving && <Loader2 className="size-4 animate-spin" />}
-                Kaydet
+                {t("common.save")}
               </Button>
               <Button variant="outline" onClick={handleRunNow} disabled={running}>
                 {running && <Loader2 className="size-4 animate-spin" />}
-                Şimdi Yedekle
+                {lang === "en" ? "Backup Now" : "Şimdi Yedekle"}
               </Button>
-              {saveOk && <span className="text-xs text-success">Kaydedildi.</span>}
+              {saveOk && <span className="text-xs text-success">{lang === "en" ? "Saved." : "Kaydedildi."}</span>}
             </div>
 
             {(runMessage || runError) && (
@@ -342,20 +344,20 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
 
             <dl className="divide-y divide-border border-t border-border pt-2">
               <div className="flex items-center justify-between py-2 text-sm">
-                <dt className="text-muted-foreground">Son yedekleme</dt>
+                <dt className="text-muted-foreground">{lang === "en" ? "Last backup" : "Son yedekleme"}</dt>
                 <dd className="font-mono text-foreground">
                   {data?.schedule.lastBackupAt
-                    ? new Date(data.schedule.lastBackupAt).toLocaleString("tr-TR")
-                    : "Henüz yapılmadı"}
+                    ? new Date(data.schedule.lastBackupAt).toLocaleString(lang === "en" ? "en-US" : "tr-TR")
+                    : (lang === "en" ? "Not yet performed" : "Henüz yapılmadı")}
                 </dd>
               </div>
               {data?.schedule.lastBackupAt && (
                 <div className="flex items-center justify-between py-2 text-sm">
-                  <dt className="text-muted-foreground">Durum</dt>
+                  <dt className="text-muted-foreground">{t("common.status")}</dt>
                   <dd className={data.schedule.lastBackupOk ? "text-success" : "text-destructive"}>
                     {data.schedule.lastBackupOk
-                      ? "Başarılı"
-                      : (data.schedule.lastBackupError ?? "Başarısız")}
+                      ? t("common.success")
+                      : (data.schedule.lastBackupError ?? (lang === "en" ? "Failed" : "Başarısız"))}
                   </dd>
                 </div>
               )}
@@ -363,21 +365,21 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
 
             {data && data.backups.length > 0 && (
               <div className="space-y-1.5">
-                <Label>Yedekler</Label>
+                <Label>{t("sites.tabs.backups")}</Label>
                 <div className="divide-y divide-border">
                   {data.backups.map((b) => (
                     <div key={b.fileName} className="flex items-center justify-between gap-3 py-2 text-sm">
                       <button
                         className="truncate text-left font-mono text-xs text-foreground hover:underline"
                         onClick={() => downloadBackup(b.fileName)}
-                        title="İndir"
+                        title={lang === "en" ? "Download" : "İndir"}
                       >
                         {b.fileName}
                       </button>
                       <div className="flex shrink-0 items-center gap-3">
                         <span className="text-xs text-muted-foreground">{formatBytes(b.sizeBytes)}</span>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(b.createdAt).toLocaleDateString("tr-TR")}
+                          {new Date(b.createdAt).toLocaleDateString(lang === "en" ? "en-US" : "tr-TR")}
                         </span>
                         <Button
                           variant="ghost"

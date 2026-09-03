@@ -436,10 +436,10 @@ export default function SiteDetailPage() {
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:text-[#580619] hover:border-[#c8a87c] shadow-xs transition-all"
         >
           <ArrowLeft className="size-3.5" />
-          Siteler listesine dön
+          {t("sites.detail.backToList")}
         </Link>
         <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-          Site bulunamadı veya silinmiş olabilir.
+          {lang === "en" ? "Site not found or may have been deleted." : "Site bulunamadı veya silinmiş olabilir."}
         </div>
       </div>
     )
@@ -451,40 +451,50 @@ export default function SiteDetailPage() {
   const status = STATUS_CONFIG[site.status] ?? STATUS_CONFIG.stopped
   const TypeIcon = getTypeIcon(site.type)
 
+  const statusLabels: Record<string, string> = {
+    active: t("sites.statusActive"),
+    running: t("sites.statusRunning"),
+    provisioning: t("sites.statusProvisioning"),
+    stopped: t("sites.statusStopped"),
+    error: t("sites.statusFailed"),
+  }
+
+  const localizedTypeLabel = t(`sites.types.${site.type}.label`) || typeInfo.label
+
   const configRows = [
-    { label: "Alan Adı (Domain)", value: site.domain },
+    { label: t("sites.detail.domainLabel"), value: site.domain },
     ...(isManaged
-      ? [{ label: "Uygulama Portu", value: String(config.port ?? "-") }]
+      ? [{ label: t("sites.detail.appPortLabel"), value: String(config.port ?? "-") }]
       : []),
     ...(isManaged
-      ? [{ label: "Başlatma Komutu", value: String(config.startCommand ?? "-") }]
+      ? [{ label: t("sites.detail.startCmdLabel"), value: String(config.startCommand ?? "-") }]
       : []),
     ...(isProxy
-      ? [{ label: "Hedef Adres (Upstream)", value: String(config.upstreamUrl ?? "-") }]
+      ? [{ label: t("sites.detail.upstreamLabel"), value: String(config.upstreamUrl ?? "-") }]
       : [
           {
-            label: "Site Kök Dizini",
+            label: t("sites.detail.siteRootLabel"),
             value: String(config.siteRoot ?? `/var/www/${site.domain}`),
           },
           {
-            label: "Linux Kullanıcısı",
+            label: t("sites.detail.linuxUserLabel"),
             value: String(config.linuxUser ?? site.domain.split(".")[0]),
           },
         ]),
     {
-      label: "SSL Durumu",
+      label: t("sites.detail.sslStatusLabel"),
       value: !sslInfo || !sslInfo.sslEnabled
-        ? "Pasif"
+        ? t("sites.detail.sslInactive")
         : sslInfo.sslStatus === "active"
-          ? "Aktif (Let's Encrypt)"
+          ? t("sites.detail.sslActiveLetsEncrypt")
           : sslInfo.sslStatus === "error"
-            ? "Hata (Doğrulama Bekliyor)"
-            : "Bekliyor",
+            ? t("sites.detail.sslErrorPending")
+            : t("sites.detail.sslPending"),
     },
     ...(isManaged
       ? [
           {
-            label: "systemd Servis Birimi",
+            label: t("sites.detail.systemdUnitLabel"),
             value: `site-${site.domain.replace(/\./g, "-")}.service`,
           },
         ]
@@ -500,7 +510,7 @@ export default function SiteDetailPage() {
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-[#580619] dark:hover:text-blue-400 hover:border-[#c8a87c] dark:hover:border-blue-500/50 shadow-xs transition-all"
         >
           <ArrowLeft className="size-3.5 text-[#580619] dark:text-blue-400" />
-          Siteler listesine dön
+          {t("sites.detail.backToList")}
         </Link>
 
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -522,11 +532,11 @@ export default function SiteDetailPage() {
                   )}
                 >
                   <span className={cn("size-1.5 rounded-full", status.dot)} />
-                  {status.label}
+                  {statusLabels[site.status] ?? status.label}
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans flex items-center gap-2">
-                <span>{typeInfo.label} {t("sites.siteSuffix")}</span>
+                <span>{localizedTypeLabel} {t("sites.siteSuffix")}</span>
                 <span>•</span>
                 <span>{sslInfo?.sslEnabled ? t("sites.sslActiveLabel") : t("sites.httpOnlyLabel")}</span>
               </p>
@@ -645,10 +655,12 @@ export default function SiteDetailPage() {
               </div>
               <div>
                 <p className="font-heading font-bold text-slate-900 dark:text-slate-100 text-xs">
-                  SSL sertifikası doğrulanamadı, site HTTP üzerinden yayında.
+                  {lang === "en"
+                    ? "SSL certificate could not be verified, site is serving over HTTP."
+                    : "SSL sertifikası doğrulanamadı, site HTTP üzerinden yayında."}
                 </p>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 font-sans">
-                  {sslInfo.sslLastError || "DNS A kaydının sunucunuza yönlendiğinden emin olduktan sonra tekrar deneyin."}
+                  {sslInfo.sslLastError || (lang === "en" ? "Make sure your DNS A record points to your server, then try again." : "DNS A kaydının sunucunuza yönlendiğinden emin olduktan sonra tekrar deneyin.")}
                 </p>
                 {sslRetryError && <p className="text-[11px] text-red-600 dark:text-red-400 mt-1 font-mono">{sslRetryError}</p>}
               </div>
@@ -752,10 +764,10 @@ export default function SiteDetailPage() {
           {isManaged && (
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-5 shadow-xs">
-                <StatMeter label="İşlemci Kullanımı (CPU)" value={site.cpu ?? 0} />
+                <StatMeter label={lang === "en" ? "CPU Usage" : "İşlemci Kullanımı (CPU)"} value={site.cpu ?? 0} />
               </div>
               <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-5 shadow-xs">
-                <StatMeter label="Bellek Kullanımı (RAM)" value={site.ram ?? 0} />
+                <StatMeter label={lang === "en" ? "RAM Usage" : "Bellek Kullanımı (RAM)"} value={site.ram ?? 0} />
               </div>
             </div>
           )}
@@ -765,10 +777,10 @@ export default function SiteDetailPage() {
             <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 shadow-xs space-y-4">
               <div>
                 <h3 className="font-heading font-bold text-slate-900 dark:text-slate-100 text-sm">
-                  Hedef Adres (Reverse Proxy Pass)
+                  {t("sites.detail.proxyPassTitle")}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Ters proxy trafiğinin yönlendirileceği yerel veya harici servis portunu güncelleyin.
+                  {t("sites.detail.proxyPassDesc")}
                 </p>
               </div>
 
@@ -787,7 +799,7 @@ export default function SiteDetailPage() {
                   className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-10 px-5 rounded-xl text-xs font-semibold shrink-0 cursor-pointer border border-[#c8a87c]/40 dark:border-[#2a4687]/60"
                 >
                   {upstreamSaving && <Loader2 className="size-3.5 animate-spin mr-1" />}
-                  Güncelle
+                  {upstreamSaving ? t("sites.detail.updatingBtn") : t("sites.detail.updateBtn")}
                 </Button>
               </div>
 
@@ -795,7 +807,7 @@ export default function SiteDetailPage() {
               {upstreamSaveOk && !upstreamSaveError && (
                 <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
                   <Check className="size-3.5 stroke-[3]" />
-                  Hedef adres başarıyla güncellendi.
+                  {t("sites.detail.targetUpdated")}
                 </p>
               )}
             </div>
@@ -804,7 +816,7 @@ export default function SiteDetailPage() {
           {/* Yapılandırma Bilgileri Tablosu */}
           <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 shadow-xs space-y-4">
             <h3 className="font-heading font-bold text-slate-900 dark:text-slate-100 text-sm">
-              Sunucu &amp; Yapılandırma Detayları
+              {t("sites.detail.serverConfigDetails")}
             </h3>
 
             <div className="divide-y divide-slate-100 dark:divide-[#16223f]">
@@ -830,10 +842,10 @@ export default function SiteDetailPage() {
           <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-6 md:p-8 shadow-xs space-y-6">
             <div className="border-b border-slate-100 dark:border-[#16223f] pb-4">
               <h3 className="font-heading font-bold text-slate-900 dark:text-slate-100 text-base">
-                Git Deposu ve Otomatik Dağıtım
+                {t("sites.detail.gitRepoTitle")}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                GitHub veya özel git deponuzu bağlayarak otomatik pull ve yeniden başlatma yapılandırın.
+                {t("sites.detail.gitRepoDesc")}
               </p>
             </div>
 
@@ -841,7 +853,7 @@ export default function SiteDetailPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="repoUrl" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Repo Adresi (SSH / HTTPS)
+                    {t("sites.detail.repoAddressLabel")}
                   </Label>
                   <Input
                     id="repoUrl"
@@ -853,7 +865,7 @@ export default function SiteDetailPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="gitBranch" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Branch Adı
+                    {t("sites.detail.branchNameLabel")}
                   </Label>
                   <Input
                     id="gitBranch"
@@ -868,9 +880,9 @@ export default function SiteDetailPage() {
               {/* Otomatik Pull Switch */}
               <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-[#16223f] p-4 bg-slate-50/50 dark:bg-[#060a17]">
                 <div>
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Otomatik Pull &amp; Restart</p>
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{t("sites.detail.autoPullRestartLabel")}</p>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Yeni commit tespit edildiğinde kod otomatik çekilir ve servis yeniden başlatılır.
+                    {t("sites.detail.autoPullDesc")}
                   </p>
                 </div>
                 <Switch
@@ -885,7 +897,7 @@ export default function SiteDetailPage() {
               {gitForm.autoPullEnabled && (
                 <div className="space-y-2 sm:w-64">
                   <Label htmlFor="autoPullInterval" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Kontrol Aralığı (Saniye)
+                    {t("sites.detail.checkIntervalSecLabel")}
                   </Label>
                   <Input
                     id="autoPullInterval"
@@ -907,7 +919,7 @@ export default function SiteDetailPage() {
               {/* Process Manager Seçimi */}
               <div className="space-y-2">
                 <Label htmlFor="processManager" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Yeniden Başlatma Yöntemi (Process Manager)
+                  {t("sites.detail.processManagerLabel")}
                 </Label>
                 <CustomSelect
                   value={gitForm.processManager || "SYSTEMD"}
@@ -919,11 +931,11 @@ export default function SiteDetailPage() {
                   }
                   options={[
                     ...(!isProxy
-                      ? [{ value: "SYSTEMD", label: "systemd (panel yönetiyor — varsayılan)" }]
+                      ? [{ value: "SYSTEMD", label: lang === "en" ? "systemd (managed by panel — default)" : "systemd (panel yönetiyor — varsayılan)" }]
                       : []),
                     { value: "DOCKER_COMPOSE", label: "Docker Compose (docker compose restart)" },
                     { value: "PM2", label: "PM2 (pm2 restart)" },
-                    { value: "CUSTOM_SCRIPT", label: "Özel script betiği" },
+                    { value: "CUSTOM_SCRIPT", label: lang === "en" ? "Custom script" : "Özel script betiği" },
                   ]}
                   className="w-full"
                 />
@@ -932,7 +944,7 @@ export default function SiteDetailPage() {
               {gitForm.processManager === "CUSTOM_SCRIPT" && (
                 <div className="space-y-2">
                   <Label htmlFor="customRestartCommand" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Özel Restart Betiği (Mutlak Yol)
+                    {t("sites.detail.customRestartScriptLabel")}
                   </Label>
                   <Input
                     id="customRestartCommand"
@@ -955,7 +967,7 @@ export default function SiteDetailPage() {
                   className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-10 px-6 rounded-xl text-xs font-semibold cursor-pointer border border-[#c8a87c]/40 dark:border-[#2a4687]/60"
                 >
                   {gitSaving && <Loader2 className="size-3.5 animate-spin mr-1" />}
-                  Ayarları Kaydet
+                  {t("sites.detail.saveGitSettings")}
                 </Button>
                 <Button
                   variant="outline"
@@ -968,9 +980,9 @@ export default function SiteDetailPage() {
                   ) : (
                     <RotateCw className="size-3.5 mr-1" />
                   )}
-                  Şimdi Pull Et
+                  {t("sites.detail.pullNow")}
                 </Button>
-                {gitSaveOk && <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Ayarlar kaydedildi.</span>}
+                {gitSaveOk && <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">{t("sites.detail.gitSettingsSaved")}</span>}
               </div>
 
               {(gitPullMessage || gitPullError) && (
@@ -986,9 +998,9 @@ export default function SiteDetailPage() {
 
               {/* Son Pull Durumu */}
               <div className="pt-4 border-t border-slate-100 dark:border-[#16223f] flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span>Son Git Pull:</span>
+                <span>{t("sites.detail.lastGitPull")}</span>
                 <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                  {gitLastPull.at ? new Date(gitLastPull.at).toLocaleString("tr-TR") : "Henüz yapılmadı"}
+                  {gitLastPull.at ? new Date(gitLastPull.at).toLocaleString(lang === "en" ? "en-US" : "tr-TR") : t("sites.detail.gitPullNever")}
                 </span>
               </div>
             </div>
@@ -1019,10 +1031,10 @@ export default function SiteDetailPage() {
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#16223f] pb-4">
             <div>
               <h3 className="font-heading font-bold text-slate-900 dark:text-slate-100 text-base">
-                Canlı Servis Kayıtları (systemd Logs)
+                {t("sites.detail.liveLogsTitle")}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Uygulamanızın standart çıktı (stdout / stderr) akışı.
+                {t("sites.detail.liveLogsDesc")}
               </p>
             </div>
             <Button
@@ -1033,7 +1045,7 @@ export default function SiteDetailPage() {
               className="h-8 px-3 rounded-xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#060a17] text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer dark:hover:bg-[#111f40]"
             >
               {logsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCw className="size-3.5" />}
-              Yenile
+              {t("common.refresh")}
             </Button>
           </div>
 
@@ -1042,10 +1054,10 @@ export default function SiteDetailPage() {
           ) : (
             <pre className="max-h-96 overflow-auto rounded-xl bg-slate-900 dark:bg-[#030610] p-4 font-mono text-xs text-emerald-400 leading-relaxed shadow-inner border border-slate-800 dark:border-[#16223f]">
               {logsLoading && !logs
-                ? "Kayıtlar yükleniyor..."
+                ? t("sites.detail.logsLoading")
                 : logs.trim()
                 ? logs
-                : "Henüz bir kayıt bulunmuyor."}
+                : t("sites.detail.logsEmpty")}
             </pre>
           )}
         </div>

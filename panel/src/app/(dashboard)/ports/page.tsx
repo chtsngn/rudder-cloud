@@ -23,14 +23,14 @@ interface PortsResponse {
   suggestRange: { start: number; end: number }
 }
 
-function sourceBadge(p: UsedPort) {
+function sourceBadge(p: UsedPort, lang: "tr" | "en") {
   if (p.source === "site") return <Badge>Site: {p.label}</Badge>
   if (p.source === "docker") return <Badge variant="secondary">Docker: {p.label}</Badge>
-  return <Badge variant="outline">Sistem</Badge>
+  return <Badge variant="outline">{lang === "en" ? "System" : "Sistem"}</Badge>
 }
 
 export default function PortsPage() {
-  const { t } = useTranslation()
+  const { t, lang } = useTranslation()
   const [data, setData] = useState<PortsResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -43,7 +43,7 @@ export default function PortsPage() {
       if (!res.ok) throw new Error("failed")
       setData((await res.json()) as PortsResponse)
     } catch {
-      setError("Port bilgisi alınamadı.")
+      setError(lang === "en" ? "Could not retrieve port information." : "Port bilgisi alınamadı.")
     } finally {
       setLoading(false)
     }
@@ -83,23 +83,23 @@ export default function PortsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Network className="size-4" />
-            Kullanılan Portlar
+            {t("dashboard.portsInUse")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {!data ? (
-            <p className="text-sm text-muted-foreground">Yükleniyor...</p>
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : data.used.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Dinlenen port bulunamadı.</p>
+            <p className="text-sm text-muted-foreground">{lang === "en" ? "No listening ports found." : "Dinlenen port bulunamadı."}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-muted-foreground">
                     <th className="py-2 pr-4 font-medium">Port</th>
-                    <th className="py-2 pr-4 font-medium">Adres</th>
-                    <th className="py-2 pr-4 font-medium">Süreç</th>
-                    <th className="py-2 pr-4 font-medium">Kaynak</th>
+                    <th className="py-2 pr-4 font-medium">{lang === "en" ? "Address" : "Adres"}</th>
+                    <th className="py-2 pr-4 font-medium">{lang === "en" ? "Process" : "Süreç"}</th>
+                    <th className="py-2 pr-4 font-medium">{lang === "en" ? "Source" : "Kaynak"}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -108,7 +108,7 @@ export default function PortsPage() {
                       <td className="py-2 pr-4 font-mono text-foreground">{p.port}</td>
                       <td className="py-2 pr-4 font-mono text-muted-foreground">{p.address}</td>
                       <td className="py-2 pr-4 text-muted-foreground">{p.process ?? "—"}</td>
-                      <td className="py-2 pr-4">{sourceBadge(p)}</td>
+                      <td className="py-2 pr-4">{sourceBadge(p, lang)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -121,19 +121,19 @@ export default function PortsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            Boş Port Önerileri
+            {lang === "en" ? "Available Port Suggestions" : "Boş Port Önerileri"}
             {data && (
               <span className="ml-2 text-xs font-normal text-muted-foreground">
-                ({data.suggestRange.start}–{data.suggestRange.end} aralığında)
+                {lang === "en" ? `(in ${data.suggestRange.start}–${data.suggestRange.end} range)` : `(${data.suggestRange.start}–${data.suggestRange.end} aralığında)`}
               </span>
             )}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {!data ? (
-            <p className="text-sm text-muted-foreground">Yükleniyor...</p>
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : data.suggestions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Bu aralıkta boş port bulunamadı.</p>
+            <p className="text-sm text-muted-foreground">{lang === "en" ? "No available ports found in this range." : "Bu aralıkta boş port bulunamadı."}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {data.suggestions.map((p) => (

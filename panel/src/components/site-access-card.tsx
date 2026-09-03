@@ -6,18 +6,18 @@ import { Loader2, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useCurrentUser } from "@/hooks/use-current-user"
+import { useTranslation } from "@/components/language-provider"
 
 type SitePermission = "VIEW" | "EDIT_FILES" | "RESTART" | "DELETE" | "MANAGE_BACKUPS" | "MANAGE_DEPLOY_KEYS"
 
-const PERMISSION_LABELS: Record<SitePermission, string> = {
-  VIEW: "Görüntüle",
-  EDIT_FILES: "Dosyaları düzenle",
-  RESTART: "Yeniden başlat / durdur",
-  DELETE: "Dosya sil (dosya yöneticisi)",
-  MANAGE_BACKUPS: "Yedeklemeleri yönet",
-  MANAGE_DEPLOY_KEYS: "GitHub anahtarlarını yönet",
-}
-const ALL_PERMISSIONS = Object.keys(PERMISSION_LABELS) as SitePermission[]
+const ALL_PERMISSIONS: SitePermission[] = [
+  "VIEW",
+  "EDIT_FILES",
+  "RESTART",
+  "DELETE",
+  "MANAGE_BACKUPS",
+  "MANAGE_DEPLOY_KEYS",
+]
 
 interface AccessRow {
   userId: string
@@ -37,6 +37,7 @@ async function parseError(res: Response): Promise<string> {
  * kullanıcı yoksa boş bir durum mesajı gösterir.
  */
 export function SiteAccessCard({ siteId }: { siteId: string }) {
+  const { t, lang } = useTranslation()
   const { user: me, loading: meLoading } = useCurrentUser()
 
   const [rows, setRows] = useState<AccessRow[]>([])
@@ -108,30 +109,42 @@ export function SiteAccessCard({ siteId }: { siteId: string }) {
 
   if (meLoading || me?.role !== "SUPER_ADMIN") return null
 
+  const PERMISSION_LABELS: Record<SitePermission, string> = {
+    VIEW: lang === "en" ? "View" : "Görüntüle",
+    EDIT_FILES: lang === "en" ? "Edit files" : "Dosyaları düzenle",
+    RESTART: lang === "en" ? "Restart / stop" : "Yeniden başlat / durdur",
+    DELETE: lang === "en" ? "Delete files (file manager)" : "Dosya sil (dosya yöneticisi)",
+    MANAGE_BACKUPS: lang === "en" ? "Manage backups" : "Yedeklemeleri yönet",
+    MANAGE_DEPLOY_KEYS: lang === "en" ? "Manage GitHub keys" : "GitHub anahtarlarını yönet",
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <ShieldCheck className="size-4" />
-          Erişim
+          {t("sites.tabs.access")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Üye (MEMBER) rolündeki kullanıcılara bu sitede hangi işlemlerin izin verildiğini belirleyin.
-          Süper adminler her zaman tam erişime sahiptir, burada listelenmezler.
+          {lang === "en"
+            ? "Define what actions users with the MEMBER role are permitted to perform on this site. Super admins always have full access and are not listed here."
+            : "Üye (MEMBER) rolündeki kullanıcılara bu sitede hangi işlemlerin izin verildiğini belirleyin. Süper adminler her zaman tam erişime sahiptir, burada listelenmezler."}
         </p>
 
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
-            Yükleniyor...
+            {t("common.loading")}
           </div>
         ) : loadError ? (
           <p className="text-sm text-destructive">{loadError}</p>
         ) : rows.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Sistemde üye (MEMBER) rolünde bir kullanıcı yok. Kullanıcılar sayfasından ekleyebilirsiniz.
+            {lang === "en"
+              ? "No users with the MEMBER role in the system. You can add them from the Users page."
+              : "Sistemde üye (MEMBER) rolünde bir kullanıcı yok. Kullanıcılar sayfasından ekleyebilirsiniz."}
           </p>
         ) : (
           <div className="space-y-4">
@@ -156,7 +169,7 @@ export function SiteAccessCard({ siteId }: { siteId: string }) {
                   {rowError[row.userId] && <p className="text-sm text-destructive">{rowError[row.userId]}</p>}
                   <Button size="sm" disabled={savingFor === row.userId} onClick={() => handleSave(row.userId)}>
                     {savingFor === row.userId && <Loader2 className="size-4 animate-spin" />}
-                    Kaydet
+                    {t("common.save")}
                   </Button>
                 </div>
               )
