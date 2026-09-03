@@ -185,44 +185,21 @@ export function AppSidebar() {
         preserveAspectRatio="none"
       >
         <defs>
-          {/* Açık Tema: Zengin Bordo Degrade / Koyu Tema: Gece Mavisi (Midnight Blue) */}
+          {/* Dinamik Renk Temasına Duyarlı Yelken Degradesi */}
           <linearGradient id="sailDynamicGrad" x1="0" y1="0" x2="0.8" y2="1">
-            {isDark ? (
-              <>
-                <stop offset="0%" stopColor="#0b1739" />
-                <stop offset="35%" stopColor="#0e1f4d" />
-                <stop offset="70%" stopColor="#0a1536" />
-                <stop offset="100%" stopColor="#060e24" />
-              </>
-            ) : (
-              <>
-                <stop offset="0%" stopColor="#48030f" />
-                <stop offset="35%" stopColor="#680b22" />
-                <stop offset="70%" stopColor="#540516" />
-                <stop offset="100%" stopColor="#320108" />
-              </>
-            )}
+            <stop offset="0%" stopColor="var(--sail-bg-0, #0b1739)" />
+            <stop offset="35%" stopColor="var(--sail-bg-1, #0e1f4d)" />
+            <stop offset="70%" stopColor="var(--sail-bg-2, #0a1536)" />
+            <stop offset="100%" stopColor="var(--sail-bg-3, #060e24)" />
           </linearGradient>
 
-          {/* Kenar Çizgi Degradesi (Açık: Altın, Koyu: Ay Işığı & Okyanus) */}
+          {/* Dinamik Renk Temasına Duyarlı Kenar Çizgi Degradesi */}
           <linearGradient id="sailDynamicStroke" x1="0" y1="0" x2="0.8" y2="1">
-            {isDark ? (
-              <>
-                <stop offset="0%" stopColor="#38bdf8" />
-                <stop offset="20%" stopColor="#e2e8f0" />
-                <stop offset="45%" stopColor="#7dd3fc" />
-                <stop offset="75%" stopColor="#38bdf8" />
-                <stop offset="100%" stopColor="#0284c7" />
-              </>
-            ) : (
-              <>
-                <stop offset="0%" stopColor="#c5a059" />
-                <stop offset="20%" stopColor="#fbedd0" />
-                <stop offset="45%" stopColor="#dfc9a0" />
-                <stop offset="75%" stopColor="#c8a87c" />
-                <stop offset="100%" stopColor="#8e6425" />
-              </>
-            )}
+            <stop offset="0%" stopColor="var(--sail-stroke-0, #38bdf8)" />
+            <stop offset="20%" stopColor="var(--sail-stroke-1, #e2e8f0)" />
+            <stop offset="45%" stopColor="var(--sail-stroke-2, #7dd3fc)" />
+            <stop offset="75%" stopColor="var(--sail-stroke-0, #38bdf8)" />
+            <stop offset="100%" stopColor="var(--sail-stroke-3, #0284c7)" />
           </linearGradient>
         </defs>
 
@@ -269,12 +246,11 @@ export function AppSidebar() {
       >
         {/* Işıma Halosu */}
         <div
-          className={cn(
-            "absolute inset-0 rounded-full blur-sm transition-all pointer-events-none",
-            isDark
-              ? "bg-[#38bdf8]/30 group-hover:bg-[#38bdf8]/60"
-              : "bg-[#dfc9a0]/30 group-hover:bg-[#dfc9a0]/60"
-          )}
+          className="absolute inset-0 rounded-full blur-sm transition-all pointer-events-none opacity-40 group-hover:opacity-80"
+          style={{
+            backgroundColor: "var(--sidebar-accent, #38bdf8)",
+            boxShadow: "0 0 16px var(--accent-subtle)",
+          }}
         />
 
         {/* Madalyon Gövdesi */}
@@ -326,16 +302,10 @@ export function AppSidebar() {
 
             {!effectivelyCollapsed && (
               <span
-                className={cn(
-                  "font-heading font-extrabold text-[22px] tracking-[0.24em] uppercase select-none leading-none transition-all duration-300",
-                  isDark
-                    ? "text-[#cbd5e1] tracking-[0.26em]"
-                    : "text-[#dfc9a0]"
-                )}
+                className="font-heading font-extrabold text-[22px] tracking-[0.24em] uppercase select-none leading-none transition-all duration-300"
                 style={{
-                  textShadow: isDark
-                    ? "0 0 14px rgba(203, 213, 225, 0.45), 0 2px 6px rgba(0,0,0,0.9)"
-                    : "0 2px 8px rgba(0,0,0,0.7), 0 0 2px rgba(251, 237, 208, 0.4)",
+                  color: "var(--sidebar-logo-text, #cbd5e1)",
+                  textShadow: "0 0 14px var(--sidebar-logo-glow, rgba(203, 213, 225, 0.45)), 0 2px 6px rgba(0,0,0,0.9)",
                 }}
               >
                 RUDDER
@@ -393,8 +363,9 @@ export function AppSidebar() {
                   className={cn(
                     "shrink-0 transition-all duration-200 group-hover:scale-110",
                     effectivelyCollapsed ? "size-5" : "size-[19px]",
-                    active ? (isDark ? "text-[#38bdf8]" : "text-[#dfc9a0]") : "text-white/80"
+                    active ? "" : "text-white/80"
                   )}
+                  style={active ? { color: "var(--sidebar-accent, #38bdf8)" } : undefined}
                 />
 
                 {!effectivelyCollapsed && (
@@ -416,7 +387,7 @@ export function AppSidebar() {
                       style={{
                         borderTop: "7px solid transparent",
                         borderBottom: "7px solid transparent",
-                        borderRight: isDark ? "10px solid #38bdf8" : "10px solid #dfc9a0",
+                        borderRight: "10px solid var(--sidebar-accent, #38bdf8)",
                         filter: "drop-shadow(-1px 0 2px rgba(0,0,0,0.4))",
                       }}
                     />
@@ -444,12 +415,13 @@ export function AppSidebar() {
                 type="button"
                 onClick={() => setLang(lang === "tr" ? "en" : "tr")}
                 title={lang === "tr" ? "Switch to English" : "Türkçe'ye Geç"}
-                className={cn(
-                  "size-8 rounded-lg text-xs font-bold font-mono uppercase transition-all flex items-center justify-center cursor-pointer",
-                  isDark
-                    ? "bg-[#101c38] text-[#38bdf8] border border-[#2a4687]/70 shadow-[0_0_8px_rgba(56,189,248,0.3)]"
-                    : "bg-[#580619] text-[#dfc9a0] border border-[#dfc9a0]/40 shadow-[0_0_8px_rgba(223,201,160,0.3)]"
-                )}
+                className="size-8 rounded-lg text-xs font-bold font-mono uppercase transition-all flex items-center justify-center cursor-pointer border"
+                style={{
+                  backgroundColor: "var(--sidebar-accent-bg, #101c38)",
+                  color: "var(--sidebar-accent, #38bdf8)",
+                  borderColor: "var(--sidebar-accent, #2a4687)",
+                  boxShadow: "0 0 8px var(--accent-subtle)",
+                }}
               >
                 {lang.toUpperCase()}
               </button>
@@ -459,13 +431,21 @@ export function AppSidebar() {
                   type="button"
                   onClick={() => setLang("tr")}
                   className={cn(
-                    "flex-1 py-1 px-2 rounded-lg text-xs font-semibold font-mono tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                    "flex-1 py-1 px-2 rounded-lg text-xs font-semibold font-mono tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer border",
                     lang === "tr"
-                      ? isDark
-                        ? "bg-[#101c38] text-[#38bdf8] border border-[#2a4687]/80 shadow-[0_0_8px_rgba(56,189,248,0.3)]"
-                        : "bg-[#580619] text-[#dfc9a0] border border-[#dfc9a0]/50 shadow-[0_0_8px_rgba(223,201,160,0.3)]"
-                      : "text-white/60 hover:text-white hover:bg-white/5 border border-transparent"
+                      ? ""
+                      : "text-white/60 hover:text-white hover:bg-white/5 border-transparent"
                   )}
+                  style={
+                    lang === "tr"
+                      ? {
+                          backgroundColor: "var(--sidebar-accent-bg, #101c38)",
+                          color: "var(--sidebar-accent, #38bdf8)",
+                          borderColor: "var(--sidebar-accent, #2a4687)",
+                          boxShadow: "0 0 8px var(--accent-subtle)",
+                        }
+                      : undefined
+                  }
                 >
                   <span>🇹🇷</span>
                   <span>TR</span>
@@ -474,13 +454,21 @@ export function AppSidebar() {
                   type="button"
                   onClick={() => setLang("en")}
                   className={cn(
-                    "flex-1 py-1 px-2 rounded-lg text-xs font-semibold font-mono tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                    "flex-1 py-1 px-2 rounded-lg text-xs font-semibold font-mono tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer border",
                     lang === "en"
-                      ? isDark
-                        ? "bg-[#101c38] text-[#38bdf8] border border-[#2a4687]/80 shadow-[0_0_8px_rgba(56,189,248,0.3)]"
-                        : "bg-[#580619] text-[#dfc9a0] border border-[#dfc9a0]/50 shadow-[0_0_8px_rgba(223,201,160,0.3)]"
-                      : "text-white/60 hover:text-white hover:bg-white/5 border border-transparent"
+                      ? ""
+                      : "text-white/60 hover:text-white hover:bg-white/5 border-transparent"
                   )}
+                  style={
+                    lang === "en"
+                      ? {
+                          backgroundColor: "var(--sidebar-accent-bg, #101c38)",
+                          color: "var(--sidebar-accent, #38bdf8)",
+                          borderColor: "var(--sidebar-accent, #2a4687)",
+                          boxShadow: "0 0 8px var(--accent-subtle)",
+                        }
+                      : undefined
+                  }
                 >
                   <span>🇬🇧</span>
                   <span>EN</span>
@@ -510,13 +498,16 @@ export function AppSidebar() {
             <Avatar
               className="size-8.5 shrink-0"
               style={{
-                border: isDark ? "2px solid #38bdf8" : "2px solid #dfc9a0",
-                boxShadow: isDark ? "0 0 8px rgba(56,189,248,0.4)" : "0 0 8px rgba(223,201,160,0.4)",
+                border: "2px solid var(--sidebar-accent, #38bdf8)",
+                boxShadow: "0 0 8px var(--accent-subtle)",
               }}
             >
               <AvatarFallback
-                className={cn("text-xs font-bold", isDark ? "text-[#38bdf8]" : "text-[#dfc9a0]")}
-                style={{ background: isDark ? "#060e24" : "#38020b" }}
+                className="text-xs font-bold"
+                style={{
+                  color: "var(--sidebar-accent, #38bdf8)",
+                  background: "var(--sidebar-accent-bg, #060e24)",
+                }}
               >
                 {user ? user.username.slice(0, 2).toUpperCase() : "?"}
               </AvatarFallback>
@@ -528,7 +519,10 @@ export function AppSidebar() {
                   <p className="truncate text-[12.5px] font-bold text-white leading-tight">
                     {user?.username ?? "..."}
                   </p>
-                  <p className={cn("truncate text-[10.5px] leading-tight mt-0.5", isDark ? "text-slate-300" : "text-[#dfc9a0]/90")}>
+                  <p
+                    className="truncate text-[10.5px] leading-tight mt-0.5"
+                    style={{ color: "var(--sidebar-accent-light, #cbd5e1)" }}
+                  >
                     {user ? (user.role === "SUPER_ADMIN" ? t("nav.superAdmin") : t("nav.member")) : ""}
                   </p>
                 </div>

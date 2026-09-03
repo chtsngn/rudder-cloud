@@ -212,6 +212,71 @@ export function buildThemeVars(paletteId: string, mode: 'light' | 'dark'): Recor
   vars['--input'] = vars['--border']
   vars['--ring'] = vars['--accent']
 
+  // ═══ YELKEN (SAIL), SIDEBAR VE LOGO DİNAMİK DEĞİŞKENLERİ ═══
+  if (paletteId === 'default') {
+    if (isLight) {
+      vars['--sail-bg-0'] = '#48030f'
+      vars['--sail-bg-1'] = '#680b22'
+      vars['--sail-bg-2'] = '#540516'
+      vars['--sail-bg-3'] = '#320108'
+      vars['--sail-stroke-0'] = '#c5a059'
+      vars['--sail-stroke-1'] = '#fbedd0'
+      vars['--sail-stroke-2'] = '#dfc9a0'
+      vars['--sail-stroke-3'] = '#8e6425'
+      vars['--sidebar-accent'] = '#dfc9a0'
+      vars['--sidebar-accent-light'] = '#fbedd0'
+      vars['--sidebar-accent-bg'] = '#580619'
+      vars['--sidebar-logo-text'] = '#dfc9a0'
+      vars['--sidebar-logo-glow'] = 'rgba(251, 237, 208, 0.4)'
+    } else {
+      vars['--sail-bg-0'] = '#0b1739'
+      vars['--sail-bg-1'] = '#0e1f4d'
+      vars['--sail-bg-2'] = '#0a1536'
+      vars['--sail-bg-3'] = '#060e24'
+      vars['--sail-stroke-0'] = '#38bdf8'
+      vars['--sail-stroke-1'] = '#e2e8f0'
+      vars['--sail-stroke-2'] = '#7dd3fc'
+      vars['--sail-stroke-3'] = '#0284c7'
+      vars['--sidebar-accent'] = '#38bdf8'
+      vars['--sidebar-accent-light'] = '#7dd3fc'
+      vars['--sidebar-accent-bg'] = '#101c38'
+      vars['--sidebar-logo-text'] = '#cbd5e1'
+      vars['--sidebar-logo-glow'] = 'rgba(203, 213, 225, 0.45)'
+    }
+  } else {
+    // 9 Renk Ailesine Özel Dinamik Yelken ve Sidebar Hesabı
+    const h = p.hue
+    if (isLight) {
+      vars['--sail-bg-0'] = hslToHex(h, 75, 15)
+      vars['--sail-bg-1'] = hslToHex(h, 70, 23)
+      vars['--sail-bg-2'] = hslToHex(h, 75, 18)
+      vars['--sail-bg-3'] = hslToHex(h, 80, 10)
+      vars['--sail-stroke-0'] = a[400]
+      vars['--sail-stroke-1'] = hslToHex(h, 30, 92)
+      vars['--sail-stroke-2'] = a[500]
+      vars['--sail-stroke-3'] = a[700]
+      vars['--sidebar-accent'] = a[500]
+      vars['--sidebar-accent-light'] = hslToHex(h, 60, 92)
+      vars['--sidebar-accent-bg'] = hslToHex(h, 65, 20)
+      vars['--sidebar-logo-text'] = a[400]
+      vars['--sidebar-logo-glow'] = rgba(a[400], 0.5)
+    } else {
+      vars['--sail-bg-0'] = hslToHex(h, 58, 14)
+      vars['--sail-bg-1'] = hslToHex(h, 65, 18)
+      vars['--sail-bg-2'] = hslToHex(h, 60, 12)
+      vars['--sail-bg-3'] = hslToHex(h, 68, 8)
+      vars['--sail-stroke-0'] = a[400]
+      vars['--sail-stroke-1'] = hslToHex(h, 30, 94)
+      vars['--sail-stroke-2'] = a[500]
+      vars['--sail-stroke-3'] = a[600]
+      vars['--sidebar-accent'] = a[400]
+      vars['--sidebar-accent-light'] = a[400]
+      vars['--sidebar-accent-bg'] = hslToHex(h, 55, 15)
+      vars['--sidebar-logo-text'] = a[400]
+      vars['--sidebar-logo-glow'] = rgba(a[400], 0.6)
+    }
+  }
+
   return vars
 }
 

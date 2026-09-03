@@ -163,3 +163,43 @@
     @apply bg-background text-foreground font-sans antialiased;
   }
 }
+
+/* ═══ DİNAMİK RENK TEMASI EŞLEMELERİ (TÜM SİTEDE VE BUTONLARDA DÖNÜŞÜM) ═══ */
+.bg-\[\#580619\], 
+.dark .dark\:bg-\[\#162752\], 
+.bg-\[\#162752\] {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+.hover\:bg-\[\#720a22\]:hover, 
+.dark .dark\:hover\:bg-\[\#1e346b\]:hover, 
+.hover\:bg-\[\#1e346b\]:hover {
+  background-color: var(--primary-hover) !important;
+}
+
+.border-\[\#c8a87c\]\/40, 
+.border-\[\#c8a87c\]\/50, 
+.dark .dark\:border-\[\#2a4687\]\/60, 
+.dark .dark\:border-\[\#2a4687\] {
+  border-color: var(--accent-veil) !important;
+}
+
+.text-\[\#580619\], 
+.dark .dark\:text-blue-300, 
+.text-blue-300 {
+  color: var(--accent-text) !important;
+}
+
+.bg-\[\#580619\]\/10, 
+.bg-\[\#580619\]\/5, 
+.dark .dark\:bg-\[\#101c38\], 
+.bg-\[\#101c38\] {
+  background-color: var(--accent-subtle) !important;
+}
+
+.border-\[\#c8a87c\]\/30, 
+.dark .dark\:border-\[\#1e3568\]\/50, 
+.dark .dark\:border-\[\#1e3568\] {
+  border-color: var(--border) !important;
+}
