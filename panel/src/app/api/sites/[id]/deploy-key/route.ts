@@ -38,10 +38,12 @@ function normalizeKey(key: string): string {
 /**
  * `GET /api/sites/[id]/deploy-key`
  *
- * Sitenin deploy key bilgisini döner. Eğer bağlı bir GitHub hesabı varsa
- * ve sitenin repoUrl'si biliniyorsa, anahtarın GitHub deposundaki durumunu da
- * canlı kontrol eder. Eğer anahtar GitHub'dan silinmişse, otomatik olarak yerel
- * kaydı da temizleyerek senkronize eder.
+ * Sitenin deploy key bilgisini döner.
+ * GitHub ile senkronizasyon:
+ * 1. Kayıtlı repo (site.config.deployKeyRepo, query param veya site.repoUrl) üzerinde anahtar sorgulanır.
+ * 2. Repo bilgisi bulunamazsa kullanıcının güncel depoları taranır.
+ * 3. Eğer deploy key GitHub üzerinde silinmişse, yerel kayıt ve ~/.ssh dosyaları da
+ *    otomatik olarak temizlenir (autoCleared: true döner).
  */
 export async function GET(request: Request, { params }: RouteParams) {
   const session = await getSession()
@@ -65,58 +67,132 @@ export async function GET(request: Request, { params }: RouteParams) {
   const url = new URL(request.url)
   const reqOwner = url.searchParams.get("owner")
   const reqRepo = url.searchParams.get("repo")
-  const repoInfo = (reqOwner && reqRepo)
+  const siteConfig = (site.config && typeof site.config === "object" ? site.config : {}) as Record<string, unknown>
+  const configRepoStr = typeof siteConfig.deployKeyRepo === "string" ? siteConfig.deployKeyRepo : null
+
+  let repoInfo = (reqOwner && reqRepo)
     ? { owner: reqOwner, repo: reqRepo }
-    : parseOwnerRepo(site.repoUrl ?? "")
+    : (configRepoStr ? parseOwnerRepo(configRepoStr) : parseOwnerRepo(site.repoUrl ?? ""))
 
   let githubStatus: "active" | "deleted_on_github" | "not_checked" = "not_checked"
   let githubKeyId: number | null = null
 
-  if (repoInfo) {
-    try {
-      const { getDecryptedTokenForUser, listDeployKeysFromGitHubRepo } = await import("@/lib/github-api")
-      const token = await getDecryptedTokenForUser(session.userId)
-      const remoteKeys = await listDeployKeysFromGitHubRepo(token, repoInfo.owner, repoInfo.repo)
-      
+  try {
+    const {
+      getDecryptedTokenForUser,
+      listDeployKeysFromGitHubRepo,
+      listGitHubUserRepos,
+    } = await import("@/lib/github-api")
+    const token = await getDecryptedTokenForUser(session.userId).catch(() => null)
+
+    if (token) {
       const localNorm = normalizeKey(site.deployKeyPublicKey)
-      const matched = remoteKeys.find((rk) => normalizeKey(rk.key) === localNorm)
 
-      if (matched) {
-        githubStatus = "active"
-        githubKeyId = matched.id
+      // 1. Belirli bir repo biliniyorsa doğrudan o depoyu kontrol et
+      if (repoInfo) {
+        const remoteKeys = await listDeployKeysFromGitHubRepo(token, repoInfo.owner, repoInfo.repo)
+        const matched = remoteKeys.find((rk) => normalizeKey(rk.key) === localNorm)
+
+        if (matched) {
+          githubStatus = "active"
+          githubKeyId = matched.id
+        } else {
+          // Anahtar GitHub deposundan silinmiş!
+          // Çift yönlü senkronizasyon: Yerel kaydı ve anahtar dosyalarını hemen temizle
+          githubStatus = "deleted_on_github"
+          await removeDeployKey(site.domain)
+          await prisma.site.update({
+            where: { id },
+            data: {
+              deployKeyName: null,
+              deployKeyPublicKey: null,
+              deployKeyFingerprint: null,
+              deployKeyCreatedAt: null,
+              config: {
+                ...siteConfig,
+                deployKeyRepo: null,
+                deployKeyId: null,
+              },
+            },
+          })
+
+          await logAudit({
+            userId: session.userId,
+            action: "DEPLOY_KEY_SYNC_AUTO_CLEARED",
+            targetType: "Site",
+            targetId: id,
+            detail: `${site.domain} (GitHub deposunda @${repoInfo.owner}/${repoInfo.repo} silindiği için yerel kayıt da kaldırıldı)`,
+          })
+
+          return NextResponse.json({
+            deployKey: null,
+            autoCleared: true,
+            githubStatus: "deleted_on_github",
+            message: "Deploy key GitHub deposundan silindiği için buradan da kaldırıldı.",
+          })
+        }
       } else {
-        // Anahtar GitHub deposundan kullanıcı tarafından silinmiş!
-        // Çift yönlü senkronizasyon: Yerel kaydı ve anahtar dosyalarını da temizle
-        githubStatus = "deleted_on_github"
-        await removeDeployKey(site.domain)
-        await prisma.site.update({
-          where: { id },
-          data: {
-            deployKeyName: null,
-            deployKeyPublicKey: null,
-            deployKeyFingerprint: null,
-            deployKeyCreatedAt: null,
-          },
-        })
+        // Repo henüz atanmamışsa kullanıcının son güncellenen depolarını tara
+        const userRepos = await listGitHubUserRepos(token).catch(() => [])
+        let foundRepo: { owner: string; repo: string } | null = null
+        const reposToCheck = userRepos.slice(0, 15)
 
-        await logAudit({
-          userId: session.userId,
-          action: "DEPLOY_KEY_SYNC_AUTO_CLEARED",
-          targetType: "Site",
-          targetId: id,
-          detail: `${site.domain} (GitHub deposunda @${repoInfo.owner}/${repoInfo.repo} bulunamadığı için otomatik temizlendi)`,
-        })
+        for (const r of reposToCheck) {
+          try {
+            const keys = await listDeployKeysFromGitHubRepo(token, r.owner, r.name)
+            const matched = keys.find((k) => normalizeKey(k.key) === localNorm)
+            if (matched) {
+              foundRepo = { owner: r.owner, repo: r.name }
+              githubStatus = "active"
+              githubKeyId = matched.id
+              // Bulunan depoyu sonraki hızlı kontroller için config'e kaydet
+              await prisma.site.update({
+                where: { id },
+                data: {
+                  config: {
+                    ...siteConfig,
+                    deployKeyRepo: `${r.owner}/${r.name}`,
+                    deployKeyId: matched.id,
+                  },
+                },
+              })
+              break
+            }
+          } catch {
+            // Sonraki depoyu denemeye devam et
+          }
+        }
 
-        return NextResponse.json({
-          deployKey: null,
-          autoCleared: true,
-          githubStatus: "deleted_on_github",
-          message: "Deploy key GitHub deposundan silindiği için panelde de temizlendi.",
-        })
+        // Taranan depoların hiçbirinde anahtar yoksa silinmiş kabul et ve temizle
+        if (!foundRepo && reposToCheck.length > 0) {
+          githubStatus = "deleted_on_github"
+          await removeDeployKey(site.domain)
+          await prisma.site.update({
+            where: { id },
+            data: {
+              deployKeyName: null,
+              deployKeyPublicKey: null,
+              deployKeyFingerprint: null,
+              deployKeyCreatedAt: null,
+              config: {
+                ...siteConfig,
+                deployKeyRepo: null,
+                deployKeyId: null,
+              },
+            },
+          })
+
+          return NextResponse.json({
+            deployKey: null,
+            autoCleared: true,
+            githubStatus: "deleted_on_github",
+            message: "Deploy key GitHub depolarında bulunamadığı için buradan da kaldırıldı.",
+          })
+        }
       }
-    } catch {
-      githubStatus = "not_checked"
     }
+  } catch {
+    githubStatus = "not_checked"
   }
 
   return NextResponse.json({
@@ -128,6 +204,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       createdAt: site.deployKeyCreatedAt,
       githubStatus,
       githubKeyId,
+      repo: configRepoStr || (repoInfo ? `${repoInfo.owner}/${repoInfo.repo}` : null),
     },
   })
 }
@@ -135,9 +212,9 @@ export async function GET(request: Request, { params }: RouteParams) {
 /**
  * `POST /api/sites/[id]/deploy-key`
  *
- * Yeni bir deploy key üretir. Mevcut bir anahtar varsa `overwrite: true` ile
- * güvenle yenisiyle değiştirir (409 hatası vermez). `autoAddToGithub: true` ise
- * bağlı kullanıcının GitHub token'ı ile anahtarı doğrudan depoya ekler.
+ * Yeni bir deploy key üretir (`overwrite: true` ile).
+ * `autoAddToGithub: true` ise bağlı GitHub deposuna anahtarı ekler ve
+ * depoyu site.config.deployKeyRepo olarak kaydeder.
  */
 export async function POST(request: Request, { params }: RouteParams) {
   const session = await getSession()
@@ -165,11 +242,14 @@ export async function POST(request: Request, { params }: RouteParams) {
   const customTitle = typeof input.title === "string" ? input.title.trim() : ""
   const readOnly = input.readOnly !== false
 
+  const siteConfig = (site.config && typeof site.config === "object" ? site.config : {}) as Record<string, unknown>
+  const configRepoStr = typeof siteConfig.deployKeyRepo === "string" ? siteConfig.deployKeyRepo : null
+
   let owner = typeof input.owner === "string" ? input.owner.trim() : ""
   let repo = typeof input.repo === "string" ? input.repo.trim() : ""
 
   if (!owner || !repo) {
-    const parsed = parseOwnerRepo(site.repoUrl ?? "")
+    const parsed = configRepoStr ? parseOwnerRepo(configRepoStr) : parseOwnerRepo(site.repoUrl ?? "")
     if (parsed) {
       owner = parsed.owner
       repo = parsed.repo
@@ -180,18 +260,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     // overwrite: true sayesinde eski anahtar varsa temizlenip sıfırdan üretilir
     const info = await generateDeployKey(site.domain, true)
     
-    await prisma.site.update({
-      where: { id },
-      data: {
-        deployKeyName: info.keyName,
-        deployKeyPublicKey: info.publicKey,
-        deployKeyFingerprint: info.fingerprint,
-        deployKeyCreatedAt: new Date(info.createdAt),
-      },
-    })
-
     let githubKey = null
     let githubError: string | null = null
+    let attachedRepo: string | null = null
 
     if (autoAddToGithub && owner && repo) {
       try {
@@ -207,10 +278,30 @@ export async function POST(request: Request, { params }: RouteParams) {
           info.publicKey,
           readOnly
         )
+        attachedRepo = `${owner}/${repo}`
       } catch (ghErr) {
         githubError = ghErr instanceof Error ? ghErr.message : "GitHub'a otomatik eklenemedi."
       }
     }
+
+    const assignedRepo = attachedRepo || (owner && repo ? `${owner}/${repo}` : configRepoStr)
+    const newRepoUrl = site.repoUrl || (assignedRepo ? `git@${info.hostAlias}:${assignedRepo}.git` : null)
+
+    await prisma.site.update({
+      where: { id },
+      data: {
+        deployKeyName: info.keyName,
+        deployKeyPublicKey: info.publicKey,
+        deployKeyFingerprint: info.fingerprint,
+        deployKeyCreatedAt: new Date(info.createdAt),
+        repoUrl: newRepoUrl,
+        config: {
+          ...siteConfig,
+          deployKeyRepo: assignedRepo,
+          deployKeyId: githubKey?.id ?? null,
+        },
+      },
+    })
 
     await logAudit({
       userId: session.userId,
@@ -226,6 +317,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         ...info,
         githubStatus: githubKey ? "active" : "not_checked",
         githubKeyId: githubKey?.id ?? null,
+        repo: assignedRepo,
       },
       githubAdded: !!githubKey,
       githubKey,
@@ -244,8 +336,7 @@ export async function POST(request: Request, { params }: RouteParams) {
  * `DELETE /api/sites/[id]/deploy-key`
  *
  * Deploy key'i yerel sunucudan (`~/.ssh/` ve DB) siler.
- * Aynı zamanda kullanıcı bağlı bir GitHub hesabına ve depoya sahipse,
- * anahtarı GitHub API üzerinden depodan da otomatik olarak kaldırır.
+ * Aynı zamanda bağlı depodan (GitHub API üzerinden) da kaldırır.
  */
 export async function DELETE(request: Request, { params }: RouteParams) {
   const session = await getSession()
@@ -265,9 +356,12 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   const url = new URL(request.url)
   const reqOwner = url.searchParams.get("owner")
   const reqRepo = url.searchParams.get("repo")
+  const siteConfig = (site.config && typeof site.config === "object" ? site.config : {}) as Record<string, unknown>
+  const configRepoStr = typeof siteConfig.deployKeyRepo === "string" ? siteConfig.deployKeyRepo : null
+
   const repoInfo = (reqOwner && reqRepo)
     ? { owner: reqOwner, repo: reqRepo }
-    : parseOwnerRepo(site.repoUrl ?? "")
+    : (configRepoStr ? parseOwnerRepo(configRepoStr) : parseOwnerRepo(site.repoUrl ?? ""))
 
   let githubDeleted = false
   let githubError: string | null = null
@@ -294,7 +388,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     }
   }
 
-  // Yerel sunucu dosyalarını ve DB kaydını sil
+  // Yerel sunucu dosyalarını, DB kaydını ve config bilgisini temizle
   await removeDeployKey(site.domain)
   await prisma.site.update({
     where: { id },
@@ -303,6 +397,11 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       deployKeyPublicKey: null,
       deployKeyFingerprint: null,
       deployKeyCreatedAt: null,
+      config: {
+        ...siteConfig,
+        deployKeyRepo: null,
+        deployKeyId: null,
+      },
     },
   })
 

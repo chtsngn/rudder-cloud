@@ -1,13 +1,14 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Copy, KeyRound, Loader2, Trash2 } from "lucide-react"
+import { Copy, KeyRound, Loader2, RefreshCw, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useTranslation } from "@/components/language-provider"
+import { cn } from "@/lib/utils"
 
 interface DeployKeyData {
   keyName: string
@@ -94,12 +95,20 @@ export function SiteGithubKeysCard({
   const [ghDeploySuccess, setGhDeploySuccess] = useState<string | null>(null)
   const [autoCleanNotice, setAutoCleanNotice] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
+  const [syncing, setSyncing] = useState(false)
+
+  const load = useCallback(async (overrideRepo?: string) => {
     setLoading(true)
     setLoadError(null)
     try {
+      const activeRepo = overrideRepo !== undefined ? overrideRepo : repoSlug
+      const parts = (activeRepo || "").split("/")
+      const owner = parts[0]?.trim()
+      const repo = parts[1]?.trim()
+      const q = owner && repo ? `?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}` : ""
+
       const [deployRes, actionsRes, ghRes] = await Promise.all([
-        fetch(`/api/sites/${siteId}/deploy-key`, { cache: "no-store" }),
+        fetch(`/api/sites/${siteId}/deploy-key${q}`, { cache: "no-store" }),
         fetch(`/api/sites/${siteId}/actions-key`, { cache: "no-store" }),
         fetch(`/api/settings/github`, { cache: "no-store" }).catch(() => null),
       ])
@@ -112,7 +121,7 @@ export function SiteGithubKeysCard({
         return
       }
       const deployData = (await deployRes.json()) as {
-        deployKey: DeployKeyData | null
+        deployKey: (DeployKeyData & { repo?: string | null }) | null
         autoCleared?: boolean
         message?: string
       }
@@ -121,11 +130,16 @@ export function SiteGithubKeysCard({
       setDeployKey(deployData.deployKey)
       setActionsKey(actionsData.actionsKey)
 
+      if (deployData.deployKey?.repo && !repoSlug) {
+        setRepoSlug(deployData.deployKey.repo)
+      }
+
       if (deployData.autoCleared) {
+        setDeployKey(null)
         setAutoCleanNotice(
           lang === "tr"
-            ? "Deploy key GitHub deposunda bulunamadı (silinmiş). Yerel kayıt otomatik senkronize edilerek temizlendi. Dilediğiniz zaman yeni bir anahtar oluşturabilirsiniz."
-            : "Deploy key was not found in the GitHub repository (deleted). Local key was automatically cleaned up. You can generate a new deploy key anytime."
+            ? "⚠️ Deploy key GitHub deposundan silindiği tespit edildi ve buradan da otomatik olarak kaldırıldı. Dilerseniz hemen yeni bir anahtar oluşturabilirsiniz."
+            : "⚠️ Deploy key was detected as removed from GitHub and has been automatically removed here. You can generate a new deploy key anytime."
         )
       }
 
@@ -152,17 +166,31 @@ export function SiteGithubKeysCard({
       setLoadError(lang === "tr" ? "Sunucuya bağlanılamadı." : "Failed to connect to server.")
     } finally {
       setLoading(false)
+      setSyncing(false)
     }
-  }, [siteId, lang])
+  }, [siteId, lang, repoSlug])
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setRepoSlug(guessOwnerRepo(initialRepoUrl ?? ""))
-      load()
-    }, 0)
-    return () => clearTimeout(timer)
+    const initialSlug = guessOwnerRepo(initialRepoUrl ?? "")
+    if (initialSlug) setRepoSlug(initialSlug)
+    load(initialSlug || undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteId])
+
+  // Kullanıcı başka bir sekmede GitHub'dan anahtarı silip panele döndüğünde otomatik senkronize et
+  useEffect(() => {
+    function handleFocusOrVisible() {
+      if (document.visibilityState === "visible") {
+        load()
+      }
+    }
+    window.addEventListener("focus", handleFocusOrVisible)
+    document.addEventListener("visibilitychange", handleFocusOrVisible)
+    return () => {
+      window.removeEventListener("focus", handleFocusOrVisible)
+      document.removeEventListener("visibilitychange", handleFocusOrVisible)
+    }
+  }, [load])
 
   function copy(field: string, value: string) {
     navigator.clipboard
@@ -381,7 +409,13 @@ export function SiteGithubKeysCard({
                   <select
                     id="repoSelect"
                     value={repoSlug}
-                    onChange={(e) => setRepoSlug(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setRepoSlug(val)
+                      if (deployKey && val) {
+                        load(val)
+                      }
+                    }}
                     className="w-full h-10 px-3 rounded-xl text-xs bg-white dark:bg-[#090e1f] border border-slate-200 dark:border-[#16223f] text-slate-900 dark:text-slate-100 font-mono outline-none focus:ring-1 focus:ring-[#c8a87c] dark:focus:ring-[#2a4687]"
                   >
                     <option value="">
@@ -609,6 +643,26 @@ export function SiteGithubKeysCard({
                     <Button variant="outline" size="sm" onClick={handleTestDeployKey} disabled={deployTesting} className="h-8 text-xs">
                       {deployTesting && <Loader2 className="size-3.5 animate-spin mr-1.5" />}
                       {lang === "tr" ? "Bağlantıyı Test Et" : "Test Connection"}
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSyncing(true)
+                        load().then(() => {
+                          setGhDeploySuccess(
+                            lang === "tr"
+                              ? "GitHub senkronizasyonu tamamlandı."
+                              : "GitHub synchronization completed."
+                          )
+                        })
+                      }}
+                      disabled={syncing || deployTesting}
+                      className="h-8 text-xs"
+                    >
+                      <RefreshCw className={cn("size-3.5 mr-1.5 text-[#c8a87c] dark:text-blue-300", syncing && "animate-spin")} />
+                      {lang === "tr" ? "GitHub ile Senkronize Et" : "Sync with GitHub"}
                     </Button>
                     
                     <Button
