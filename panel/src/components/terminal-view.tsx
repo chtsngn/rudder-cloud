@@ -37,6 +37,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useTheme } from "@/components/theme-provider"
+import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
 
 type ConnectionState = "connecting" | "connected" | "closed" | "error"
@@ -90,6 +91,7 @@ export interface TerminalViewProps {
 
 export function TerminalView({ isDocked = false, onClose, onMinimize }: TerminalViewProps) {
   const { theme } = useTheme()
+  const { t, lang } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
@@ -329,11 +331,11 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
     term.open(container)
 
     if (isDark) {
-      term.writeln("\x1b[38;2;147;197;253m>_ Rudder Cloud • Sunucu Web Terminali\x1b[0m")
+      term.writeln(`\x1b[38;2;147;197;253m${t("terminal.bannerTitle")}\x1b[0m`)
     } else {
-      term.writeln("\x1b[38;2;223;201;160m>_ Rudder Cloud • Sunucu Web Terminali\x1b[0m")
+      term.writeln(`\x1b[38;2;223;201;160m${t("terminal.bannerTitle")}\x1b[0m`)
     }
-    term.writeln("\x1b[90mBağlantı kuruluyor, lütfen bekleyin...\x1b[0m\r\n")
+    term.writeln(`\x1b[90m${t("terminal.bannerConnecting")}\x1b[0m\r\n`)
 
     setTimeout(() => {
       try {
@@ -579,7 +581,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
             {state === "connected" && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 dark:border-emerald-500/40 px-2 py-0.5 text-[10px] font-mono font-bold text-emerald-400">
                 <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(74,222,128,0.8)]" />
-                <span className="hidden sm:inline">Online</span>
+                <span className="hidden sm:inline">{t("terminal.connected")}</span>
               </span>
             )}
             {state === "connecting" && (
@@ -590,7 +592,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
             {(state === "closed" || state === "error") && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 dark:bg-rose-950/40 border border-rose-500/30 dark:border-rose-900/60 px-2 py-0.5 text-[10px] font-mono text-rose-400">
                 <span className="size-1.5 rounded-full bg-rose-400" />
-                <span className="hidden sm:inline">Offline</span>
+                <span className="hidden sm:inline">{t("terminal.disconnected")}</span>
               </span>
             )}
           </div>
@@ -604,7 +606,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
                 setIsPaletteOpen(true)
                 setPaletteQuery("")
               }}
-              title="Komut Paletini Aç (Ctrl + K)"
+              title={t("terminal.commandPalette")}
               className="h-6.5 px-2 flex items-center gap-1 rounded-md border border-slate-700/60 dark:border-[#16223f] bg-slate-900/90 dark:bg-[#060a17] text-slate-300 dark:text-slate-300 hover:text-white dark:hover:text-blue-300 hover:border-[#c8a87c] dark:hover:border-[#2a4687] transition-all cursor-pointer text-xs"
             >
               <Command className="size-3 text-[#c8a87c] dark:text-blue-300" />
@@ -616,7 +618,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
               <button
                 type="button"
                 onClick={() => handleZoom(-1)}
-                title="Yazıyı Küçült"
+                title={t("terminal.zoomOut")}
                 className="size-5 flex items-center justify-center text-slate-400 hover:text-white dark:hover:text-slate-200 rounded transition-colors cursor-pointer"
               >
                 <ZoomOut className="size-3" />
@@ -625,7 +627,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
               <button
                 type="button"
                 onClick={() => handleZoom(1)}
-                title="Yazıyı Büyüt"
+                title={t("terminal.zoomIn")}
                 className="size-5 flex items-center justify-center text-slate-400 hover:text-white dark:hover:text-slate-200 rounded transition-colors cursor-pointer"
               >
                 <ZoomIn className="size-3" />
@@ -636,7 +638,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
             <button
               type="button"
               onClick={handleClear}
-              title="Konsolu Temizle"
+              title={t("terminal.clear")}
               className="size-6.5 flex items-center justify-center rounded-md border border-slate-700/60 dark:border-[#16223f] bg-slate-900/90 dark:bg-[#060a17] text-slate-400 hover:text-white dark:hover:text-slate-200 hover:border-slate-600 dark:hover:border-[#2a4687] transition-all cursor-pointer"
             >
               <Eraser className="size-3" />
@@ -646,7 +648,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
             <button
               type="button"
               onClick={() => setReconnectKey((k) => k + 1)}
-              title="Yeniden Bağlan"
+              title={t("terminal.reconnect")}
               className={cn(
                 "size-6.5 flex items-center justify-center rounded-md border text-xs font-semibold transition-all cursor-pointer",
                 state === "closed" || state === "error"
@@ -677,7 +679,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
             className="inline-flex items-center gap-1.5 rounded-full border border-[#c8a87c]/80 dark:border-[#2a4687]/60 bg-[#580619] dark:bg-[#162752] px-3 py-1.5 font-bold text-[11px] text-white shadow-xs hover:bg-[#720a22] dark:hover:bg-[#1e346b] hover:border-[#dfc9a0] dark:hover:border-[#385db3] transition-all cursor-pointer shrink-0 active:scale-95"
           >
             <Plus className="size-3.5 text-[#dfc9a0] dark:text-white" />
-            Komut Ekle
+            {t("terminal.addCommand")}
           </button>
 
           {/* Kitaplık Butonu */}

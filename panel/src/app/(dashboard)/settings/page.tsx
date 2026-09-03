@@ -689,11 +689,11 @@ export default function SettingsPage() {
             <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-700 dark:text-blue-300 border border-slate-200/80 dark:border-[#1e3568]/50">
               {theme === "dark" ? (
                 <>
-                  <Moon className="size-3 text-blue-300" /> Koyu Tema
+                  <Moon className="size-3 text-blue-300" /> {t("settings.theme.dark")}
                 </>
               ) : (
                 <>
-                  <Sun className="size-3 text-amber-600" /> Açık Tema
+                  <Sun className="size-3 text-amber-600" /> {t("settings.theme.light")}
                 </>
               )}
             </span>
@@ -729,8 +729,8 @@ export default function SettingsPage() {
                         <Sun className="size-4" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Açık Tema</h3>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Kraliyet Bordosu & Altın Vurgular</p>
+                        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">{t("settings.theme.light")}</h3>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{t("settings.theme.lightDesc")}</p>
                       </div>
                     </div>
                     {theme === "light" && (
@@ -771,8 +771,8 @@ export default function SettingsPage() {
                         <Moon className="size-4" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Koyu Tema</h3>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Gece Okyanus Laciverti & Sisli Gri</p>
+                        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">{t("settings.theme.dark")}</h3>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{t("settings.theme.darkDesc")}</p>
                       </div>
                     </div>
                     {theme === "dark" && (
@@ -813,10 +813,10 @@ export default function SettingsPage() {
             </div>
             <div>
               <h2 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100">
-                Panel Alan Adı ve Otomatik SSL
+                {t("settings.sections.domain")}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
-                Rudder paneline kendi özel alan adınızla (<span className="font-mono text-slate-700 dark:text-slate-300">panel.siteniz.com</span>) güvenli HTTPS üzerinden erişin.
+                {t("settings.domain.subtitle", { domain: "panel.example.com" })}
               </p>
             </div>
           </div>
@@ -828,7 +828,7 @@ export default function SettingsPage() {
               </span>
             ) : (
               <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-[#16223f]">
-                Yapılandırılmadı
+                {t("settings.domain.notConfigured")}
               </span>
             )}
             <div
@@ -880,7 +880,7 @@ export default function SettingsPage() {
                           </span>
                         </div>
                         <p className="text-xs text-emerald-800 dark:text-emerald-300/90 mt-1">
-                          Let&apos;s Encrypt SSL sertifikası aktif ve otomatik olarak yenilenir.
+                          {t("settings.domain.sslActiveDesc")}
                         </p>
                         {domainSettings.lastError && (
                           <p className="mt-2 text-xs text-red-600 dark:text-red-400 font-mono bg-red-50 dark:bg-red-950/40 p-2 rounded-lg border border-red-200 dark:border-red-900">
@@ -902,7 +902,7 @@ export default function SettingsPage() {
                       ) : (
                         <Trash2 className="size-3.5 mr-1" />
                       )}
-                      Bağlantıyı Kaldır
+                      {t("settings.domain.removeBtn")}
                     </Button>
                   </div>
                 )}
@@ -910,24 +910,26 @@ export default function SettingsPage() {
                 {/* Form Alanları */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Panel Alan Adı (FQDN)</Label>
+                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {t("settings.domain.fqdnLabel")}
+                    </Label>
                     <Input
                       value={domainForm.domain}
                       onChange={(e) => setDomainForm((f) => ({ ...f, domain: e.target.value }))}
-                      placeholder="panel.ornek.com"
+                      placeholder={t("settings.domain.fqdnPlaceholder")}
                       className="font-mono text-xs h-11 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      SSL Bildirim E-postası (Let&apos;s Encrypt)
+                      {t("settings.domain.emailLabel")}
                     </Label>
                     <Input
                       type="email"
                       value={domainForm.email}
                       onChange={(e) => setDomainForm((f) => ({ ...f, email: e.target.value }))}
-                      placeholder="admin@ornek.com"
+                      placeholder={t("settings.domain.emailPlaceholder")}
                       className="text-xs h-11 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
                     />
                   </div>
@@ -936,7 +938,7 @@ export default function SettingsPage() {
                 <div className="rounded-xl border border-amber-200/80 dark:border-[#16223f] bg-amber-50/50 dark:bg-[#060a17] p-3.5 text-xs text-amber-900 dark:text-slate-300 flex items-start gap-2.5">
                   <ShieldAlert className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <span>
-                    Alan adınızın <strong>DNS A kaydının</strong> bu sunucunun genel IP adresini gösterdiğinden emin olun. SSL doğrulaması için port 80/443 erişimi gereklidir.
+                    {t("settings.domain.dnsWarning")}
                   </span>
                 </div>
 
@@ -958,7 +960,7 @@ export default function SettingsPage() {
                     ) : (
                       <CheckCircle2 className="size-4 text-[#dfc9a0] dark:text-white" />
                     )}
-                    {domainSettings?.domain ? "GÜNCELLE VE SSL YENİLE" : "BAĞLA VE SSL SERTİFİKASI AL"}
+                    {domainSaving ? t("settings.domain.bindingBtn") : (domainSettings?.domain ? t("common.save") : t("settings.domain.bindBtn"))}
                   </Button>
                 </div>
               </div>
@@ -980,17 +982,17 @@ export default function SettingsPage() {
             </div>
             <div>
               <h2 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100">
-                S3 Bulut Depolama Yapılandırmaları
+                {t("settings.s3.title")}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
-                AWS S3, Cloudflare R2, MinIO, Wasabi veya DigitalOcean Spaces otomatik yedekleme hedefleri.
+                {t("settings.s3.subtitle")}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
             <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-700 dark:text-blue-300 border border-slate-200/80 dark:border-[#1e3568]/50">
-              <Database className="size-3" /> {configs.length} Profil
+              <Database className="size-3" /> {t("settings.s3.profilesCount", { count: configs.length })}
             </span>
 
             <Button
@@ -1003,7 +1005,7 @@ export default function SettingsPage() {
               className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-3.5 py-1.5 rounded-xl shadow-sm transition-all flex items-center gap-1.5 h-8.5 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] shrink-0 cursor-pointer"
             >
               <Plus className="size-3.5 text-[#dfc9a0] dark:text-white" />
-              <span className="hidden xs:inline">Yeni Yapılandırma</span>
+              <span className="hidden xs:inline">{t("settings.s3.newConfigBtn")}</span>
             </Button>
 
             <div
@@ -1027,25 +1029,29 @@ export default function SettingsPage() {
                   <div className="flex items-center gap-2">
                     <Sparkles className="size-4 text-[#c8a87c] dark:text-blue-300" />
                     <h3 className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
-                      {editingId ? "S3 Yapılandırmasını Düzenle" : "Yeni S3 Sağlayıcı Profili Ekle"}
+                      {editingId ? t("settings.s3.modalTitleEdit") : t("settings.s3.modalTitleAdd")}
                     </h3>
                   </div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 font-sans">AWS S3 / R2 / MinIO Uyumlu</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-sans">AWS S3 / R2 / MinIO</span>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Profil Etiketi</Label>
+                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {t("settings.s3.label")}
+                    </Label>
                     <Input
                       value={form.label}
                       onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
-                      placeholder="Örn: AWS Frankfurt, Cloudflare R2 Yedekler"
+                      placeholder="AWS Frankfurt, Cloudflare R2"
                       className="h-10 rounded-xl text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Bucket Adı</Label>
+                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {t("settings.s3.bucket")}
+                    </Label>
                     <Input
                       value={form.bucket}
                       onChange={(e) => setForm((f) => ({ ...f, bucket: e.target.value }))}
@@ -1055,18 +1061,20 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Bölge (Region)</Label>
+                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {t("settings.s3.region")}
+                    </Label>
                     <Input
                       value={form.region}
                       onChange={(e) => setForm((f) => ({ ...f, region: e.target.value }))}
-                      placeholder="eu-central-1 veya auto"
+                      placeholder="eu-central-1 / auto"
                       className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
                     />
                   </div>
 
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Özel Endpoint URL (Opsiyonel — R2 / MinIO / Spaces)
+                      {t("settings.s3.endpoint")}
                     </Label>
                     <Input
                       value={form.endpoint}
@@ -1077,7 +1085,9 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Access Key ID</Label>
+                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {t("settings.s3.accessKey")}
+                    </Label>
                     <Input
                       value={form.accessKeyId}
                       onChange={(e) => setForm((f) => ({ ...f, accessKeyId: e.target.value }))}
@@ -1087,7 +1097,7 @@ export default function SettingsPage() {
 
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Secret Access Key {editingId ? "(Değiştirmek istemiyorsanız boş bırakın)" : ""}
+                      {t("settings.s3.secretKey")}
                     </Label>
                     <Input
                       type="password"
@@ -1100,7 +1110,7 @@ export default function SettingsPage() {
 
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Yol Öneki / Klasör (Path Prefix — Opsiyonel)
+                      {t("settings.s3.prefix")}
                     </Label>
                     <Input
                       value={form.pathPrefix}
@@ -1124,7 +1134,7 @@ export default function SettingsPage() {
                     onClick={() => setFormOpen(false)}
                     className="h-10 px-4 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300 dark:hover:bg-[#111f40]"
                   >
-                    Vazgeç
+                    {t("common.vazgec")}
                   </Button>
                   <Button
                     size="sm"
@@ -1133,7 +1143,7 @@ export default function SettingsPage() {
                     className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-10 px-6 rounded-xl text-xs font-semibold border border-[#c8a87c]/40 dark:border-[#2a4687]/60"
                   >
                     {saving && <Loader2 className="size-3.5 animate-spin mr-1 text-[#dfc9a0] dark:text-white" />}
-                    {editingId ? "Değişiklikleri Kaydet" : "Profili Oluştur"}
+                    {editingId ? t("common.save") : t("settings.s3.saveBtn")}
                   </Button>
                 </div>
               </div>
@@ -1156,10 +1166,10 @@ export default function SettingsPage() {
                   <Database className="size-6" />
                 </div>
                 <h3 className="font-heading font-bold text-sm text-slate-800 dark:text-slate-200">
-                  Henüz bir S3 yapılandırması eklenmedi.
+                  {t("settings.s3.emptyTitle")}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mt-1 mb-4">
-                  Sitelerinizin veritabanı ve dosya yedeklerini güvenli bulut depolama alanına aktarmak için ilk profilinizi oluşturun.
+                  {t("settings.s3.emptyDesc")}
                 </p>
                 <Button
                   size="sm"
@@ -1167,7 +1177,7 @@ export default function SettingsPage() {
                   className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white text-xs font-semibold px-4 h-9 rounded-xl border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer"
                 >
                   <Plus className="size-3.5 mr-1 text-[#dfc9a0] dark:text-white" />
-                  İlk S3 Profilini Ekle
+                  {t("settings.s3.createFirstBtn")}
                 </Button>
               </div>
             ) : (
@@ -1180,25 +1190,25 @@ export default function SettingsPage() {
                     <div>
                       <div className="flex items-center justify-between">
                         <span className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
-                          {config.label || "İsimsiz S3 Profili"}
+                          {config.label || "S3 Profile"}
                         </span>
                         <span className="text-[10px] font-mono font-bold bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 px-2 py-0.5 rounded-full border border-[#c8a87c]/30 dark:border-[#1e3568]/50">
-                          S3 Uyumlu
+                          S3
                         </span>
                       </div>
 
                       <div className="mt-3 space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
                         <div className="flex items-center justify-between">
-                          <span className="text-slate-400 dark:text-slate-500">Bucket:</span>
+                          <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.bucket")}:</span>
                           <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{config.bucket}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-slate-400 dark:text-slate-500">Bölge (Region):</span>
+                          <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.region")}:</span>
                           <span className="font-mono text-slate-800 dark:text-slate-200">{config.region}</span>
                         </div>
                         {config.endpoint && (
                           <div className="flex items-center justify-between">
-                            <span className="text-slate-400 dark:text-slate-500">Özel Endpoint:</span>
+                            <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.endpoint")}:</span>
                             <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300 truncate max-w-[200px]" title={config.endpoint}>
                               {config.endpoint}
                             </span>
@@ -1206,7 +1216,7 @@ export default function SettingsPage() {
                         )}
                         {config.pathPrefix && (
                           <div className="flex items-center justify-between">
-                            <span className="text-slate-400 dark:text-slate-500">Yol Öneki:</span>
+                            <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.prefix")}:</span>
                             <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300">{config.pathPrefix}</span>
                           </div>
                         )}
@@ -1221,7 +1231,7 @@ export default function SettingsPage() {
                         className="h-8 rounded-xl text-xs font-semibold px-3 dark:border-[#16223f] dark:text-slate-300 dark:hover:border-[#2a4687] dark:hover:bg-[#111f40]"
                       >
                         <Pencil className="size-3 mr-1 text-[#c8a87c] dark:text-blue-300" />
-                        Düzenle
+                        {t("settings.s3.editBtn")}
                       </Button>
                       <Button
                         variant="outline"
@@ -1235,7 +1245,7 @@ export default function SettingsPage() {
                         ) : (
                           <Trash2 className="size-3 mr-1" />
                         )}
-                        Sil
+                        {t("settings.s3.deleteBtn")}
                       </Button>
                     </div>
                   </div>
@@ -1278,7 +1288,7 @@ export default function SettingsPage() {
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-[#1e3568]/50">
                 <span className="size-2 rounded-full bg-slate-400" />
-                Bağlantı Yok
+                {t("settings.github.notConnected")}
               </span>
             )}
 
@@ -1306,7 +1316,7 @@ export default function SettingsPage() {
                   onClick={() => setGithubSuccess(null)}
                   className="text-xs text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
                 >
-                  Kapat
+                  {t("common.close")}
                 </button>
               </div>
             )}
@@ -1318,7 +1328,7 @@ export default function SettingsPage() {
                   onClick={() => setGithubError(null)}
                   className="text-xs text-red-600 dark:text-red-400 hover:underline cursor-pointer"
                 >
-                  Kapat
+                  {t("common.close")}
                 </button>
               </div>
             )}
@@ -1334,10 +1344,10 @@ export default function SettingsPage() {
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                       <h3 className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
-                        GitHub Personal Access Token (PAT) ile Bağlanın
+                        {t("settings.github.notConnectedTitle")}
                       </h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        Depolarınızı otomatik listelemek ve sunucudan tek tıkla Deploy Key eklemek için GitHub erişim token&apos;ınızı girin.
+                        {t("settings.github.notConnectedDesc")}
                       </p>
                     </div>
 
@@ -1348,13 +1358,13 @@ export default function SettingsPage() {
                       className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#101c38] text-slate-700 dark:text-blue-200 border border-slate-200 dark:border-[#1e3568]/50 hover:border-[#c8a87c] dark:hover:border-[#2a4687] shadow-2xs hover:shadow-xs transition-all shrink-0 cursor-pointer"
                     >
                       <ExternalLink className="size-3.5 text-[#c8a87c] dark:text-blue-300" />
-                      Gerekli İzinlerle Token Oluştur
+                      {t("settings.github.createTokenBtn")}
                     </a>
                   </div>
 
                   <div className="space-y-2">
                     <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      GitHub Personal Access Token (Classic veya Fine-Grained)
+                      {t("settings.github.tokenLabel")}
                     </Label>
                     <div className="flex gap-2">
                       <Input
@@ -1374,21 +1384,20 @@ export default function SettingsPage() {
                         ) : (
                           <CheckCircle2 className="size-4 text-[#dfc9a0] dark:text-white" />
                         )}
-                        BAĞLA VE DOĞRULA
+                        {t("settings.github.connectBtn")}
                       </Button>
                     </div>
                   </div>
 
                   <div className="rounded-xl border border-slate-200/60 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-3 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
                     <p className="font-semibold text-slate-700 dark:text-slate-300">
-                      Gerekli GitHub İzinleri:
+                      {t("settings.github.requiredScopes")}
                     </p>
-                    <ul className="list-disc list-inside space-y-0.5 text-slate-600 dark:text-slate-400">
-                      <li><strong>repo</strong> — Özel ve genel depoların listelenmesi ve deploy key eklenmesi için.</li>
-                      <li><strong>admin:public_key</strong> — Depoların Deploy Keys bölümüne SSH anahtarının otomatik kaydedilmesi için.</li>
-                    </ul>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      {t("settings.github.requiredScopesDesc")}
+                    </p>
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-1">
-                      🔒 Token&apos;ınız sunucu tarafında AES-256-GCM ile güvenle şifrelenir ve hiçbir istemciye açık olarak iletilmez.
+                      {t("settings.github.securityNote")}
                     </p>
                   </div>
                 </div>
@@ -1430,10 +1439,10 @@ export default function SettingsPage() {
                       </p>
                       <div className="flex flex-wrap items-center gap-2 mt-2">
                         <span className="text-[11px] font-mono bg-white dark:bg-[#101c38] px-2.5 py-0.5 rounded-lg border border-slate-200 dark:border-[#1e3568]/50 text-slate-700 dark:text-blue-300">
-                          {githubAccount.publicRepos + githubAccount.totalPrivateRepos} Depo ({githubAccount.totalPrivateRepos} Gizli)
+                          {t("settings.github.reposCount", { count: githubAccount.publicRepos + githubAccount.totalPrivateRepos, privateCount: githubAccount.totalPrivateRepos })}
                         </span>
                         <span className="text-[11px] font-mono bg-emerald-50 dark:bg-[#101c38] px-2.5 py-0.5 rounded-lg border border-emerald-200/80 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-400">
-                          Aktif PAT Bağlantısı
+                          {t("settings.github.connectedAs")}
                         </span>
                       </div>
                     </div>
@@ -1451,7 +1460,7 @@ export default function SettingsPage() {
                       className="h-9 px-3 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300 dark:hover:bg-[#111f40]"
                     >
                       <RefreshCw className={cn("size-3.5 mr-1 text-[#c8a87c] dark:text-blue-300", reposLoading && "animate-spin")} />
-                      Yenile
+                      {t("settings.github.refreshBtn")}
                     </Button>
                     <Button
                       variant="outline"
@@ -1465,7 +1474,7 @@ export default function SettingsPage() {
                       ) : (
                         <Trash2 className="size-3.5 mr-1" />
                       )}
-                      Bağlantıyı Kaldır
+                      {t("settings.github.disconnectBtn")}
                     </Button>
                   </div>
                 </div>
@@ -1476,11 +1485,11 @@ export default function SettingsPage() {
                     <div className="flex items-center gap-2">
                       <KeyRound className="size-4 text-[#c8a87c] dark:text-blue-300" />
                       <h3 className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
-                        GitHub Deposuna Deploy Key Ekle
+                        {t("settings.github.deploySectionTitle")}
                       </h3>
                     </div>
                     <span className="text-xs text-slate-500 dark:text-slate-400 font-sans">
-                      Sunucuda ed25519 üretilir ve seçilen depoya otomatik yazılır
+                      {t("settings.github.deploySectionDesc")}
                     </span>
                   </div>
 
@@ -1488,7 +1497,7 @@ export default function SettingsPage() {
                     {/* Depo Seçimi */}
                     <div className="space-y-1.5">
                       <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                        GitHub Deposu (Repository)
+                        {t("settings.github.repoLabel")}
                       </Label>
                       {githubRepos.length > 0 ? (
                         <select
@@ -1499,7 +1508,7 @@ export default function SettingsPage() {
                           }}
                           className="w-full h-10 px-3 rounded-xl text-xs bg-white dark:bg-[#090e1f] border border-slate-200 dark:border-[#16223f] text-slate-900 dark:text-slate-100 font-mono outline-none focus:ring-1 focus:ring-[#c8a87c] dark:focus:ring-[#2a4687]"
                         >
-                          <option value="">Depolarınızdan seçin ({githubRepos.length} depo)...</option>
+                          <option value="">{t("settings.github.selectRepoPlaceholder", { count: githubRepos.length })}</option>
                           {githubRepos.map((r) => (
                             <option key={r.id} value={r.fullName}>
                               {r.private ? "🔒 " : "🌐 "} {r.fullName} ({r.defaultBranch})
@@ -1510,7 +1519,7 @@ export default function SettingsPage() {
                         <Input
                           value={customRepo}
                           onChange={(e) => setCustomRepo(e.target.value)}
-                          placeholder="kullanici/depo-adi (örn: alisolmazz/projem)"
+                          placeholder="owner/repo"
                           className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
                         />
                       )}
@@ -1523,7 +1532,7 @@ export default function SettingsPage() {
                               setCustomRepo(e.target.value)
                               if (e.target.value) setSelectedRepo("")
                             }}
-                            placeholder="Veya elle yazın: owner/repo"
+                            placeholder={t("settings.github.orCustomRepo")}
                             className="w-full h-8 px-3 rounded-lg text-[11px] bg-white/70 dark:bg-[#090e1f]/70 border border-slate-200 dark:border-[#16223f] text-slate-800 dark:text-slate-200 font-mono"
                           />
                         </div>
@@ -1533,14 +1542,14 @@ export default function SettingsPage() {
                     {/* Site ile İlişkilendirme */}
                     <div className="space-y-1.5">
                       <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                        Rudder Sitesi ile Eşleştir (Opsiyonel)
+                        {t("settings.github.bindSiteLabel")}
                       </Label>
                       <select
                         value={selectedSiteId}
                         onChange={(e) => setSelectedSiteId(e.target.value)}
                         className="w-full h-10 px-3 rounded-xl text-xs bg-white dark:bg-[#090e1f] border border-slate-200 dark:border-[#16223f] text-slate-900 dark:text-slate-100 font-mono outline-none focus:ring-1 focus:ring-[#c8a87c] dark:focus:ring-[#2a4687]"
                       >
-                        <option value="">Bağımsız Anahtar (Hiçbir siteye bağlama)</option>
+                        <option value="">{t("settings.github.bindSiteNone")}</option>
                         {sites.map((s) => (
                           <option key={s.id} value={s.id}>
                             🌐 {s.domain}
@@ -1548,14 +1557,14 @@ export default function SettingsPage() {
                         ))}
                       </select>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Seçilen sitenin &quot;Git &amp; Dağıtım&quot; ayarlarındaki deploy key otomatik güncellenir.
+                        {t("settings.github.bindSiteDesc")}
                       </p>
                     </div>
 
                     {/* Anahtar Başlığı */}
                     <div className="space-y-1.5">
                       <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                        GitHub Anahtar Başlığı (Title)
+                        {t("settings.github.keyTitleLabel")}
                       </Label>
                       <Input
                         value={deployKeyTitle}
@@ -1575,11 +1584,11 @@ export default function SettingsPage() {
                           className="size-4 rounded accent-[#580619] dark:accent-[#162752]"
                         />
                         <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                          Salt-Okunur (Read-Only) — Önerilen
+                          {t("settings.github.readOnlyLabel")}
                         </span>
                       </label>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Yalnızca git clone ve pull işlemlerine izin verir, depoya yazma yetkisi vermez.
+                        {t("settings.github.readOnlyDesc")}
                       </p>
                     </div>
                   </div>
@@ -1601,7 +1610,7 @@ export default function SettingsPage() {
                       ) : (
                         <KeyRound className="size-4 text-[#dfc9a0] dark:text-white" />
                       )}
-                      DEPLOY KEY OLUŞTUR VE GITHUB&apos;A GÖNDER
+                      {t("settings.github.createAndPushBtn")}
                     </Button>
                   </div>
 
@@ -1610,13 +1619,13 @@ export default function SettingsPage() {
                     <div className="mt-4 rounded-xl border border-emerald-300/80 dark:border-emerald-800/80 bg-emerald-50/50 dark:bg-emerald-950/30 p-5 space-y-4 animate-in fade-in zoom-in-95 duration-200">
                       <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold text-xs">
                         <CheckCircle2 className="size-4.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>Deploy Key başarıyla üretildi ve GitHub deposuna kaydedildi!</span>
+                        <span>{t("settings.github.successAlert")}</span>
                       </div>
 
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                            Önerilen Git SSH Klonlama Adresi:
+                            {t("settings.github.suggestedCloneLabel")}
                           </span>
                           <Button
                             variant="ghost"
@@ -1625,7 +1634,7 @@ export default function SettingsPage() {
                             className="h-7 text-xs font-semibold"
                           >
                             <Copy className="size-3 mr-1" />
-                            {copiedField === "sshUrl" ? "Kopyalandı!" : "Kopyala"}
+                            {copiedField === "sshUrl" ? t("common.copied") : t("common.copy")}
                           </Button>
                         </div>
                         <pre className="p-2.5 rounded-lg bg-white dark:bg-[#060a17] border border-slate-200 dark:border-[#16223f] font-mono text-xs text-slate-800 dark:text-slate-200 overflow-x-auto">
@@ -1635,13 +1644,13 @@ export default function SettingsPage() {
 
                       <div className="grid sm:grid-cols-2 gap-3 text-xs">
                         <div>
-                          <span className="text-slate-500 dark:text-slate-400">SSH Alias:</span>
+                          <span className="text-slate-500 dark:text-slate-400">{t("settings.github.sshAliasLabel")}</span>
                           <span className="font-mono font-bold text-slate-800 dark:text-slate-200 ml-2">
                             {createdKey.hostAlias}
                           </span>
                         </div>
                         <div>
-                          <span className="text-slate-500 dark:text-slate-400">Parmak İzi:</span>
+                          <span className="text-slate-500 dark:text-slate-400">{t("settings.github.fingerprintLabel")}</span>
                           <span className="font-mono text-[11px] text-slate-800 dark:text-slate-200 ml-2">
                             {createdKey.fingerprint}
                           </span>
@@ -1651,7 +1660,7 @@ export default function SettingsPage() {
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                            Public Key (GitHub&apos;a eklendi):
+                            {t("settings.github.publicKeyLabel")}
                           </span>
                           <Button
                             variant="ghost"
@@ -1660,7 +1669,7 @@ export default function SettingsPage() {
                             className="h-7 text-xs font-semibold"
                           >
                             <Copy className="size-3 mr-1" />
-                            {copiedField === "pubKey" ? "Kopyalandı!" : "Kopyala"}
+                            {copiedField === "pubKey" ? t("common.copied") : t("common.copy")}
                           </Button>
                         </div>
                         <pre className="p-2.5 rounded-lg bg-white dark:bg-[#060a17] border border-slate-200 dark:border-[#16223f] font-mono text-[11px] text-slate-700 dark:text-slate-300 overflow-x-auto">

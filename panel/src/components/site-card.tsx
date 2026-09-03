@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
 import { SITE_TYPES, type Site, type SiteType } from "@/lib/mock-data"
 
@@ -67,6 +68,7 @@ function getTypeIcon(type: SiteType) {
 }
 
 export function SiteCard({ site }: { site: Site }) {
+  const { t } = useTranslation()
   const typeInfo =
     SITE_TYPES.find((t) => t.type === site.type) ?? {
       type: site.type,
@@ -75,6 +77,14 @@ export function SiteCard({ site }: { site: Site }) {
       description: "",
       managed: false,
     }
+
+  const statusLabels: Record<Site["status"], string> = {
+    active: t("sites.statusActive"),
+    running: t("sites.statusRunning"),
+    stopped: t("sites.statusStopped"),
+    provisioning: t("sites.statusProvisioning"),
+    error: t("sites.statusFailed"),
+  }
 
   const status = STATUS_CONFIG[site.status] ?? STATUS_CONFIG.stopped
   const TypeIcon = getTypeIcon(site.type)
@@ -97,7 +107,7 @@ export function SiteCard({ site }: { site: Site }) {
                 {typeInfo.label}
               </span>
               <span className="text-[10.5px] text-slate-400 dark:text-slate-500 font-mono">
-                {typeInfo.managed ? "systemd servisi" : "Nginx web sitesi"}
+                {typeInfo.managed ? "systemd" : "Nginx"}
               </span>
             </div>
           </div>
@@ -110,7 +120,7 @@ export function SiteCard({ site }: { site: Site }) {
             )}
           >
             <span className={cn("size-1.5 rounded-full", status.dot)} />
-            {status.label}
+            {statusLabels[site.status] ?? status.label}
           </span>
         </div>
 
@@ -124,7 +134,7 @@ export function SiteCard({ site }: { site: Site }) {
             <ArrowUpRight className="size-4 text-slate-400 group-hover/link:text-[#580619] dark:group-hover/link:text-blue-300 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-all shrink-0" />
           </Link>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
-            {typeInfo.description || "Yönetilen web sitesi."}
+            {typeInfo.description || `${typeInfo.label} ${t("sites.siteSuffix")}`}
           </p>
         </div>
       </div>
@@ -133,7 +143,7 @@ export function SiteCard({ site }: { site: Site }) {
       <div className="pt-3.5 border-t border-slate-100 dark:border-[#16223f] flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 font-mono">
           <ShieldCheck className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-          <span>Nginx Aktif</span>
+          <span>Nginx {t("common.active")}</span>
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -143,7 +153,7 @@ export function SiteCard({ site }: { site: Site }) {
                 size="icon"
                 variant="outline"
                 className="size-7 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#16223f] hover:text-[#580619] dark:hover:text-blue-300 hover:border-[#c8a87c] dark:hover:border-[#2a4687] dark:hover:bg-[#111f40]"
-                title="Yeniden Başlat"
+                title={t("sites.restartBtn")}
               >
                 <RotateCw className="size-3" />
               </Button>
@@ -157,7 +167,7 @@ export function SiteCard({ site }: { site: Site }) {
           >
             <Link href={`/sites/${site.id}`}>
               <Settings2 className="size-3.5" />
-              Yönet
+              {t("sites.manage")}
             </Link>
           </Button>
         </div>

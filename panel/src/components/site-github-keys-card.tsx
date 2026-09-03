@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useTranslation } from "@/components/language-provider"
 
 interface DeployKeyData {
   keyName: string
@@ -51,6 +52,7 @@ export function SiteGithubKeysCard({
   siteId: string
   initialRepoUrl?: string
 }) {
+  const { t, lang } = useTranslation()
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -287,7 +289,7 @@ export function SiteGithubKeysCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <KeyRound className="size-4" />
-          GitHub Erişim Anahtarları
+          {lang === "tr" ? "GitHub Erişim Anahtarları" : "GitHub Access Keys"}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -305,11 +307,12 @@ export function SiteGithubKeysCard({
                 id="repoSlug"
                 value={repoSlug}
                 onChange={(e) => setRepoSlug(e.target.value)}
-                placeholder="codextrasoft/my-repo"
+                placeholder="owner/repo"
               />
               <p className="text-xs text-muted-foreground">
-                Yalnızca aşağıdaki önerilen adresleri ve otomatik secret eklemeyi oluşturmak için
-                kullanılır — kaydedilmez.
+                {lang === "tr"
+                  ? "Yalnızca aşağıdaki önerilen adresleri ve otomatik secret eklemeyi oluşturmak için kullanılır — kaydedilmez."
+                  : "Only used to generate the recommended clone URLs and automatic secret injection — not persisted."}
               </p>
             </div>
 
@@ -318,7 +321,9 @@ export function SiteGithubKeysCard({
               <div>
                 <h3 className="text-sm font-medium text-foreground">Deploy Key (git clone/pull)</h3>
                 <p className="text-xs text-muted-foreground">
-                  Private repodan çekiş yapabilmek için tek yönlü, salt-okunur bir SSH anahtarı.
+                  {lang === "tr"
+                    ? "Private repodan çekiş yapabilmek için tek yönlü, salt-okunur bir SSH anahtarı."
+                    : "One-way, read-only SSH key to pull from private repositories."}
                 </p>
               </div>
 
@@ -329,7 +334,7 @@ export function SiteGithubKeysCard({
                       <div className="flex items-center gap-2">
                         <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
-                          GitHub Hesabı: @{ghAccount.username}
+                          {lang === "tr" ? "GitHub Hesabı" : "GitHub Account"}: @{ghAccount.username}
                         </span>
                       </div>
                       <label className="flex items-center gap-2 cursor-pointer select-none text-slate-700 dark:text-slate-300 font-medium">
@@ -339,17 +344,21 @@ export function SiteGithubKeysCard({
                           onChange={(e) => setAutoAddDeployKeyToGh(e.target.checked)}
                           className="size-3.5 rounded accent-[#580619] dark:accent-[#162752]"
                         />
-                        GitHub Deposuna Otomatik Ekle
+                        {lang === "tr" ? "GitHub Deposuna Otomatik Ekle" : "Auto-add to GitHub Repository"}
                       </label>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 dark:bg-[#060a17] border border-slate-200/80 dark:border-[#16223f] text-xs text-slate-500 dark:text-slate-400">
-                      <span>GitHub hesabınızı bağlayarak anahtarı tek tıkla depoya ekleyebilirsiniz.</span>
+                      <span>
+                        {lang === "tr"
+                          ? "GitHub hesabınızı bağlayarak anahtarı tek tıkla depoya ekleyebilirsiniz."
+                          : "Connect your GitHub account to add keys to your repo with 1 click."}
+                      </span>
                       <a
                         href="/settings"
                         className="text-[#580619] dark:text-blue-300 font-semibold hover:underline shrink-0 ml-2"
                       >
-                        Ayarlar &rarr;
+                        {t("nav.settings")} &rarr;
                       </a>
                     </div>
                   )}
@@ -362,18 +371,18 @@ export function SiteGithubKeysCard({
 
                   <Button onClick={handleCreateDeployKey} disabled={deployCreating}>
                     {deployCreating && <Loader2 className="size-4 animate-spin" />}
-                    Deploy Key Oluştur
+                    {lang === "tr" ? "Deploy Key Oluştur" : "Create Deploy Key"}
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-3">
                   <dl className="divide-y divide-border rounded-lg border border-border">
                     <div className="flex items-center justify-between px-3 py-2 text-sm">
-                      <dt className="text-muted-foreground">Anahtar adı</dt>
+                      <dt className="text-muted-foreground">{lang === "tr" ? "Anahtar adı" : "Key name"}</dt>
                       <dd className="font-mono text-xs text-foreground">{deployKey.keyName}</dd>
                     </div>
                     <div className="flex items-center justify-between px-3 py-2 text-sm">
-                      <dt className="text-muted-foreground">Parmak izi</dt>
+                      <dt className="text-muted-foreground">{t("settings.github.fingerprintLabel")}</dt>
                       <dd className="font-mono text-xs text-foreground">
                         {deployKey.fingerprint || "—"}
                       </dd>
@@ -389,37 +398,37 @@ export function SiteGithubKeysCard({
                         onClick={() => copy("deployPub", deployKey.publicKey ?? "")}
                       >
                         <Copy className="size-3.5" />
-                        {copiedField === "deployPub" ? "Kopyalandı" : "Kopyala"}
+                        {copiedField === "deployPub" ? t("common.copied") : t("common.copy")}
                       </Button>
                     </div>
                     <pre className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-3 text-xs">
                       {deployKey.publicKey}
                     </pre>
                     <p className="text-xs text-muted-foreground">
-                      GitHub: Repo → Settings → Deploy keys → Add deploy key. Yazma erişimi
-                      gerekmiyorsa &quot;Allow write access&quot; kutusunu işaretleme.
+                      GitHub: Repo → Settings → Deploy keys → Add deploy key.
                     </p>
                   </div>
 
                   {suggestedCloneUrl && (
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <Label>Önerilen Repo URL (alias ile)</Label>
+                        <Label>{lang === "tr" ? "Önerilen Repo URL (alias ile)" : "Recommended Repo URL (with alias)"}</Label>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => copy("cloneUrl", suggestedCloneUrl)}
                         >
                           <Copy className="size-3.5" />
-                          {copiedField === "cloneUrl" ? "Kopyalandı" : "Kopyala"}
+                          {copiedField === "cloneUrl" ? t("common.copied") : t("common.copy")}
                         </Button>
                       </div>
                       <pre className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-3 text-xs">
                         {suggestedCloneUrl}
                       </pre>
                       <p className="text-xs text-muted-foreground">
-                        Bu deploy key&apos;in kullanılması için yukarıdaki &quot;Git &amp; Dağıtım&quot;
-                        kartındaki Repo URL alanına bu adresi yapıştır.
+                        {lang === "tr"
+                          ? "Bu deploy key'in kullanılması için yukarıdaki \"Git & Dağıtım\" kartındaki Repo URL alanına bu adresi yapıştır."
+                          : "Paste this URL into the Repo URL field under the Git tab to use this deploy key."}
                       </p>
                     </div>
                   )}
@@ -427,7 +436,7 @@ export function SiteGithubKeysCard({
                   <div className="flex flex-wrap items-center gap-2">
                     <Button variant="outline" onClick={handleTestDeployKey} disabled={deployTesting}>
                       {deployTesting && <Loader2 className="size-4 animate-spin" />}
-                      Bağlantıyı Test Et
+                      {lang === "tr" ? "Bağlantıyı Test Et" : "Test Connection"}
                     </Button>
                     <Button variant="ghost" onClick={handleDeleteDeployKey} disabled={deployDeleting}>
                       {deployDeleting ? (
@@ -435,7 +444,7 @@ export function SiteGithubKeysCard({
                       ) : (
                         <Trash2 className="size-3.5" />
                       )}
-                      Sil
+                      {t("common.delete")}
                     </Button>
                   </div>
 
@@ -449,8 +458,8 @@ export function SiteGithubKeysCard({
                     >
                       <p className="mb-1 font-medium">
                         {deployTestResult.ok
-                          ? "Bağlantı doğrulandı."
-                          : "Kesin sonuç alınamadı — çıktıyı incele:"}
+                          ? (lang === "tr" ? "Bağlantı doğrulandı." : "Connection verified.")
+                          : (lang === "tr" ? "Kesin sonuç alınamadı — çıktıyı incele:" : "Could not verify — check output:")}
                       </p>
                       <pre className="overflow-x-auto whitespace-pre-wrap font-mono">
                         {deployTestResult.output || "(çıktı yok)"}
@@ -467,13 +476,12 @@ export function SiteGithubKeysCard({
             <div className="space-y-3 border-t border-border pt-4">
               <div>
                 <h3 className="text-sm font-medium text-foreground">
-                  GitHub Actions Erişimi (SSH deploy)
+                  {lang === "tr" ? "GitHub Actions Erişimi (SSH deploy)" : "GitHub Actions Access (SSH deploy)"}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  GitHub Actions&apos;ın bu sunucuya SSH ile bağlanıp deploy komutlarını
-                  çalıştırabilmesi için — public key sunucuda{" "}
-                  <span className="font-mono">panel</span> kullanıcısının kendi{" "}
-                  <span className="font-mono">authorized_keys</span> dosyasına eklenir.
+                  {lang === "tr"
+                    ? "GitHub Actions'ın bu sunucuya SSH ile bağlanıp deploy komutlarını çalıştırabilmesi için — public key sunucuda panel kullanıcısının kendi authorized_keys dosyasına eklenir."
+                    : "For GitHub Actions to SSH into this server and run deploy scripts — public key is added to the panel user's authorized_keys file on the server."}
                 </p>
               </div>
 
@@ -486,30 +494,31 @@ export function SiteGithubKeysCard({
                       onChange={(e) => setUseGh(e.target.checked)}
                       className="size-4 rounded border-input"
                     />
-                    Sunucuda <span className="font-mono">gh</span> CLI kuruluysa secret&apos;ı otomatik
-                    eklemeyi dene
+                    {lang === "tr"
+                      ? "Sunucuda gh CLI kuruluysa secret'ı otomatik eklemeyi dene"
+                      : "Try auto-injecting secret if gh CLI is installed on server"}
                   </label>
                   <Button onClick={handleCreateActionsKey} disabled={actionsCreating}>
                     {actionsCreating && <Loader2 className="size-4 animate-spin" />}
-                    Actions Anahtarı Oluştur
+                    {lang === "tr" ? "Actions Anahtarı Oluştur" : "Create Actions Key"}
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-3">
                   <dl className="divide-y divide-border rounded-lg border border-border">
                     <div className="flex items-center justify-between px-3 py-2 text-sm">
-                      <dt className="text-muted-foreground">Anahtar adı</dt>
+                      <dt className="text-muted-foreground">{lang === "tr" ? "Anahtar adı" : "Key name"}</dt>
                       <dd className="font-mono text-xs text-foreground">{actionsKey.keyName}</dd>
                     </div>
                     <div className="flex items-center justify-between px-3 py-2 text-sm">
-                      <dt className="text-muted-foreground">Parmak izi</dt>
+                      <dt className="text-muted-foreground">{t("settings.github.fingerprintLabel")}</dt>
                       <dd className="font-mono text-xs text-foreground">
                         {actionsKey.fingerprint || "—"}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between px-3 py-2 text-sm">
                       <dt className="text-muted-foreground">authorized_keys</dt>
-                      <dd className="text-success">Eklendi</dd>
+                      <dd className="text-success">{lang === "tr" ? "Eklendi" : "Added"}</dd>
                     </div>
                   </dl>
 
@@ -523,7 +532,7 @@ export function SiteGithubKeysCard({
                     <div className="space-y-1.5 rounded-lg border border-warning/40 p-3">
                       <div className="flex items-center justify-between">
                         <Label className="text-warning">
-                          Private key — yalnızca bu sefer gösteriliyor
+                          {lang === "tr" ? "Private key — yalnızca bu sefer gösteriliyor" : "Private key — shown only once"}
                         </Label>
                         <Button
                           variant="ghost"
@@ -531,17 +540,16 @@ export function SiteGithubKeysCard({
                           onClick={() => copy("actionsPriv", revealedPrivateKey)}
                         >
                           <Copy className="size-3.5" />
-                          {copiedField === "actionsPriv" ? "Kopyalandı" : "Kopyala"}
+                          {copiedField === "actionsPriv" ? t("common.copied") : t("common.copy")}
                         </Button>
                       </div>
                       <pre className="overflow-x-auto rounded-lg bg-muted/40 p-3 text-xs">
                         {revealedPrivateKey}
                       </pre>
                       <p className="text-xs text-muted-foreground">
-                        GitHub: Repo → Settings → Secrets and variables → Actions → New repository
-                        secret. Secret adı: <span className="font-mono">SSH_PRIVATE_KEY</span>. Bu
-                        değer panelde tekrar gösterilmeyecek — kopyaladıktan sonra sayfadan
-                        ayrılabilirsin.
+                        {lang === "tr"
+                          ? "GitHub: Repo → Settings → Secrets and variables → Actions → New repository secret. Secret adı: SSH_PRIVATE_KEY."
+                          : "GitHub: Repo → Settings → Secrets and variables → Actions → New repository secret. Secret name: SSH_PRIVATE_KEY."}
                       </p>
                     </div>
                   )}
@@ -552,7 +560,7 @@ export function SiteGithubKeysCard({
                     ) : (
                       <Trash2 className="size-3.5" />
                     )}
-                    Sil
+                    {t("common.delete")}
                   </Button>
                 </div>
               )}

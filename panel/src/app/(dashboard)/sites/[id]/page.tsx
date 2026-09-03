@@ -43,6 +43,7 @@ import { StatMeter } from "@/components/stat-meter"
 import { SITE_TYPES, type Site, type SiteType } from "@/lib/mock-data"
 import { apiSiteToUiSite, type ApiSite } from "@/lib/site-adapter"
 import { CustomSelect } from "@/components/ui/custom-select"
+import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
 
 const STATUS_CONFIG: Record<
@@ -96,6 +97,7 @@ function getTypeIcon(type: SiteType) {
 }
 
 export default function SiteDetailPage() {
+  const { t, lang } = useTranslation()
   const params = useParams<{ id: string }>()
   const router = useRouter()
 
@@ -524,9 +526,9 @@ export default function SiteDetailPage() {
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans flex items-center gap-2">
-                <span>{typeInfo.label} sitesi</span>
+                <span>{typeInfo.label} {t("sites.siteSuffix")}</span>
                 <span>•</span>
-                <span>{sslInfo?.sslEnabled ? "SSL Aktif" : "HTTP"}</span>
+                <span>{sslInfo?.sslEnabled ? t("sites.sslActiveLabel") : t("sites.httpOnlyLabel")}</span>
               </p>
             </div>
           </div>
@@ -546,7 +548,7 @@ export default function SiteDetailPage() {
                 className="flex items-center gap-1.5"
               >
                 <Globe className="size-3.5" />
-                Siteyi Aç
+                {t("sites.openSiteBtn")}
                 <ArrowUpRight className="size-3 text-slate-400 dark:text-slate-500" />
               </a>
             </Button>
@@ -560,7 +562,7 @@ export default function SiteDetailPage() {
               >
                 <Link href={`/sites/${site.id}/files`} className="flex items-center gap-1.5">
                   <FolderOpen className="size-3.5 text-[#580619] dark:text-blue-300" />
-                  Dosyalar
+                  {t("sites.filesBtn")}
                 </Link>
               </Button>
             )}
@@ -573,14 +575,14 @@ export default function SiteDetailPage() {
                   disabled={isRunning || actionPending !== null}
                   onClick={() => handleServiceAction("start")}
                   className="h-7 px-2.5 rounded-lg text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                  title="Servisi Başlat"
+                  title={t("sites.startBtn")}
                 >
                   {actionPending === "start" ? (
                     <Loader2 className="size-3 animate-spin" />
                   ) : (
                     <Play className="size-3 fill-emerald-600 dark:fill-emerald-400" />
                   )}
-                  Başlat
+                  {t("sites.startBtn")}
                 </Button>
                 <Button
                   size="sm"
@@ -588,14 +590,14 @@ export default function SiteDetailPage() {
                   disabled={!isRunning || actionPending !== null}
                   onClick={() => handleServiceAction("stop")}
                   className="h-7 px-2.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800"
-                  title="Servisi Durdur"
+                  title={t("sites.stopBtn")}
                 >
                   {actionPending === "stop" ? (
                     <Loader2 className="size-3 animate-spin" />
                   ) : (
                     <Square className="size-3 fill-slate-500" />
                   )}
-                  Durdur
+                  {t("sites.stopBtn")}
                 </Button>
                 <Button
                   size="sm"
@@ -603,14 +605,14 @@ export default function SiteDetailPage() {
                   disabled={actionPending !== null}
                   onClick={() => handleServiceAction("restart")}
                   className="h-7 px-2.5 rounded-lg text-xs font-semibold text-[#580619] dark:text-blue-300 hover:bg-[#580619]/10 dark:hover:bg-[#162752]"
-                  title="Servisi Yeniden Başlat"
+                  title={t("sites.restartBtn")}
                 >
                   {actionPending === "restart" ? (
                     <Loader2 className="size-3 animate-spin" />
                   ) : (
                     <RotateCw className="size-3" />
                   )}
-                  Yeniden Başlat
+                  {t("sites.restartBtn")}
                 </Button>
               </div>
             )}
@@ -623,7 +625,7 @@ export default function SiteDetailPage() {
               className="h-9 px-3 rounded-xl border-red-200 dark:border-red-900/60 bg-white dark:bg-[#090e1f] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-300 text-xs font-semibold shadow-2xs"
             >
               {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
-              Sil
+              {t("sites.deleteSiteBtn")}
             </Button>
           </div>
         </div>
@@ -659,7 +661,7 @@ export default function SiteDetailPage() {
               className="shrink-0 h-8 rounded-xl border-amber-300 dark:border-[#16223f] bg-white dark:bg-[#060a17] text-amber-900 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-[#111f40] text-xs font-semibold"
             >
               {sslRetrying && <Loader2 className="size-3 animate-spin mr-1" />}
-              Tekrar Dene
+              {t("common.refresh")}
             </Button>
           </div>
         )}
@@ -678,7 +680,7 @@ export default function SiteDetailPage() {
           )}
         >
           <Settings2 className="size-4 text-[#c8a87c] dark:text-blue-300" />
-          Genel Bakış &amp; Ayarlar
+          {t("sites.tabs.overview")}
         </button>
 
         {(isManaged || isProxy) && (
@@ -693,7 +695,7 @@ export default function SiteDetailPage() {
             )}
           >
             <GitBranch className="size-4 text-[#c8a87c] dark:text-blue-300" />
-            Git &amp; Otomatik Dağıtım
+            {t("sites.tabs.git")}
           </button>
         )}
 
@@ -705,10 +707,10 @@ export default function SiteDetailPage() {
             activeTab === "backups"
               ? "border-[#580619] dark:border-[#2a4687] text-[#580619] dark:text-blue-300"
               : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-            )}
+          )}
         >
           <Database className="size-4 text-[#c8a87c] dark:text-blue-300" />
-          Yedekler &amp; S3
+          {t("sites.tabs.backups")}
         </button>
 
         <button
@@ -722,7 +724,7 @@ export default function SiteDetailPage() {
           )}
         >
           <Users className="size-4 text-[#c8a87c] dark:text-blue-300" />
-          Erişim Yetkileri
+          {t("sites.tabs.access")}
         </button>
 
         {isManaged && (
@@ -737,7 +739,7 @@ export default function SiteDetailPage() {
             )}
           >
             <Terminal className="size-4 text-[#c8a87c] dark:text-blue-300" />
-            Servis Logları
+            {t("sites.tabs.logs")}
           </button>
         )}
       </div>

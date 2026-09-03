@@ -60,7 +60,7 @@ export default function TerminalPage() {
             className="group inline-flex items-center gap-2 rounded-xl border border-[#c8a87c]/50 dark:border-[#2a4687]/60 bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] hover:border-[#dfc9a0] px-4 py-2 text-xs font-bold text-white shadow-2xs transition-all cursor-pointer hover:scale-102 active:scale-98 shrink-0"
           >
             <Columns2 className="size-4 text-[#dfc9a0] dark:text-white transition-transform group-hover:scale-110" />
-            <span className="font-heading tracking-wide">Sağa Tuttur</span>
+            <span className="font-heading tracking-wide">{t("terminal.dockRight")}</span>
           </button>
         </div>
 
@@ -72,10 +72,10 @@ export default function TerminalPage() {
             </div>
             <div>
               <p className="font-heading font-bold text-slate-900 dark:text-slate-100 text-xs">
-                Yüksek Yetkili Kabuk Oturumu (Root/Sudo Erişimi)
+                {t("terminal.securityTitle")}
               </p>
               <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed font-sans">
-                Burada çalıştırılan komutlar sunucu dosya sistemini ve çalışan servisleri anında etkiler. Sekme kapatıldığında veya bağlantı koptuğunda oturum otomatik sonlandırılır.
+                {t("terminal.securityDesc")}
               </p>
             </div>
           </div>

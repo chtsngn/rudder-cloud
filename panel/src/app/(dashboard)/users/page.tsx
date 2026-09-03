@@ -41,10 +41,10 @@ async function parseError(res: Response): Promise<string> {
   return data?.error ?? `İstek başarısız oldu (${res.status}).`
 }
 
-function formatDate(isoStr: string) {
+function formatDate(isoStr: string, locale: string = "tr-TR") {
   try {
     const d = new Date(isoStr)
-    return d.toLocaleDateString("tr-TR", {
+    return d.toLocaleDateString(locale, {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -55,7 +55,7 @@ function formatDate(isoStr: string) {
 }
 
 function UsersContent() {
-  const { t } = useTranslation()
+  const { t, lang } = useTranslation()
   const { user: me } = useCurrentUser()
 
   const [users, setUsers] = useState<UserView[]>([])
@@ -248,7 +248,7 @@ function UsersContent() {
                 <Plus className="size-4" />
               </div>
               <h3 className="font-heading font-bold text-base text-slate-900 dark:text-slate-100">
-                Yeni Panel Kullanıcısı Oluştur
+                {t("users.modalTitle")}
               </h3>
             </div>
             <button
@@ -263,38 +263,38 @@ function UsersContent() {
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Kullanıcı Adı</Label>
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("users.username")}</Label>
                 <Input
                   value={createForm.username}
                   onChange={(e) => setCreateForm((f) => ({ ...f, username: e.target.value }))}
-                  placeholder="ör. ahmet veya developer"
+                  placeholder={lang === "tr" ? "ör. ahmet veya developer" : "e.g. john or developer"}
                   className="h-10 rounded-xl text-xs bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Geçici Parola</Label>
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("users.tempPassword")}</Label>
                 <Input
                   type="password"
                   value={createForm.password}
                   onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
-                  placeholder="en az 8 karakter"
+                  placeholder={lang === "tr" ? "en az 8 karakter" : "at least 8 characters"}
                   className="h-10 rounded-xl text-xs font-mono bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Sistem Rolü</Label>
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("users.systemRole")}</Label>
                 <CustomSelect
                   value={createForm.role}
                   onChange={(val) =>
                     setCreateForm((f) => ({ ...f, role: val as "SUPER_ADMIN" | "MEMBER" }))
                   }
                   options={[
-                    { value: "MEMBER", label: "Üye (Yalnızca yetkilendirilen siteleri görür)" },
-                    { value: "SUPER_ADMIN", label: "Süper Admin (Tüm paneli & sunucuyu yönetir)" },
+                    { value: "MEMBER", label: t("users.memberRoleOption") },
+                    { value: "SUPER_ADMIN", label: t("users.adminRoleOption") },
                   ]}
                   className="w-full"
                 />
@@ -314,7 +314,7 @@ function UsersContent() {
                 onClick={() => setCreateOpen(false)}
                 className="h-9 px-4 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300 dark:hover:bg-[#111f40]"
               >
-                Vazgeç
+                {t("common.vazgec")}
               </Button>
               <Button
                 type="submit"
@@ -322,7 +322,7 @@ function UsersContent() {
                 className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-9 px-5 rounded-xl text-xs font-semibold border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer"
               >
                 {creating && <Loader2 className="size-3.5 animate-spin mr-1.5 text-[#dfc9a0] dark:text-white" />}
-                Kullanıcıyı Kaydet
+                {t("users.saveUserBtn")}
               </Button>
             </div>
           </form>
@@ -336,14 +336,14 @@ function UsersContent() {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Kullanıcı adına göre ara..."
+            placeholder={t("users.searchPlaceholder")}
             className="pl-9 h-9.5 rounded-xl text-xs bg-slate-50/50 dark:bg-[#060a17] border-slate-200 dark:border-[#16223f] dark:text-slate-100 focus:bg-white dark:focus:bg-[#060a17]"
           />
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider pl-1">
-            Rol Filtresi:
+            {t("users.roleFilterLabel")}
           </span>
           <div className="flex items-center bg-slate-100/80 dark:bg-[#070c1a] p-0.5 rounded-xl border border-slate-200 dark:border-[#16223f] text-xs">
             <button
@@ -356,7 +356,7 @@ function UsersContent() {
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
               )}
             >
-              Tümü ({users.length})
+              {t("users.filterAll")} ({users.length})
             </button>
             <button
               type="button"
@@ -368,7 +368,7 @@ function UsersContent() {
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
               )}
             >
-              Süper Admin ({superAdminCount})
+              {t("users.filterSuperAdmin")} ({superAdminCount})
             </button>
             <button
               type="button"
@@ -380,7 +380,7 @@ function UsersContent() {
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
               )}
             >
-              Üye ({memberCount})
+              {t("users.filterMember")} ({memberCount})
             </button>
           </div>
         </div>
@@ -391,7 +391,7 @@ function UsersContent() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
             <Loader2 className="size-8 animate-spin text-[#580619] dark:text-blue-300 mb-2" />
-            <span className="text-xs font-medium">Kullanıcılar yükleniyor...</span>
+            <span className="text-xs font-medium">{t("users.loadingUsers")}</span>
           </div>
         ) : listError ? (
           <div className="p-8 text-center text-xs text-red-600 dark:text-red-400 font-mono bg-red-50/50 dark:bg-red-950/30">
@@ -399,17 +399,17 @@ function UsersContent() {
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="py-12 text-center text-xs text-slate-500 dark:text-slate-400">
-            {searchQuery ? "Aramanızla eşleşen kullanıcı bulunamadı." : "Henüz kayıtlı kullanıcı bulunmuyor."}
+            {searchQuery ? t("users.noUsersFound") : t("users.noUsersYet")}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 dark:border-[#16223f] bg-slate-50/70 dark:bg-[#060a17] text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  <th className="py-3.5 px-5">Kullanıcı</th>
-                  <th className="py-3.5 px-4">Rol &amp; Yetki</th>
-                  <th className="py-3.5 px-4 hidden md:table-cell">Kayıt Tarihi</th>
-                  <th className="py-3.5 px-5 text-right">Güvenlik &amp; İşlemler</th>
+                  <th className="py-3.5 px-5">{t("users.colUser")}</th>
+                  <th className="py-3.5 px-4">{t("users.colRole")}</th>
+                  <th className="py-3.5 px-4 hidden md:table-cell">{t("users.colDate")}</th>
+                  <th className="py-3.5 px-5 text-right">{t("users.colActions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-[#16223f] text-xs">
@@ -448,7 +448,7 @@ function UsersContent() {
                               </span>
                               {isMe && (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-[#580619]/10 dark:bg-[#101c38] border border-[#580619]/20 dark:border-[#1e3568]/50 px-2 py-0.5 text-[10px] font-extrabold text-[#580619] dark:text-blue-300">
-                                  Siz
+                                  {t("users.you")}
                                 </span>
                               )}
                             </div>
@@ -463,7 +463,7 @@ function UsersContent() {
                           <div className="mt-3 flex items-center gap-2 bg-slate-50 dark:bg-[#060a17] p-2.5 rounded-xl border border-slate-200 dark:border-[#16223f] animate-in fade-in duration-100">
                             <Input
                               type="password"
-                              placeholder="Yeni parola (en az 8 karakter)"
+                              placeholder={lang === "tr" ? "Yeni parola (en az 8 karakter)" : "New password (min 8 chars)"}
                               value={resetPassword}
                               onChange={(e) => setResetPassword(e.target.value)}
                               className="h-8 text-xs font-mono max-w-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
@@ -475,7 +475,7 @@ function UsersContent() {
                               onClick={() => handleResetPassword(u.id)}
                               className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-8 px-3 text-xs font-semibold cursor-pointer border border-[#c8a87c]/40 dark:border-[#2a4687]/60"
                             >
-                              {isBusy ? <Loader2 className="size-3 animate-spin" /> : "Kaydet"}
+                              {isBusy ? <Loader2 className="size-3 animate-spin" /> : t("common.save")}
                             </Button>
                             <Button
                               size="sm"
@@ -508,8 +508,8 @@ function UsersContent() {
                               handleRoleChange(u.id, val as "SUPER_ADMIN" | "MEMBER")
                             }
                             options={[
-                              { value: "SUPER_ADMIN", label: "Süper Admin" },
-                              { value: "MEMBER", label: "Üye" },
+                              { value: "SUPER_ADMIN", label: t("users.superAdmin") },
+                              { value: "MEMBER", label: t("users.member") },
                             ]}
                             size="sm"
                             className={cn(
@@ -526,7 +526,7 @@ function UsersContent() {
                       <td className="py-4 px-4 hidden md:table-cell text-slate-500 dark:text-slate-400 font-sans">
                         <div className="flex items-center gap-1.5 text-xs">
                           <Calendar className="size-3 text-slate-400" />
-                          <span>{formatDate(u.createdAt)}</span>
+                          <span>{formatDate(u.createdAt, lang === "en" ? "en-US" : "tr-TR")}</span>
                         </div>
                       </td>
 
@@ -550,7 +550,7 @@ function UsersContent() {
                             )}
                           >
                             <KeyRound className="size-3 mr-1 text-[#c8a87c] dark:text-blue-300" />
-                            Parola Sıfırla
+                            {t("users.resetPassword")}
                           </Button>
 
                           {/* Sil Butonu */}
@@ -559,7 +559,7 @@ function UsersContent() {
                             size="sm"
                             disabled={isBusy || isMe}
                             onClick={() => handleDelete(u)}
-                            title={isMe ? "Kendi hesabınızı silemezsiniz" : "Kullanıcıyı Sil"}
+                            title={isMe ? (lang === "tr" ? "Kendi hesabınızı silemezsiniz" : "Cannot delete your own account") : t("users.deleteUser")}
                             className="size-8 p-0 rounded-xl border-slate-200 dark:border-[#16223f] text-slate-400 hover:border-red-300 dark:hover:border-red-900 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 disabled:opacity-30 cursor-pointer"
                           >
                             {isBusy ? (
