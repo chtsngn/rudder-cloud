@@ -3,10 +3,45 @@
 import { useState } from "react"
 import { Check, ExternalLink, Sparkles } from "lucide-react"
 import { FONT_OPTIONS, useFontTheme, type FontOption } from "@/lib/font-theme"
+import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
+
+const FONT_PREVIEWS: Record<string, { titleTr: string; titleEn: string; subTr: string; subEn: string }> = {
+  grenze: {
+    titleTr: "Sunucu Paneli",
+    titleEn: "Server Panel",
+    subTr: "%99.9 Çevrimiçi • 2026",
+    subEn: "99.9% Online • 2026",
+  },
+  "jim-nightshade": {
+    titleTr: "Seyir Defteri",
+    titleEn: "Captain's Log",
+    subTr: "Rotada 18 Mil • 1840",
+    subEn: "18 Miles On Route",
+  },
+  "cormorant-upright": {
+    titleTr: "Bulut Altyapısı",
+    titleEn: "Cloud Infra",
+    subTr: "SSL & Nginx Aktif",
+    subEn: "SSL & Nginx Active",
+  },
+  joan: {
+    titleTr: "Sistem Servisleri",
+    titleEn: "System Services",
+    subTr: "Duru & Denge • 24/7",
+    subEn: "Clean & Modern • 24/7",
+  },
+  "twinkle-star": {
+    titleTr: "Yıldızlı Gökyüzü",
+    titleEn: "Starry Night",
+    subTr: "Hızlı Dağıtım • Canlı",
+    subEn: "Fast Deploy • Live",
+  },
+}
 
 export function FontPicker() {
   const { currentFont, setFont, activeOption } = useFontTheme()
+  const { lang } = useTranslation()
   const [customText, setCustomText] = useState("")
 
   return (
@@ -24,14 +59,14 @@ export function FontPicker() {
             }}
             className="text-base sm:text-lg text-slate-900 dark:text-slate-100 truncate"
           >
-            {customText || "Rudder Cloud — Sislerin arasından doğan asil dümen"}
+            {customText || (lang === "en" ? "Rudder Cloud — Noble helm rising through the mists" : "Rudder Cloud — Sislerin arasından doğan asil dümen")}
           </p>
         </div>
 
         {/* Canlı Test Kutusu */}
         <input
           type="text"
-          placeholder="Yazıp test edin..."
+          placeholder={lang === "en" ? "Type to test font..." : "Yazıp test edin..."}
           value={customText}
           onChange={(e) => setCustomText(e.target.value)}
           className="w-full sm:w-44 px-3 py-1 text-xs rounded-lg bg-white dark:bg-[#090e1f] border border-slate-200 dark:border-[#1e3568] text-slate-800 dark:text-slate-200 placeholder:text-slate-400 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all font-sans shrink-0"
@@ -42,6 +77,12 @@ export function FontPicker() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         {FONT_OPTIONS.map((font: FontOption) => {
           const isSelected = font.id === currentFont
+          const preview = FONT_PREVIEWS[font.id] ?? {
+            titleTr: font.name,
+            titleEn: font.name,
+            subTr: font.category,
+            subEn: font.category,
+          }
 
           return (
             <div
@@ -74,7 +115,7 @@ export function FontPicker() {
                 <div className="flex items-center gap-1 shrink-0">
                   {font.isDefault && (
                     <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      Varsayılan
+                      {lang === "en" ? "Default" : "Varsayılan"}
                     </span>
                   )}
                   {isSelected ? (
@@ -87,16 +128,35 @@ export function FontPicker() {
                 </div>
               </div>
 
-              {/* Kısa Önizleme Cümlesi */}
-              <p
-                style={{
-                  fontFamily: font.family,
-                  fontWeight: 400,
-                }}
-                className="text-sm text-slate-700 dark:text-slate-300 my-2.5 line-clamp-1"
-              >
-                Rudder Cloud v1.1
-              </p>
+              {/* ═══ KÜÇÜK TİPOGRAFİ & ARAYÜZ ÖNİZLEMESİ ═══ */}
+              <div className="my-2.5 p-2 rounded-lg bg-slate-100/70 dark:bg-[#05091a]/80 border border-slate-200/70 dark:border-[#16223f] flex items-center gap-2.5">
+                <div
+                  style={{
+                    fontFamily: font.family,
+                    fontWeight: font.category === "Cursive" || font.id === "joan" ? 400 : 700,
+                  }}
+                  className="size-8.5 rounded-md bg-white dark:bg-[#0d1633] border border-slate-200 dark:border-[#1e3568]/60 flex items-center justify-center text-lg font-bold text-sky-600 dark:text-sky-400 shadow-2xs shrink-0 select-none"
+                >
+                  Aa
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div
+                    style={{
+                      fontFamily: font.family,
+                      fontWeight: font.category === "Cursive" || font.id === "joan" ? 400 : 600,
+                    }}
+                    className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate leading-tight"
+                  >
+                    {lang === "en" ? preview.titleEn : preview.titleTr}
+                  </div>
+                  <div
+                    style={{ fontFamily: font.family }}
+                    className="text-[11px] text-slate-500 dark:text-slate-400 truncate leading-tight mt-0.5"
+                  >
+                    {lang === "en" ? preview.subEn : preview.subTr}
+                  </div>
+                </div>
+              </div>
 
               {/* Kart Altı: Tek Etiket & Google Fonts Bağlantısı */}
               <div className="pt-2 border-t border-slate-100 dark:border-[#16223f] flex items-center justify-between gap-1 text-[10px] font-mono text-slate-400">
@@ -120,7 +180,7 @@ export function FontPicker() {
       {/* İnce Bilgi İpucu */}
       <p className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1.5 pt-1">
         <Sparkles className="size-3 text-sky-400 shrink-0" />
-        <span>Seçilen font (sol üst logo hariç) menü, kartlar, pencereler ve tüm sayfalara anında yansır.</span>
+        <span>{lang === "en" ? "Selected font applies instantly to menus, cards, dialogs, and pages." : "Seçilen font (sol üst logo hariç) menü, kartlar, pencereler ve tüm sayfalara anında yansır."}</span>
       </p>
     </div>
   )
