@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useTransition } from "react"
+import { APP_VERSION } from "@/lib/version"
 
 export const FONT_STORAGE_KEY = "app_font_family"
 export const DEFAULT_FONT_ID = "grenze"
@@ -32,7 +33,7 @@ export const FONT_OPTIONS: FontOption[] = [
     description: "Gotik ve denizcilik ruhunu taşıyan yüksek kontrastlı, asil başlık fontu.",
     googleUrl: "https://fonts.google.com/specimen/Grenze",
     previewText: "Puslu göklerin derinliklerinde, sislerin arasından doğan dümenin başında.",
-    sampleHeading: "Rudder Cloud v1.1.0",
+    sampleHeading: `Rudder Cloud ${APP_VERSION}`,
     tags: ["Varsayılan", "Gotik Asalet", "Yüksek Kontrast"],
   },
   {
@@ -44,7 +45,7 @@ export const FONT_OPTIONS: FontOption[] = [
     description: "Gizemli, dramatik ve fırtınalı kaptan seyir defteri el yazısı tarzı.",
     googleUrl: "https://fonts.google.com/specimen/Jim+Nightshade",
     previewText: "Puslu göklerin derinliklerinde, sislerin arasından doğan dümenin başında.",
-    sampleHeading: "Rudder Cloud v1.1.0",
+    sampleHeading: `Rudder Cloud ${APP_VERSION}`,
     tags: ["Dramatik", "El Yazısı", "Korsan & Macera"],
   },
   {
@@ -56,7 +57,7 @@ export const FONT_OPTIONS: FontOption[] = [
     description: "Zarif, dik eksenli kaligrafik kıvrımlara sahip lüks ve klasik tipografi.",
     googleUrl: "https://fonts.google.com/specimen/Cormorant+Upright",
     previewText: "Puslu göklerin derinliklerinde, sislerin arasından doğan dümenin başında.",
-    sampleHeading: "Rudder Cloud v1.1.0",
+    sampleHeading: `Rudder Cloud ${APP_VERSION}`,
     tags: ["Lüks", "Kaligrafik", "Klasik Zarafet"],
   },
   {
@@ -68,7 +69,7 @@ export const FONT_OPTIONS: FontOption[] = [
     description: "Sıcak, dengeli, yuvarlatılmış harf yapısıyla zamansız edebi bir dokunuş.",
     googleUrl: "https://fonts.google.com/specimen/Joan",
     previewText: "Puslu göklerin derinliklerinde, sislerin arasından doğan dümenin başında.",
-    sampleHeading: "Rudder Cloud v1.1.0",
+    sampleHeading: `Rudder Cloud ${APP_VERSION}`,
     tags: ["Sıcak", "Edebi", "Modern Serif"],
   },
   {
@@ -80,7 +81,7 @@ export const FONT_OPTIONS: FontOption[] = [
     description: "Yıldızlı gecelerin neşesini ve samimiyetini yansıtan serbest el yazısı.",
     googleUrl: "https://fonts.google.com/specimen/Twinkle+Star",
     previewText: "Puslu göklerin derinliklerinde, sislerin arasından doğan dümenin başında.",
-    sampleHeading: "Rudder Cloud v1.1.0",
+    sampleHeading: `Rudder Cloud ${APP_VERSION}`,
     tags: ["Neşeli", "Samimi", "Yıldızlı Gece"],
   },
 ]

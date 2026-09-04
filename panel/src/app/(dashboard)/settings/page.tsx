@@ -47,6 +47,7 @@ import { FontPicker } from "@/components/font-picker"
 import { useFontTheme } from "@/lib/font-theme"
 import { useSystemVersion } from "@/hooks/use-system-version"
 import { SystemUpdateModal } from "@/components/system-update-modal"
+import { APP_VERSION } from "@/lib/version"
 
 interface PanelDomainSettings {
   domain: string | null
@@ -1347,7 +1348,7 @@ export default function SettingsPage() {
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-[#1e3568]/50 font-mono">
                 <span className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
-                {versionData?.currentVersion || "v1.1.0"}
+                {versionData?.currentVersion || APP_VERSION}
               </span>
             )}
             <div
@@ -1371,7 +1372,7 @@ export default function SettingsPage() {
                   {lang === "en" ? "Current Version" : "Mevcut Sürüm"}
                 </span>
                 <div className="text-lg font-bold font-mono text-slate-900 dark:text-slate-100 mt-1 flex items-center gap-2">
-                  <span>{versionData?.currentVersion || "v1.1.0"}</span>
+                  <span>{versionData?.currentVersion || APP_VERSION}</span>
                   <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200 dark:bg-[#101c38] text-slate-600 dark:text-slate-300 font-sans">
                     {lang === "en" ? "Active" : "Aktif"}
                   </span>
@@ -1383,7 +1384,7 @@ export default function SettingsPage() {
                   {lang === "en" ? "Latest GitHub Release" : "En Son GitHub Sürümü"}
                 </span>
                 <div className="text-lg font-bold font-mono text-slate-900 dark:text-slate-100 mt-1 flex items-center gap-2">
-                  <span>{versionData?.latestVersion || "—"}</span>
+                  <span>{versionData?.latestVersion || APP_VERSION}</span>
                   {versionData?.hasUpdate ? (
                     <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-600 dark:text-amber-400 font-sans font-semibold">
                       {lang === "en" ? "New!" : "Yeni!"}
@@ -1457,8 +1458,8 @@ export default function SettingsPage() {
                     </h4>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       {lang === "en"
-                        ? `You are running the latest version of Rudder Cloud (${versionData?.currentVersion || "v1.1.0"}).`
-                        : `Rudder Cloud'un en son kararlı sürümünü (${versionData?.currentVersion || "v1.1.0"}) çalıştırıyorsunuz.`}
+                        ? `You are running the latest version of Rudder Cloud (${versionData?.currentVersion || APP_VERSION}).`
+                        : `Rudder Cloud'un en son kararlı sürümünü (${versionData?.currentVersion || APP_VERSION}) çalıştırıyorsunuz.`}
                     </p>
                   </div>
                 </div>

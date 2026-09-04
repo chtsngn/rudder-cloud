@@ -441,7 +441,7 @@ export const tr = {
     loggingIn: "Giriş Yapılıyor...",
     errorInvalid: "Kullanıcı adı veya şifre yanlış.",
     errorConnection: "Sunucuya bağlanılamadı. Lütfen tekrar deneyin.",
-    secured: "v1.1.0 Güvenli",
+    secured: "{version} Güvenli",
   },
 }
 

@@ -23,6 +23,7 @@ import { useTranslation } from "@/components/language-provider"
 import { useSidebar } from "@/components/sidebar-context"
 import { useSystemVersion } from "@/hooks/use-system-version"
 import { SystemUpdateModal } from "@/components/system-update-modal"
+import { APP_VERSION } from "@/lib/version"
 import { cn } from "@/lib/utils"
 
 const SIDEBAR_KEY = "panel:sidebar-collapsed"
@@ -526,7 +527,7 @@ export function AppSidebar() {
                   className="hover:text-white/80 transition-colors cursor-pointer text-white/50"
                   title="Sistem ve Sürüm Detayları"
                 >
-                  {versionData?.currentVersion || "v1.1.0"}
+                  {versionData?.currentVersion || APP_VERSION}
                 </button>
               </div>
             )

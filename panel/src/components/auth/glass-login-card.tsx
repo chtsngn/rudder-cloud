@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, type FormEvent } from "react"
 import { Loader2 } from "lucide-react"
 import { useTranslation } from "@/components/language-provider"
+import { APP_VERSION } from "@/lib/version"
 
 interface GlassLoginCardProps {
   progress: number
@@ -18,9 +19,9 @@ export function GlassLoginCard({ progress }: GlassLoginCardProps) {
   const usernameInputRef = useRef<HTMLInputElement>(null)
 
   // 🌪️ KASIRGA (VORTEX) GİRİŞ EŞİĞİ
-  // 0.74'te başlar, 0.88'de tam merkeze oturur ve dönüş durur
-  const appearStart = 0.74
-  const appearEnd = 0.88
+  // Daha erken başlar (0.58), daha geniş ve dengeli bir geçişle (0.92) merkeze oturur
+  const appearStart = 0.58
+  const appearEnd = 0.92
   const normalizedProgress = Math.min(
     1,
     Math.max(0, (progress - appearStart) / (appearEnd - appearStart))
@@ -173,7 +174,7 @@ export function GlassLoginCard({ progress }: GlassLoginCardProps) {
         <div className="pt-2 text-center text-[11px] text-slate-400 font-mono flex items-center justify-center gap-2 border-t border-slate-800/80">
           <span>Rudder Cloud</span>
           <span>•</span>
-          <span>{t("auth.secured")}</span>
+          <span>{t("auth.secured", { version: APP_VERSION })}</span>
         </div>
       </div>
     </div>

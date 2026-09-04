@@ -8,6 +8,7 @@ import { CinematicCanvasScene } from "@/components/auth/cinematic-canvas-scene"
 import { GlassLoginCard } from "@/components/auth/glass-login-card"
 import { SailingShipRoute } from "@/components/auth/sailing-ship-route"
 import { cn } from "@/lib/utils"
+import { APP_VERSION } from "@/lib/version"
 
 export default function LoginPage() {
   const { lang, setLang, t } = useTranslation()
@@ -134,7 +135,7 @@ export default function LoginPage() {
             {/* Sade Version Bilgisi (Fırtına yazısı kaldırıldı) */}
             <div className="flex items-center gap-2 pt-1 text-xs font-mono text-slate-400">
               <span className="size-1.5 rounded-full bg-slate-400/80" />
-              <span>v1.1.0</span>
+              <span>{APP_VERSION}</span>
             </div>
           </div>
 

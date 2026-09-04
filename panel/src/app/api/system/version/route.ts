@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
 import { execSync } from "child_process"
 import { getSession } from "@/lib/auth"
+import { APP_VERSION } from "@/lib/version"
 
-export const CURRENT_VERSION = "v1.2.2"
+export const CURRENT_VERSION = APP_VERSION
 export const GITHUB_REPO = "chtsngn/rudder-cloud"
 
 interface GitHubRelease {
@@ -45,7 +46,7 @@ function getLocalGitInfo() {
       .trim()
     return { commit, branch }
   } catch {
-    return { commit: "7ace4f2", branch: "v1.1.0" }
+    return { commit: "30b5841", branch: APP_VERSION }
   }
 }
 
