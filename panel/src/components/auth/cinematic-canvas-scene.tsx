@@ -137,6 +137,9 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
     // ── C. Kasırga Sis Kuşakları (Harbi Girdap/Kasırga) ──
     const stormMist: StormMistBand[] = []
     let cachedBgGrad: CanvasGradient | null = null
+    const logicalWRef = { current: 1920 }
+    const logicalHRef = { current: 1080 }
+    const dprRef = { current: 1 }
 
     const initEntities = (w: number, h: number) => {
       // 1. Kristal Yıldızlar
@@ -194,16 +197,22 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
-      canvas.width = Math.round(window.innerWidth * dpr)
-      canvas.height = Math.round(window.innerHeight * dpr)
+      dprRef.current = dpr
+      const w = window.innerWidth
+      const h = window.innerHeight
+      logicalWRef.current = w
+      logicalHRef.current = h
 
-      // Arka plan gradyanını tek seferlik önbelleğe al
-      cachedBgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height)
+      canvas.width = Math.round(w * dpr)
+      canvas.height = Math.round(h * dpr)
+
+      // Arka plan gradyanını mantıksal CSS pikseli (h) üzerinden tek seferlik önbelleğe al
+      cachedBgGrad = ctx.createLinearGradient(0, 0, 0, h)
       cachedBgGrad.addColorStop(0, "#010308")
       cachedBgGrad.addColorStop(0.45, "#030713")
       cachedBgGrad.addColorStop(1, "#02040b")
 
-      initEntities(canvas.width, canvas.height)
+      initEntities(w, h)
     }
 
     resize()
@@ -266,11 +275,15 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
         }
       }
 
-      const w = canvas.width
-      const h = canvas.height
+      // Mac Retina (DPR 2) ve standart ekranlar (DPR 1) arasında boyut farkını yok etmek için
+      // tüm çizim motorunu CSS piksel koordinatlarına kilitler:
+      const dpr = dprRef.current
+      const w = logicalWRef.current
+      const h = logicalHRef.current
       const cx = w / 2
       const cy = h / 2
 
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, w, h)
 
       // ════════════════════════════════════════════════════════════
@@ -350,7 +363,8 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
       // ════════════════════════════════════════════════════════════
       if (p > 0.45) {
         const helmFactor = Math.min(1, (p - 0.45) / 0.35) // 0 -> 1
-        const helmScale = (0.3 + helmFactor * 0.8) * (w < 800 ? 0.72 : 1)
+        // Mobilde taşmayı önlemek için 0.82, masaüstü/Mac/Windows'ta kartı saran 1.05 ölçek
+        const helmScale = (0.3 + helmFactor * 0.8) * (w < 768 ? 0.82 : 1.05)
         const helmOpacity = Math.min(1, helmFactor * 1.5)
 
         let rotSpeed = 0
@@ -368,14 +382,15 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
         ctx.scale(helmScale, helmScale)
         ctx.globalAlpha = helmOpacity
 
-        // Dümen Arkası Safir ve Gümüş Işıma Halesi (GPU Sprite Blit)
+        // Dümen Arkası Safir ve Gümüş Işıma Halesi (CSS Pikseli: 520px)
         if (auraSprite) {
-          ctx.drawImage(auraSprite, -250, -250, 500, 500)
+          const auraSize = 520
+          ctx.drawImage(auraSprite, -auraSize / 2, -auraSize / 2, auraSize, auraSize)
         }
 
-        // Amblem Dümen Görseli
+        // Amblem Dümen Görseli (Mac Retina, Windows ve tüm ekranlarda sabit 360 CSS pikseli)
         if (helmImgRef.current && helmImgRef.current.complete) {
-          const imgSize = 340
+          const imgSize = 360
           ctx.drawImage(
             helmImgRef.current,
             -imgSize / 2,
