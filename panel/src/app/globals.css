@@ -203,29 +203,79 @@
 .font-twinkle { font-family: 'Twinkle Star', cursive !important; }
 
 /* ═══ TÜM PANEL VE SAYFALARA DİNAMİK FONT UYGULANMASI ═══ */
-/* Sol üstteki 'RUDDER' logo yazısı ve kod/terminal alanları hariç her yere uygulanır */
+/* 
+ * Kullanıcının seçtiği font; sol menü sekmelerine, sayfalara, kartlara, pencerelere/diyaloglara, 
+ * butonlara, form kutularına ve tüm metinlere anında uygulanır.
+ */
+
+/* 1. Tüm DOM ağacı için font değişkeni */
+*,
+*::before,
+*::after {
+  font-family: var(--app-font, 'Grenze', serif);
+}
+
+/* 2. Kartlar, pencereler, sol menü, butonlar, tablolar ve tüm metin etiketleri */
 html,
 body,
+div,
+span,
+p,
+a,
 button,
 input,
 select,
 textarea,
-p,
-a:not(:has(.rudder-brand-title)),
 h1, h2, h3, h4, h5, h6,
 label,
 li,
+ul,
+ol,
+table,
+thead,
+tbody,
+tr,
+th,
 td,
-th {
+nav,
+header,
+footer,
+main,
+section,
+article,
+aside,
+form,
+dialog,
+summary,
+details,
+b,
+strong,
+em,
+i,
+small,
+.font-sans,
+.font-heading {
   font-family: var(--app-font, 'Grenze', serif) !important;
 }
 
-/* Kod blokları ve terminal alanları daima JetBrains Mono kalır */
-code, kbd, samp, pre, .font-mono, [data-terminal], [data-terminal] * {
+/* 3. Kod blokları ve terminal alanları daima JetBrains Mono kalır */
+code,
+code *,
+kbd,
+kbd *,
+samp,
+pre,
+pre *,
+.font-mono,
+.font-mono *,
+[data-terminal],
+[data-terminal] * {
   font-family: 'JetBrains Mono', ui-monospace, monospace !important;
 }
 
-/* Sol üstteki RUDDER marka logosu yazısı ASLA değişmez, daima asil Grenze kalır */
+/* 4. Sol üstteki RUDDER marka logosu yazısı ASLA değişmez, daima asil ve varsayılan Grenze kalır */
+html body .rudder-brand-title,
+html body .rudder-brand-title *,
 .rudder-brand-title,
 .rudder-brand-title * {
   font-family: 'Grenze', serif !important;

@@ -302,9 +302,9 @@ export function AppSidebar() {
 
             {!effectivelyCollapsed && (
               <span
-                className="rudder-brand-title font-heading font-extrabold text-[22px] tracking-[0.24em] uppercase select-none leading-none transition-all duration-300"
+                className="rudder-brand-title font-extrabold text-[22px] tracking-[0.24em] uppercase select-none leading-none transition-all duration-300"
                 style={{
-                  fontFamily: "'Grenze', serif !important",
+                  fontFamily: "'Grenze', serif",
                   color: "var(--sidebar-logo-text, #cbd5e1)",
                   textShadow: "0 0 14px var(--sidebar-logo-glow, rgba(203, 213, 225, 0.45)), 0 2px 6px rgba(0,0,0,0.9)",
                 }}
