@@ -162,8 +162,8 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
           startTimeRef.current = now
         }
         const elapsed = now - startTimeRef.current
-        const INITIAL_PAUSE = 400 // ms: ilk sahnenin kısa nefes süresi
-        const DURATION = 2100 // ms: akıcı, sinematik dalış süresi
+        const INITIAL_PAUSE = 1200 // ms: ilk sahnenin ve geminin net izlenmesi için bekleme
+        const DURATION = 3200 // ms: ağırbaşlı, asil ve sinematik dalış süresi
 
         if (elapsed < INITIAL_PAUSE) {
           targetProgressRef.current = 0

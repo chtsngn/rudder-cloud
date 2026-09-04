@@ -25,7 +25,7 @@ export default function LoginPage() {
   }
 
   // 1. Sahne (Yıldızlı Gece & Solda Puslu Gri Rudder Yazısı) opaklığı
-  const introOpacity = Math.max(0, 1 - scrollProgress * 2.8)
+  const introOpacity = Math.max(0, 1 - scrollProgress * 2.0)
   const isIntroVisible = introOpacity > 0.02
 
   return (

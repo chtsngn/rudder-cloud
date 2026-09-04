@@ -14,10 +14,10 @@ interface RippleRing {
 export function SailingShipRoute() {
   const pathRef = useRef<SVGPathElement>(null)
   const [ship, setShip] = useState({
-    x: 60,
-    y: 130,
-    angle: 0,
-    opacity: 0,
+    x: 140,
+    y: 115,
+    angle: -10,
+    opacity: 1,
   })
   const [ripples, setRipples] = useState<RippleRing[]>([])
   const [now, setNow] = useState(0)
@@ -30,7 +30,7 @@ export function SailingShipRoute() {
 
   useEffect(() => {
     let animFrame: number
-    let progress = 0
+    let progress = 0.1 // Rotanın ortasından, hemen görünür başlar
     let lastRippleTime = 0
 
     const update = (time: number) => {
@@ -58,12 +58,12 @@ export function SailingShipRoute() {
           // Geminin hafif doğal su salınımı
           const bobbing = Math.sin(time * 0.002) * 2.2
 
-          // Giriş ve çıkışlarda pürüzsüz sönümlenme (fade in / fade out)
+          // Giriş beklemesi yok; doğrudan 1 ile başlar, yalnızca sonda söner
           let opacity = 1
-          if (progress < 0.08) {
-            opacity = Math.max(0, progress / 0.08)
-          } else if (progress > 0.92) {
-            opacity = Math.max(0, (1 - progress) / 0.08)
+          if (progress < 0) {
+            opacity = 0
+          } else if (progress > 0.94) {
+            opacity = Math.max(0, (1 - progress) / 0.06)
           }
 
           setShip({
