@@ -187,8 +187,8 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
         stormMist.push({
           armAngle: spiralAngle,
           radialDist,
-          radius: (Math.random() * 42 + 22) * (0.8 + distRatio * 1.2),
-          opacity: Math.random() * 0.2 + 0.1,
+          radius: (Math.random() * 38 + 18) * (0.8 + distRatio * 1.2),
+          opacity: Math.random() * 0.18 + 0.08,
           speed: (0.02 + (1 - distRatio) * 0.04),
           hueType,
         })
@@ -363,8 +363,8 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
       // ════════════════════════════════════════════════════════════
       if (p > 0.45) {
         const helmFactor = Math.min(1, (p - 0.45) / 0.35) // 0 -> 1
-        // Mobilde taşmayı önlemek için 0.82, masaüstü/Mac/Windows'ta kartı saran 1.05 ölçek
-        const helmScale = (0.3 + helmFactor * 0.8) * (w < 768 ? 0.82 : 1.05)
+        // Kullanıcının orijinal birebir ölçeği: (w < 800 ? 0.72 : 1)
+        const helmScale = (0.3 + helmFactor * 0.8) * (w < 800 ? 0.72 : 1.0)
         const helmOpacity = Math.min(1, helmFactor * 1.5)
 
         let rotSpeed = 0
@@ -382,15 +382,15 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
         ctx.scale(helmScale, helmScale)
         ctx.globalAlpha = helmOpacity
 
-        // Dümen Arkası Safir ve Gümüş Işıma Halesi (CSS Pikseli: 520px)
+        // Dümen Arkası Safir ve Gümüş Işıma Halesi (Orijinal 500px)
         if (auraSprite) {
-          const auraSize = 520
+          const auraSize = 500
           ctx.drawImage(auraSprite, -auraSize / 2, -auraSize / 2, auraSize, auraSize)
         }
 
-        // Amblem Dümen Görseli (Mac Retina, Windows ve tüm ekranlarda sabit 360 CSS pikseli)
+        // Amblem Dümen Görseli (Kullanıcının ekranındaki orijinal 340px CSS boyutu)
         if (helmImgRef.current && helmImgRef.current.complete) {
-          const imgSize = 360
+          const imgSize = 340
           ctx.drawImage(
             helmImgRef.current,
             -imgSize / 2,
