@@ -73,21 +73,20 @@ export function SideTerminalDock() {
     }
   }, [isDragging, setWidth, setIsDragging])
 
-  // /terminal sayfasındayken dock'u gizle
-  const isTerminalPage = pathname === "/terminal"
-  if (isTerminalPage) {
-    return null
-  }
-
   // Terminal tekrar açıldığında ekran boyutunu yeniden ayarla
   useEffect(() => {
-    if (isOpen && !isMinimized) {
+    if (isOpen && !isMinimized && pathname !== "/terminal") {
       const timer = setTimeout(() => {
         window.dispatchEvent(new Event("resize"))
       }, 120)
       return () => clearTimeout(timer)
     }
-  }, [isOpen, isMinimized])
+  }, [isOpen, isMinimized, pathname])
+
+  // /terminal sayfasındayken dock'u gizle
+  if (pathname === "/terminal") {
+    return null
+  }
 
   return (
     <>

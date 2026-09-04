@@ -346,8 +346,8 @@ export async function createZipStream(site: SiteLike, relativePaths: string[]): 
   }
 
   const archive = archiver("zip", { zlib: { level: 6 } })
-  archive.on("warning", (err) => console.error("[site-fs] zip uyarısı:", err))
-  archive.on("error", (err) => {
+  archive.on("warning", (err: unknown) => console.error("[site-fs] zip uyarısı:", err))
+  archive.on("error", (err: unknown) => {
     // archiver kendi stream'ine 'error' fırlatır; burada yalnızca logluyoruz —
     // tüketen taraf (Response body) zaten stream hatasını görecek.
     console.error("[site-fs] zip hatası:", err)
