@@ -431,11 +431,17 @@ export const tr = {
   auth: {
     loginTitle: "Rudder Cloud",
     loginSubtitle: "Sunucu yönetim paneline erişmek için giriş yapın.",
+    consoleSubtitle: "Yönetici Doğrulama Konsolu",
+    quickLogin: "Hızlı Giriş",
+    navRoute: "Seyir Rotası",
+    heroDescription: "Bulut sunucularınızın mutlak kontrolü; puslu göklerin derinliklerinde, sislerin arasından doğan dümenin başında.",
     usernameLabel: "Kullanıcı Adı",
     passwordLabel: "Şifre",
     loginBtn: "GİRİŞ YAP",
     loggingIn: "Giriş Yapılıyor...",
     errorInvalid: "Kullanıcı adı veya şifre yanlış.",
+    errorConnection: "Sunucuya bağlanılamadı. Lütfen tekrar deneyin.",
+    secured: "v1.1.0 Güvenli",
   },
 }
 

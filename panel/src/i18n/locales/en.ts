@@ -433,10 +433,16 @@ export const en: TranslationDict = {
   auth: {
     loginTitle: "Rudder Cloud",
     loginSubtitle: "Sign in to access your server management panel.",
+    consoleSubtitle: "Admin Authentication Console",
+    quickLogin: "Quick Login",
+    navRoute: "Navigation Route",
+    heroDescription: "Absolute control over your cloud servers; in the depths of misty skies, at the helm emerging through the haze.",
     usernameLabel: "Username",
     passwordLabel: "Password",
     loginBtn: "SIGN IN",
     loggingIn: "Signing In...",
     errorInvalid: "Invalid username or password.",
+    errorConnection: "Could not connect to server. Please try again.",
+    secured: "v1.1.0 Secured",
   },
 }

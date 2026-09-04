@@ -10,7 +10,7 @@ interface GlassLoginCardProps {
 }
 
 export function GlassLoginCard({ progress }: GlassLoginCardProps) {
-  const { t } = useTranslation()
+  const { t, lang } = useTranslation()
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -56,16 +56,15 @@ export function GlassLoginCard({ progress }: GlassLoginCardProps) {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, lang }),
       })
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        setError(body?.error ?? "Kullanıcı adı veya şifre yanlış.")
+        setError(t("auth.errorInvalid"))
         return
       }
       window.location.href = "/"
     } catch {
-      setError("Sunucuya bağlanılamadı. Lütfen tekrar deneyin.")
+      setError(t("auth.errorConnection"))
     } finally {
       setSubmitting(false)
     }
@@ -102,7 +101,7 @@ export function GlassLoginCard({ progress }: GlassLoginCardProps) {
             Rudder
           </h1>
           <p className="text-[11px] tracking-[0.2em] uppercase text-slate-400 font-mono font-medium">
-            Yönetici Doğrulama Konsolu
+            {t("auth.consoleSubtitle")}
           </p>
         </div>
 
@@ -174,7 +173,7 @@ export function GlassLoginCard({ progress }: GlassLoginCardProps) {
         <div className="pt-2 text-center text-[11px] text-slate-400 font-mono flex items-center justify-center gap-2 border-t border-slate-800/80">
           <span>Rudder Cloud</span>
           <span>•</span>
-          <span>v1.1.0 Secured</span>
+          <span>{t("auth.secured")}</span>
         </div>
       </div>
     </div>

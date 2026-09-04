@@ -10,7 +10,7 @@ import { SailingShipRoute } from "@/components/auth/sailing-ship-route"
 import { cn } from "@/lib/utils"
 
 export default function LoginPage() {
-  const { lang, setLang } = useTranslation()
+  const { lang, setLang, t } = useTranslation()
   const [scrollProgress, setScrollProgress] = useState(0)
   const [targetProgress, setTargetProgress] = useState<number | null>(null)
 
@@ -61,7 +61,7 @@ export default function LoginPage() {
                 className="group flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-950/60 backdrop-blur-md border border-slate-700/60 text-slate-300 hover:text-white hover:border-slate-400/80 text-xs font-semibold shadow-lg transition-all cursor-pointer hover:scale-105 active:scale-95"
               >
                 <FastForward className="size-3.5 text-slate-300 transition-transform group-hover:translate-x-0.5" />
-                <span className="hidden sm:inline">Hızlı Giriş</span>
+                <span className="hidden sm:inline">{t("auth.quickLogin")}</span>
               </button>
             )}
 
@@ -107,7 +107,7 @@ export default function LoginPage() {
             {/* Sis Rozeti (Puslu Gri & Arduvaz) */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-950/60 backdrop-blur-md border border-slate-700/60 text-[11px] font-mono tracking-wider text-slate-300 uppercase shadow-lg">
               <Compass className="size-3.5 text-slate-400 animate-spin-slow" />
-              <span>36°58&apos;N • 28°14&apos;E &bull; Seyir Rotası</span>
+              <span>36°58&apos;N • 28°14&apos;E &bull; {t("auth.navRoute")}</span>
             </div>
 
             {/* Duman ve Sis İçinde Parlayan Puslu Gri Başlık (Grenze Fontu) */}
@@ -128,7 +128,7 @@ export default function LoginPage() {
             </div>
 
             <p className="text-sm sm:text-base text-slate-300 font-sans tracking-wide leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)] max-w-md">
-              Bulut sunucularınızın mutlak kontrolü; puslu göklerin derinliklerinde, sislerin arasından doğan dümenin başında.
+              {t("auth.heroDescription")}
             </p>
 
             {/* Sade Version Bilgisi (Fırtına yazısı kaldırıldı) */}

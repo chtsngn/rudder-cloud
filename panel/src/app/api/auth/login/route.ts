@@ -10,9 +10,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Geçersiz istek." }, { status: 400 })
   }
 
-  const { username, password } = (body ?? {}) as { username?: unknown; password?: unknown }
+  const { username, password, lang } = (body ?? {}) as {
+    username?: unknown
+    password?: unknown
+    lang?: unknown
+  }
   const usernameValue = typeof username === "string" ? username.trim() : ""
   const passwordValue = typeof password === "string" ? password : ""
+  const langValue = lang === "en" || lang === "tr" ? lang : null
 
   if (!usernameValue || !passwordValue) {
     return NextResponse.json(
@@ -30,5 +35,14 @@ export async function POST(request: Request) {
   }
 
   await createSession(user.id)
-  return NextResponse.json({ ok: true })
+
+  const response = NextResponse.json({ ok: true })
+  if (langValue) {
+    response.cookies.set("rudder_lang", langValue, {
+      path: "/",
+      maxAge: 31536000,
+      sameSite: "lax",
+    })
+  }
+  return response
 }
