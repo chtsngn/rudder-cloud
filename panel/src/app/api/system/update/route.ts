@@ -38,87 +38,62 @@ export async function POST(request: Request) {
   const stepsLog: Array<{ step: string; status: "success" | "skipped" | "failed"; output: string }> = []
 
   try {
-    const isProduction = process.env.NODE_ENV === "production"
+    // 1. Git Fetch
+    try {
+      const { stdout } = await execAsync("git fetch --tags origin", { cwd: gitRoot, timeout: 30000 })
+      stepsLog.push({ step: "git_fetch", status: "success", output: stdout.trim() || "Etiketler ve değişiklikler getirildi." })
+    } catch (err: any) {
+      stepsLog.push({ step: "git_fetch", status: "failed", output: err?.message || "git fetch başarısız oldu." })
+      throw new Error(`Git fetch hatası: ${err?.message || err}`)
+    }
 
-    if (!isProduction) {
-      // ── Geliştirme (Local Dev) Güvenli Simülasyonu ──
-      // Lokal git dallarını ve uncommitted çalışma ağacını bozmadan adımları görselleştirir
-      await new Promise((r) => setTimeout(r, 700))
-      stepsLog.push({ step: "git_fetch", status: "success", output: "GitHub etiketleri başarıyla kontrol edildi (Dev Simülasyon)." })
-      
-      await new Promise((r) => setTimeout(r, 800))
-      stepsLog.push({ step: "git_pull", status: "success", output: `Kodlar en son sürüme (${targetVersion}) eşitlendi (Dev Simülasyon).` })
-      
-      await new Promise((r) => setTimeout(r, 700))
-      stepsLog.push({ step: "npm_install", status: "success", output: "Paket bağımlılıkları güncel." })
-      
-      await new Promise((r) => setTimeout(r, 700))
-      stepsLog.push({ step: "prisma_migrate", status: "success", output: "Veritabanı şeması ve Prisma istemcisi güncellendi." })
-      
-      await new Promise((r) => setTimeout(r, 800))
-      stepsLog.push({ step: "npm_build", status: "success", output: "Next.js üretim derlemesi başarılı (Dev Simülasyon)." })
-      
-      await new Promise((r) => setTimeout(r, 500))
-      stepsLog.push({ step: "service_restart", status: "success", output: "Panel servisi hazır. Sayfa yenileniyor." })
-    } else {
-      // ── Prodüksiyon (Linux Sunucu - /opt/sunucu-paneli) Gerçek Pipeline ──
-      // 1. Git Fetch
-      try {
-        const { stdout } = await execAsync("git fetch --tags origin", { cwd: gitRoot, timeout: 30000 })
-        stepsLog.push({ step: "git_fetch", status: "success", output: stdout.trim() || "Etiketler ve değişiklikler getirildi." })
-      } catch (err: any) {
-        stepsLog.push({ step: "git_fetch", status: "failed", output: err?.message || "git fetch başarısız oldu." })
-        throw new Error(`Git fetch hatası: ${err?.message || err}`)
+    // 2. Git Pull / Checkout
+    try {
+      let pullCmd = "git pull"
+      if (targetVersion && targetVersion !== "latest") {
+        pullCmd = `git checkout ${targetVersion} || git pull origin main`
       }
+      const { stdout } = await execAsync(pullCmd, { cwd: gitRoot, timeout: 30000 })
+      stepsLog.push({ step: "git_pull", status: "success", output: stdout.trim() || "Kodlar güncellendi." })
+    } catch (err: any) {
+      stepsLog.push({ step: "git_pull", status: "failed", output: err?.message || "git pull başarısız oldu." })
+      throw new Error(`Git pull hatası: ${err?.message || err}`)
+    }
 
-      // 2. Git Pull / Checkout
-      try {
-        let pullCmd = "git pull"
-        if (targetVersion && targetVersion !== "latest") {
-          pullCmd = `git checkout ${targetVersion} || git pull origin main`
-        }
-        const { stdout } = await execAsync(pullCmd, { cwd: gitRoot, timeout: 30000 })
-        stepsLog.push({ step: "git_pull", status: "success", output: stdout.trim() || "Kodlar güncellendi." })
-      } catch (err: any) {
-        stepsLog.push({ step: "git_pull", status: "failed", output: err?.message || "git pull başarısız oldu." })
-        throw new Error(`Git pull hatası: ${err?.message || err}`)
-      }
+    // 3. Paket Kurulumu (npm install)
+    try {
+      const { stdout } = await execAsync("npm install --omit=dev --no-audit --no-fund", { cwd: panelDir, timeout: 120000 })
+      stepsLog.push({ step: "npm_install", status: "success", output: stdout.trim() || "Bağımlılıklar eşitlendi." })
+    } catch (err: any) {
+      stepsLog.push({ step: "npm_install", status: "skipped", output: err?.message || "npm install uyarısı (atlanıyor)." })
+    }
 
-      // 3. Paket Kurulumu (npm install)
+    // 4. Veritabanı Şeması & Prisma Generate
+    try {
+      await execAsync("npx prisma generate", { cwd: panelDir, timeout: 60000 })
       try {
-        const { stdout } = await execAsync("npm install --omit=dev --no-audit --no-fund", { cwd: panelDir, timeout: 120000 })
-        stepsLog.push({ step: "npm_install", status: "success", output: stdout.trim() || "Bağımlılıklar eşitlendi." })
-      } catch (err: any) {
-        stepsLog.push({ step: "npm_install", status: "skipped", output: err?.message || "npm install uyarısı (atlanıyor)." })
-      }
+        await execAsync("npx prisma migrate deploy", { cwd: panelDir, timeout: 60000 })
+      } catch {}
+      stepsLog.push({ step: "prisma_migrate", status: "success", output: "Veritabanı şeması ve istemcisi güncellendi." })
+    } catch (err: any) {
+      stepsLog.push({ step: "prisma_migrate", status: "skipped", output: err?.message || "Prisma adımı atlandı." })
+    }
 
-      // 4. Veritabanı Şeması & Prisma Generate
-      try {
-        await execAsync("npx prisma generate", { cwd: panelDir, timeout: 60000 })
-        try {
-          await execAsync("npx prisma migrate deploy", { cwd: panelDir, timeout: 60000 })
-        } catch {}
-        stepsLog.push({ step: "prisma_migrate", status: "success", output: "Veritabanı şeması ve istemcisi güncellendi." })
-      } catch (err: any) {
-        stepsLog.push({ step: "prisma_migrate", status: "skipped", output: err?.message || "Prisma adımı atlandı." })
-      }
+    // 5. Next.js Build
+    try {
+      const { stdout } = await execAsync("npm run build", { cwd: panelDir, timeout: 300000 })
+      stepsLog.push({ step: "npm_build", status: "success", output: stdout.trim() || "Panel başarıyla derlendi." })
+    } catch (err: any) {
+      stepsLog.push({ step: "npm_build", status: "failed", output: err?.message || "Derleme başarısız." })
+      throw new Error(`Derleme hatası: ${err?.message || err}`)
+    }
 
-      // 5. Next.js Build
-      try {
-        const { stdout } = await execAsync("npm run build", { cwd: panelDir, timeout: 300000 })
-        stepsLog.push({ step: "npm_build", status: "success", output: stdout.trim() || "Panel başarıyla derlendi." })
-      } catch (err: any) {
-        stepsLog.push({ step: "npm_build", status: "failed", output: err?.message || "Derleme başarısız." })
-        throw new Error(`Derleme hatası: ${err?.message || err}`)
-      }
-
-      // 6. Linux Servis Yeniden Başlatma
-      try {
-        await execAsync("sudo systemctl restart panel || systemctl restart panel || pm2 restart panel", { timeout: 10000 })
-        stepsLog.push({ step: "service_restart", status: "success", output: "Panel servisi yeniden başlatıldı." })
-      } catch (err: any) {
-        stepsLog.push({ step: "service_restart", status: "skipped", output: "Servis restart komutu iletildi veya gerekmedi." })
-      }
+    // 6. Linux Servis Yeniden Başlatma
+    try {
+      await execAsync("sudo systemctl restart panel || systemctl restart panel || pm2 restart panel", { timeout: 10000 })
+      stepsLog.push({ step: "service_restart", status: "success", output: "Panel servisi yeniden başlatıldı." })
+    } catch (err: any) {
+      stepsLog.push({ step: "service_restart", status: "skipped", output: "Servis restart komutu iletildi veya gerekmedi." })
     }
 
     // Denetim kaydı oluştur
