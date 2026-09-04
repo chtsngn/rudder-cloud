@@ -257,7 +257,7 @@ export default function SettingsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!window.confirm("Bu S3 yapılandırması silinsin mi? Buna bağlı sitelerin yedekleme S3 ayarı sıfırlanır.")) {
+    if (!window.confirm(t("settings.s3.confirmDelete"))) {
       return
     }
     setDeletingId(id)
@@ -905,7 +905,7 @@ export default function SettingsPage() {
                 {configs.map((config) => {
                   const ep = (config.endpoint || "").toLowerCase()
                   const providerBadge = !ep
-                    ? "AWS S3"
+                    ? "AWS (S3)"
                     : ep.includes("r2.cloudflarestorage")
                     ? "Cloudflare R2"
                     : ep.includes("wasabisys")
@@ -914,7 +914,9 @@ export default function SettingsPage() {
                     ? "DO Spaces"
                     : ep.includes("minio") || ep.includes(":9000")
                     ? "MinIO"
-                    : "S3"
+                    : lang === "tr"
+                    ? "Özel"
+                    : "Custom"
 
                   const testRes = s3TestResults[config.id]
                   const isTesting = testingS3Id === config.id
@@ -927,7 +929,7 @@ export default function SettingsPage() {
                       <div>
                         <div className="flex items-center justify-between">
                           <span className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
-                            {config.label || "S3 Profile"}
+                            {config.label || (lang === "tr" ? "Depolama Profili" : "Storage Profile")}
                           </span>
                           <span className="text-[10px] font-mono font-bold bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 px-2 py-0.5 rounded-full border border-[#c8a87c]/30 dark:border-[#1e3568]/50">
                             {providerBadge}

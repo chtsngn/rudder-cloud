@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch"
 import { CustomSelect } from "@/components/ui/custom-select"
 import { useTranslation } from "@/components/language-provider"
 import { S3ConfigDialog, type S3ConfigView } from "@/components/s3-config-dialog"
+import { cn } from "@/lib/utils"
 
 interface DetectedDatabase {
   engine: "postgres" | "mysql" | "mongo"
@@ -65,6 +66,32 @@ function formatBytes(bytes: number): string {
 async function parseError(res: Response): Promise<string> {
   const data = (await res.json().catch(() => null)) as { error?: string } | null
   return data?.error ?? `İstek başarısız oldu (${res.status}).`
+}
+
+function formatBackupError(error: string | null | undefined, lang: string): string {
+  if (!error) return lang === "en" ? "Failed" : "Başarısız"
+  if (error.includes("veritabanı bağlantısı otomatik algılanamadı") || error.includes("DATABASE_URL")) {
+    return lang === "en"
+      ? "Database connection could not be detected automatically (.env missing DATABASE_URL or DB_* variables)."
+      : error
+  }
+  if (error.includes("Seçili S3 yapılandırması") || error.includes("Seçili bulut depolama")) {
+    return lang === "en"
+      ? "Selected cloud storage configuration not found."
+      : "Seçili bulut depolama yapılandırması bulunamadı."
+  }
+  if (
+    error.includes("S3 yüklemesi başarısız") ||
+    error.includes("bulut depolama yüklemesi başarısız") ||
+    error.includes("Bulut depolamaya yükleme başarısız")
+  ) {
+    return lang === "en"
+      ? error
+          .replace("S3 yüklemesi başarısız", "Cloud storage upload failed")
+          .replace("Bulut depolamaya yükleme başarısız", "Cloud storage upload failed")
+      : error.replace("S3 yüklemesi başarısız", "Bulut depolamaya yükleme başarısız")
+  }
+  return error
 }
 
 export function SiteBackupCard({ siteId }: { siteId: string }) {
@@ -148,7 +175,7 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
       } else {
         setSiteS3TestResult({
           ok: false,
-          error: testData.error || (lang === "en" ? "S3 connection test failed." : "S3 bağlantı testi başarısız."),
+          error: testData.error || (lang === "en" ? "Cloud storage connection test failed." : "Bulut depolama bağlantı testi başarısız."),
         })
       }
     } catch {
@@ -174,8 +201,8 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
       ok: true,
       message:
         lang === "en"
-          ? `S3 credential "${saved.label}" saved and selected for this site.`
-          : `"${saved.label}" S3 kimlik bilgisi kaydedildi ve bu site için seçildi.`,
+          ? `Storage credential "${saved.label}" saved and selected for this site.`
+          : `"${saved.label}" depolama kimlik bilgisi kaydedildi ve bu site için seçildi.`,
     })
   }
 
@@ -230,10 +257,16 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
         return
       }
       if (resData?.s3Error) {
-        setRunError(`Yedek alındı ama S3 yüklemesi başarısız: ${resData.s3Error}`)
+        setRunError(
+          lang === "en"
+            ? `Backup completed but cloud storage upload failed: ${resData.s3Error}`
+            : `Yedek alındı ama bulut depolamaya yükleme başarısız: ${resData.s3Error}`
+        )
       } else {
         setRunMessage(
-          `Yedek alındı: ${resData?.fileName ?? ""}${resData?.uploadedToS3 ? " (S3'e yüklendi)" : ""}`
+          lang === "en"
+            ? `Backup completed: ${resData?.fileName ?? ""}${resData?.uploadedToS3 ? " (Uploaded to Cloud Storage)" : ""}`
+            : `Yedek alındı: ${resData?.fileName ?? ""}${resData?.uploadedToS3 ? " (Bulut depolamaya yüklendi)" : ""}`
         )
       }
       await load()
@@ -275,7 +308,7 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Database className="size-4" />
-          Veritabanı Yedekleme
+          {lang === "en" ? "Database Backup" : "Veritabanı Yedekleme"}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -290,16 +323,29 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
             <div className="rounded-lg border border-border p-3 text-sm">
               {data?.detected ? (
                 <p className="text-foreground">
-                  <span className="font-medium">{ENGINE_LABEL[data.detected.engine]}</span> algılandı
+                  <span className="font-medium">{ENGINE_LABEL[data.detected.engine]}</span>{" "}
+                  {lang === "en" ? "detected" : "algılandı"}
                   {data.detected.database ? ` — "${data.detected.database}"` : ""} ·{" "}
                   <span className="font-mono text-xs text-muted-foreground">{data.detected.source}</span>
                 </p>
               ) : (
                 <p className="text-muted-foreground">
-                  Veritabanı otomatik algılanamadı — sitenin <span className="font-mono">.env</span>{" "}
-                  dosyasında <span className="font-mono">DATABASE_URL</span> ya da{" "}
-                  <span className="font-mono">DB_CONNECTION</span>/<span className="font-mono">DB_*</span>{" "}
-                  değişkenleri bulunamadı.
+                  {lang === "en" ? (
+                    <>
+                      Database could not be detected automatically — no{" "}
+                      <span className="font-mono">DATABASE_URL</span> or{" "}
+                      <span className="font-mono">DB_CONNECTION</span>/
+                      <span className="font-mono">DB_*</span> variables found in the site&apos;s{" "}
+                      <span className="font-mono">.env</span> file.
+                    </>
+                  ) : (
+                    <>
+                      Veritabanı otomatik algılanamadı — sitenin <span className="font-mono">.env</span>{" "}
+                      dosyasında <span className="font-mono">DATABASE_URL</span> ya da{" "}
+                      <span className="font-mono">DB_CONNECTION</span>/<span className="font-mono">DB_*</span>{" "}
+                      değişkenleri bulunamadı.
+                    </>
+                  )}
                 </p>
               )}
             </div>
@@ -351,9 +397,9 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
 
             <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div className="space-y-0.5 pr-4">
-                <Label htmlFor="uploadToS3">{lang === "en" ? "Also upload to S3" : "S3'e de yükle"}</Label>
+                <Label htmlFor="uploadToS3">{lang === "en" ? "Also upload to Cloud Storage" : "Bulut depolamaya da yükle"}</Label>
                 <p className="text-xs text-muted-foreground">
-                  {lang === "en" ? "An S3 configuration configured in Settings must be selected." : "Ayarlar sayfasında tanımlı bir S3 yapılandırması seçilmeli."}
+                  {lang === "en" ? "A Cloud Storage configuration configured in Settings must be selected." : "Ayarlar sayfasında tanımlı bir bulut depolama yapılandırması seçilmeli."}
                 </p>
               </div>
               <Switch
@@ -367,7 +413,7 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
               <div className="space-y-3 pt-1">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="s3Config" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    {lang === "en" ? "S3 Storage Credential" : "S3 Depolama Kimlik Bilgisi"}
+                    {lang === "en" ? "Cloud Storage Credential" : "Bulut Depolama Kimlik Bilgisi"}
                   </Label>
                   <Button
                     type="button"
@@ -380,7 +426,7 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
                     className="h-7 text-xs text-[#580619] dark:text-blue-300 hover:underline px-2 cursor-pointer"
                   >
                     <Plus className="size-3.5 mr-1" />
-                    {lang === "en" ? "+ Add New S3 Credential" : "+ Yeni S3 Ekle"}
+                    {lang === "en" ? "+ Add New Storage Credential" : "+ Yeni Depolama Ekle"}
                   </Button>
                 </div>
 
@@ -391,13 +437,13 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
                     setSiteS3TestResult(null)
                   }}
                   options={[
-                    { value: "", label: lang === "en" ? "Select S3 Credential..." : "S3 Yapılandırması Seçiniz..." },
+                    { value: "", label: lang === "en" ? "Select Storage Credential..." : "Bulut Depolama Yapılandırması Seçiniz..." },
                     ...s3Configs.map((c) => ({
                       value: c.id,
                       label: `☁️ ${c.label} (${c.bucket}${c.region ? ` / ${c.region}` : ""})`,
                     })),
                   ]}
-                  placeholder={lang === "en" ? "Select S3 Configuration..." : "S3 Yapılandırması Seçiniz..."}
+                  placeholder={lang === "en" ? "Select Storage Credential..." : "Bulut Depolama Yapılandırması Seçiniz..."}
                   className="w-full"
                 />
 
@@ -489,8 +535,8 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
                       <div className="rounded-xl border border-slate-200/80 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] p-4 text-center">
                         <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                           {lang === "en"
-                            ? "No S3 storage credentials configured yet."
-                            : "Henüz kayıtlı bir S3 depolama kimlik bilgisi yok."}
+                            ? "No cloud storage credentials configured yet."
+                            : "Henüz kayıtlı bir bulut depolama kimlik bilgisi yok."}
                         </p>
                         <Button
                           type="button"
@@ -502,7 +548,7 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
                           className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white text-xs h-8 px-3 rounded-xl"
                         >
                           <Plus className="size-3.5 mr-1" />
-                          {lang === "en" ? "Create S3 Credential" : "S3 Yapılandırması Oluştur"}
+                          {lang === "en" ? "Create Storage Credential" : "Depolama Yapılandırması Oluştur"}
                         </Button>
                       </div>
                     )
@@ -542,12 +588,17 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
                 </dd>
               </div>
               {data?.schedule.lastBackupAt && (
-                <div className="flex items-center justify-between py-2 text-sm">
-                  <dt className="text-muted-foreground">{t("common.status")}</dt>
-                  <dd className={data.schedule.lastBackupOk ? "text-success" : "text-destructive"}>
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1.5 sm:gap-6 py-2.5 text-sm">
+                  <dt className="text-muted-foreground shrink-0 font-medium">{t("common.status")}</dt>
+                  <dd
+                    className={cn(
+                      "text-left sm:text-right max-w-xl text-xs sm:text-sm leading-relaxed",
+                      data.schedule.lastBackupOk ? "text-success font-medium" : "text-destructive"
+                    )}
+                  >
                     {data.schedule.lastBackupOk
                       ? t("common.success")
-                      : (data.schedule.lastBackupError ?? (lang === "en" ? "Failed" : "Başarısız"))}
+                      : formatBackupError(data.schedule.lastBackupError, lang)}
                   </dd>
                 </div>
               )}

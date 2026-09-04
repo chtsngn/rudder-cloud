@@ -129,11 +129,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     } else if (typeof value === "string") {
       const exists = await prisma.s3Config.findUnique({ where: { id: value } })
       if (!exists) {
-        return NextResponse.json({ error: "Seçili S3 yapılandırması bulunamadı." }, { status: 400 })
+        return NextResponse.json({ error: "Seçili bulut depolama yapılandırması bulunamadı." }, { status: 400 })
       }
       data.s3ConfigId = value
     } else {
-      return NextResponse.json({ error: "Geçersiz S3 yapılandırması." }, { status: 400 })
+      return NextResponse.json({ error: "Geçersiz bulut depolama yapılandırması." }, { status: 400 })
     }
   }
 

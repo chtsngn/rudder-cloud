@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   if (configId) {
     const existing = await prisma.s3Config.findUnique({ where: { id: configId } })
     if (!existing) {
-      return NextResponse.json({ ok: false, error: "S3 yapilandirmasi bulunamadi." }, { status: 404 })
+      return NextResponse.json({ ok: false, error: "Bulut depolama yapılandırması bulunamadı." }, { status: 404 })
     }
     bucket = existing.bucket
     region = existing.region
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       secretAccessKey = decryptSecret(existing.secretAccessKeyEnc)
     } catch {
       return NextResponse.json(
-        { ok: false, error: "Kayitli S3 sifresi cozulemedi." },
+        { ok: false, error: "Kayıtlı depolama şifresi çözülemedi." },
         { status: 500 }
       )
     }
@@ -121,8 +121,8 @@ export async function POST(request: Request) {
       endpoint: endpoint || "AWS Standart",
     })
   } catch (err: any) {
-    console.error("S3 baglanti testi hatasi:", err)
-    let msg = err instanceof Error ? err.message : "S3 baglantisi kurulamadi."
+    console.error("Bulut depolama baglanti testi hatasi:", err)
+    let msg = err instanceof Error ? err.message : "Bulut depolama bağlantısı kurulamadı."
     if (err?.name === "CredentialsProviderError") {
       msg = "Kimlik bilgisi hatasi: Access Key ID veya Secret Access Key gecersiz."
     } else if (err?.code === "ENOTFOUND" || (err?.message && err.message.includes("getaddrinfo"))) {

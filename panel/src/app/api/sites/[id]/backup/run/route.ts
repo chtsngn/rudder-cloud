@@ -33,7 +33,11 @@ export async function POST(_request: Request, { params }: RouteParams) {
       data: {
         lastBackupAt: new Date(),
         lastBackupOk: true,
-        lastBackupError: result.s3Error ? `S3 yüklemesi başarısız: ${result.s3Error}` : null,
+        lastBackupError: result.s3Error
+          ? result.s3Error.includes("yükleme") || result.s3Error.includes("yapılandırma")
+            ? result.s3Error
+            : `Bulut depolamaya yükleme başarısız: ${result.s3Error}`
+          : null,
       },
     })
     return NextResponse.json({ ...result, site: updated })

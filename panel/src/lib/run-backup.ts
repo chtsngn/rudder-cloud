@@ -40,7 +40,7 @@ export async function runBackupForSite(site: BackupableSite): Promise<RunBackupR
   if (site.backupUploadToS3 && site.s3ConfigId) {
     const s3Config = await prisma.s3Config.findUnique({ where: { id: site.s3ConfigId } })
     if (!s3Config) {
-      s3Error = "Seçili S3 yapılandırması bulunamadı."
+      s3Error = "Seçili bulut depolama yapılandırması bulunamadı."
     } else {
       try {
         await uploadBackupToS3(
@@ -51,7 +51,7 @@ export async function runBackupForSite(site: BackupableSite): Promise<RunBackupR
         )
         uploadedToS3 = true
       } catch (error) {
-        s3Error = error instanceof Error ? error.message : "S3 yüklemesi başarısız oldu."
+        s3Error = error instanceof Error ? error.message : "Bulut depolamaya yükleme başarısız oldu."
       }
     }
   }

@@ -55,8 +55,8 @@ interface PresetDetails {
 const PRESETS: PresetDetails[] = [
   {
     id: "aws",
-    name: "AWS S3",
-    badge: "AWS",
+    name: "AWS (S3)",
+    badge: "AWS (S3)",
     color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
     defaultRegion: "eu-central-1",
     defaultEndpoint: "",
@@ -100,12 +100,12 @@ const PRESETS: PresetDetails[] = [
   },
   {
     id: "custom",
-    name: "Ozel (S3)",
-    badge: "S3",
+    name: "Özel (Custom)",
+    badge: "Özel",
     color: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20",
     defaultRegion: "us-east-1",
     defaultEndpoint: "",
-    endpointPlaceholder: "https://s3.ornek.com",
+    endpointPlaceholder: "https://depolama.ornek.com",
   },
 ]
 
@@ -209,13 +209,13 @@ export function S3ConfigDialog({
       } else {
         setTestResult({
           ok: false,
-          error: data.error || (lang === "tr" ? "S3 baglantisi basarisiz." : "S3 connection failed."),
+          error: data.error || (lang === "tr" ? "Bulut depolama bağlantısı başarısız." : "Storage connection failed."),
         })
       }
     } catch {
       setTestResult({
         ok: false,
-        error: lang === "tr" ? "Sunucuya baglanilamadi." : "Failed to connect to server.",
+        error: lang === "tr" ? "Sunucuya bağlanılamadı." : "Failed to connect to server.",
       })
     } finally {
       setTesting(false)
@@ -231,7 +231,7 @@ export function S3ConfigDialog({
       const method = isEdit ? "PATCH" : "POST"
 
       const body: Record<string, unknown> = {
-        label: label.trim() || "S3 Depolama",
+        label: label.trim() || (lang === "tr" ? "Bulut Depolama" : "Cloud Storage"),
         bucket: bucket.trim(),
         region: region.trim(),
         endpoint: endpoint.trim() || null,
@@ -289,16 +289,16 @@ export function S3ConfigDialog({
               <h3 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 {isEdit
                   ? lang === "tr"
-                    ? "S3 Yapilandirmasini Duzenle"
-                    : "Edit S3 Configuration"
+                    ? "Bulut Depolama Yapılandırmasını Düzenle"
+                    : "Edit Cloud Storage Configuration"
                   : lang === "tr"
-                  ? "Yeni S3 / Bulut Depolama Kimlik Bilgisi"
-                  : "New S3 / Cloud Storage Credential"}
+                  ? "Yeni Bulut Depolama Kimlik Bilgisi"
+                  : "New Cloud Storage Credential"}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {lang === "tr"
-                  ? "AWS S3, Cloudflare R2, MinIO veya S3 uyumlu depolama alaninizi tanimlayin."
-                  : "Configure credentials for AWS S3, Cloudflare R2, MinIO, or S3-compatible storage."}
+                  ? "AWS (S3), Cloudflare R2, MinIO veya uyumlu bulut depolama alanınızı tanımlayın."
+                  : "Configure credentials for AWS (S3), Cloudflare R2, MinIO, or compatible cloud storage."}
               </p>
             </div>
           </div>

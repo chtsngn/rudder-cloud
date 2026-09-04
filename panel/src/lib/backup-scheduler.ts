@@ -48,11 +48,19 @@ async function runOne(site: Parameters<typeof runBackupForSite>[0] & { id: strin
     result = await runBackupForSite(site)
     await prisma.site.update({
       where: { id: site.id },
-      data: { lastBackupAt: new Date(), lastBackupOk: true, lastBackupError: result.s3Error ? `S3 yüklemesi başarısız: ${result.s3Error}` : null },
+      data: {
+        lastBackupAt: new Date(),
+        lastBackupOk: true,
+        lastBackupError: result.s3Error
+          ? result.s3Error.includes("yükleme") || result.s3Error.includes("yapılandırma")
+            ? result.s3Error
+            : `Bulut depolamaya yükleme başarısız: ${result.s3Error}`
+          : null,
+      },
     })
     console.log(
       `[backup-scheduler] ${site.domain}: yedek alındı (${result.fileName})` +
-        (result.uploadedToS3 ? ", S3'e yüklendi." : result.s3Error ? `, S3 hatası: ${result.s3Error}` : ".")
+        (result.uploadedToS3 ? ", bulut depolamaya yüklendi." : result.s3Error ? `, bulut hatası: ${result.s3Error}` : ".")
     )
   } catch (error) {
     const message = error instanceof BackupError ? error.message : "Yedekleme başarısız oldu."
