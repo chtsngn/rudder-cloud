@@ -535,8 +535,9 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
   return (
     <div
       ref={wrapperRef}
+      data-terminal="true"
       className={cn(
-        "flex flex-col gap-2.5 transition-all relative w-full h-full",
+        "terminal-wrapper flex flex-col gap-2.5 transition-all relative w-full h-full font-mono",
         isFullscreen &&
           "fixed inset-0 z-50 bg-[#0a0d14] p-4 h-screen w-screen backdrop-blur-md"
       )}
@@ -670,7 +671,8 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
         {/* ── 2. XTERM EKRAN ALANI ── */}
         <div
           ref={containerRef}
-          className="min-h-0 flex-1 overflow-hidden p-2.5 focus:outline-none"
+          data-terminal="true"
+          className="xterm-container min-h-0 flex-1 overflow-hidden p-2.5 focus:outline-none font-mono"
           onClick={() => termRef.current?.focus()}
         />
       </div>

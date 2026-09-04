@@ -258,19 +258,36 @@ small,
   font-family: var(--app-font, 'Grenze', serif) !important;
 }
 
-/* 3. Kod blokları ve terminal alanları daima JetBrains Mono kalır */
+/* 3. Kod blokları ve terminal alanları daima VS Code / JetBrains Mono kod fontunda kalır */
+.xterm,
+.xterm *,
+.xterm-viewport,
+.xterm-viewport *,
+.xterm-screen,
+.xterm-screen *,
+.xterm-rows,
+.xterm-rows *,
+.xterm-rows > div,
+.xterm-rows > div > span,
+.xterm-container,
+.xterm-container *,
+.terminal-wrapper,
+.terminal-wrapper *,
+.terminal-dock,
+.terminal-dock *,
+[data-terminal],
+[data-terminal] *,
 code,
 code *,
 kbd,
 kbd *,
 samp,
+samp *,
 pre,
 pre *,
 .font-mono,
-.font-mono *,
-[data-terminal],
-[data-terminal] * {
-  font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+.font-mono * {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, ui-monospace, SFMono-Regular, Menlo, Monaco, monospace !important;
 }
 
 /* 4. Sol üstteki RUDDER marka logosu yazısı ASLA değişmez, daima asil ve varsayılan Grenze kalır */
@@ -279,6 +296,24 @@ html body .rudder-brand-title *,
 .rudder-brand-title,
 .rudder-brand-title * {
   font-family: 'Grenze', serif !important;
+}
+
+/* 5. Koyu modda metin veya kenarlık olarak text-primary/border-primary kullanıldığında görünürlük garantisi */
+.dark .text-primary,
+[data-theme="dark"] .text-primary,
+.dark a.text-primary,
+.dark span.text-primary,
+.dark button.text-primary,
+.dark .hover\:text-primary:hover,
+[data-theme="dark"] .hover\:text-primary:hover {
+  color: var(--accent-text, #38bdf8) !important;
+}
+
+.dark .border-primary,
+[data-theme="dark"] .border-primary,
+.dark .hover\:border-primary:hover,
+[data-theme="dark"] .hover\:border-primary:hover {
+  border-color: var(--accent-text, #38bdf8) !important;
 }
 
 @layer base {

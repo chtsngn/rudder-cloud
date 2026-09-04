@@ -79,14 +79,29 @@ export function SideTerminalDock() {
     return null
   }
 
+  // Terminal tekrar açıldığında ekran boyutunu yeniden ayarla
+  useEffect(() => {
+    if (isOpen && !isMinimized) {
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new Event("resize"))
+      }, 120)
+      return () => clearTimeout(timer)
+    }
+  }, [isOpen, isMinimized])
+
   return (
     <>
       {/* ═══ 1. SAĞA TUTTURULMUŞ DOCK PANELİ (SOLU OVAL / YELKEN KAVİSLİ & ALTIN/LACİVERT ÇERÇEVELİ) ═══ */}
-      {isOpen && !isMinimized && (
+      {/* Oturumun ve komut geçmişinin kaybolmaması için küçültüldüğünde unmount edilmez, CSS ile gizlenir */}
+      {isOpen && (
         <aside
           style={{ width: `${width}px` }}
+          aria-hidden={isMinimized}
           className={cn(
-            "fixed right-0 top-0 bottom-0 z-40 flex flex-col bg-[#050811] border-l-2 border-[#c8a87c]/70 dark:border-[#2a4687]/80 rounded-l-[28px] max-w-full shadow-[-20px_0_60px_rgba(0,0,0,0.65)] transition-[width] duration-75 p-3 overflow-hidden",
+            "fixed right-0 top-0 bottom-0 z-40 flex flex-col bg-[#050811] border-l-2 border-[#c8a87c]/70 dark:border-[#2a4687]/80 rounded-l-[28px] max-w-full shadow-[-20px_0_60px_rgba(0,0,0,0.65)] p-3 overflow-hidden transition-all duration-300",
+            isMinimized
+              ? "translate-x-full opacity-0 pointer-events-none invisible"
+              : "translate-x-0 opacity-100 pointer-events-auto visible",
             isDragging && "select-none transition-none"
           )}
         >

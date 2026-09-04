@@ -507,16 +507,16 @@ export default function SiteDetailPage() {
       <div className="space-y-4 pb-5 border-b border-border">
         <Link
           href="/sites"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-card text-xs font-semibold text-foreground/80 hover:text-primary hover:border-primary shadow-xs transition-all"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-card text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#580619] dark:hover:text-[#38bdf8] hover:border-[#c8a87c] dark:hover:border-[#38bdf8]/50 shadow-xs transition-all"
         >
-          <ArrowLeft className="size-3.5 text-primary" />
+          <ArrowLeft className="size-3.5 text-[#580619] dark:text-[#38bdf8]" />
           {t("sites.detail.backToList")}
         </Link>
 
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           {/* Site Başlığı & Rozetler */}
           <div className="flex items-center gap-3.5">
-            <div className="size-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-mono text-xs font-black shadow-sm shrink-0">
+            <div className="size-12 rounded-2xl bg-[#580619]/10 dark:bg-sky-500/15 border border-[#580619]/20 dark:border-sky-500/30 flex items-center justify-center text-[#580619] dark:text-[#38bdf8] font-mono text-xs font-black shadow-sm shrink-0">
               <TypeIcon className="size-6" />
             </div>
 
@@ -549,7 +549,7 @@ export default function SiteDetailPage() {
               asChild
               variant="outline"
               size="sm"
-              className="h-9 px-3 rounded-xl border border-border bg-card text-xs font-semibold text-foreground/80 hover:text-primary hover:border-primary shadow-2xs"
+              className="h-9 px-3 rounded-xl border border-border bg-card text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#580619] dark:hover:text-[#38bdf8] hover:border-[#c8a87c] dark:hover:border-[#38bdf8]/50 shadow-2xs"
             >
               <a
                 href={`http://${site.domain}`}
@@ -568,10 +568,10 @@ export default function SiteDetailPage() {
                 asChild
                 variant="outline"
                 size="sm"
-                className="h-9 px-3 rounded-xl border border-border bg-card text-xs font-semibold text-foreground/80 hover:text-primary hover:border-primary shadow-2xs"
+                className="h-9 px-3 rounded-xl border border-border bg-card text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#580619] dark:hover:text-[#38bdf8] hover:border-[#c8a87c] dark:hover:border-[#38bdf8]/50 shadow-2xs"
               >
                 <Link href={`/sites/${site.id}/files`} className="flex items-center gap-1.5">
-                  <FolderOpen className="size-3.5 text-primary" />
+                  <FolderOpen className="size-3.5 text-[#580619] dark:text-[#38bdf8]" />
                   {t("sites.filesBtn")}
                 </Link>
               </Button>
@@ -687,11 +687,11 @@ export default function SiteDetailPage() {
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 whitespace-nowrap",
             activeTab === "overview"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
+              ? "border-[#580619] text-[#580619] dark:border-[#38bdf8] dark:text-[#38bdf8]"
+              : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
           )}
         >
-          <Settings2 className={cn("size-4", activeTab === "overview" ? "text-primary" : "text-muted-foreground")} />
+          <Settings2 className={cn("size-4", activeTab === "overview" ? "text-[#580619] dark:text-[#38bdf8]" : "text-slate-400 dark:text-slate-500")} />
           {t("sites.tabs.overview")}
         </button>
 
@@ -702,11 +702,11 @@ export default function SiteDetailPage() {
             className={cn(
               "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 whitespace-nowrap",
               activeTab === "git"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+                ? "border-[#580619] text-[#580619] dark:border-[#38bdf8] dark:text-[#38bdf8]"
+                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
             )}
           >
-            <GitBranch className={cn("size-4", activeTab === "git" ? "text-primary" : "text-muted-foreground")} />
+            <GitBranch className={cn("size-4", activeTab === "git" ? "text-[#580619] dark:text-[#38bdf8]" : "text-slate-400 dark:text-slate-500")} />
             {t("sites.tabs.git")}
           </button>
         )}
@@ -717,11 +717,11 @@ export default function SiteDetailPage() {
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 whitespace-nowrap",
             activeTab === "backups"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
+              ? "border-[#580619] text-[#580619] dark:border-[#38bdf8] dark:text-[#38bdf8]"
+              : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
           )}
         >
-          <Database className={cn("size-4", activeTab === "backups" ? "text-primary" : "text-muted-foreground")} />
+          <Database className={cn("size-4", activeTab === "backups" ? "text-[#580619] dark:text-[#38bdf8]" : "text-slate-400 dark:text-slate-500")} />
           {t("sites.tabs.backups")}
         </button>
 
@@ -731,11 +731,11 @@ export default function SiteDetailPage() {
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 whitespace-nowrap",
             activeTab === "access"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
+              ? "border-[#580619] text-[#580619] dark:border-[#38bdf8] dark:text-[#38bdf8]"
+              : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
           )}
         >
-          <Users className={cn("size-4", activeTab === "access" ? "text-primary" : "text-muted-foreground")} />
+          <Users className={cn("size-4", activeTab === "access" ? "text-[#580619] dark:text-[#38bdf8]" : "text-slate-400 dark:text-slate-500")} />
           {t("sites.tabs.access")}
         </button>
 
@@ -746,11 +746,11 @@ export default function SiteDetailPage() {
             className={cn(
               "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 whitespace-nowrap",
               activeTab === "logs"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+                ? "border-[#580619] text-[#580619] dark:border-[#38bdf8] dark:text-[#38bdf8]"
+                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
             )}
           >
-            <Terminal className={cn("size-4", activeTab === "logs" ? "text-primary" : "text-muted-foreground")} />
+            <Terminal className={cn("size-4", activeTab === "logs" ? "text-[#580619] dark:text-[#38bdf8]" : "text-slate-400 dark:text-slate-500")} />
             {t("sites.tabs.logs")}
           </button>
         )}
@@ -973,7 +973,7 @@ export default function SiteDetailPage() {
                   variant="outline"
                   onClick={handleGitPull}
                   disabled={gitPulling || !gitForm.repoUrl.trim()}
-                  className="h-10 px-5 rounded-xl border border-border bg-card text-foreground/90 hover:text-primary hover:border-primary text-xs font-semibold cursor-pointer"
+                  className="h-10 px-5 rounded-xl border border-border bg-card text-foreground/90 hover:text-[#580619] dark:hover:text-[#38bdf8] hover:border-[#c8a87c] dark:hover:border-[#38bdf8]/50 text-xs font-semibold cursor-pointer"
                 >
                   {gitPulling ? (
                     <Loader2 className="size-3.5 animate-spin mr-1" />
