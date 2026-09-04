@@ -149,6 +149,10 @@ export const tr = {
         label: "Ters Proxy",
         description: "Harici bir adrese yönlendiren Nginx ters proxy.",
       },
+      docker: {
+        label: "Docker",
+        description: "Docker Compose ile yönetilen konteyner uygulaması.",
+      },
     },
     tabs: {
       overview: "Genel Bakış",
@@ -302,6 +306,11 @@ export const tr = {
       secretKey: "Secret Access Key",
       prefix: "Yol Ön Eki (Prefix)",
       saveBtn: "Profili Kaydet",
+      testBtn: "Test Et",
+      testingBtn: "Test Ediliyor...",
+      testSuccess: "Bağlantı başarılı! Bucket erişilebilir.",
+      usedBySites: "Kullanan siteler:",
+      noSitesAssigned: "Henüz hiçbir siteye atanmadı",
     },
     github: {
       title: "GitHub Entegrasyonu ve Deploy Key Yönetimi",

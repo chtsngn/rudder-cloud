@@ -151,6 +151,10 @@ export const en: TranslationDict = {
         label: "Reverse Proxy",
         description: "Nginx reverse proxy pointing to an external or local address.",
       },
+      docker: {
+        label: "Docker",
+        description: "Container application managed with Docker Compose.",
+      },
     },
     tabs: {
       overview: "Overview",
@@ -304,6 +308,11 @@ export const en: TranslationDict = {
       secretKey: "Secret Access Key",
       prefix: "Path Prefix",
       saveBtn: "Save Profile",
+      testBtn: "Test Connection",
+      testingBtn: "Testing...",
+      testSuccess: "Connection verified! Bucket accessible.",
+      usedBySites: "Used by sites:",
+      noSitesAssigned: "Not assigned to any site yet",
     },
     github: {
       title: "GitHub Integration & Deploy Key Management",

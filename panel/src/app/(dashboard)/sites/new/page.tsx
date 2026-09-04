@@ -15,6 +15,7 @@ import {
   Layers,
   Server,
   Sparkles,
+  Box,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -73,6 +74,11 @@ function buildConfig(type: SiteType, useWww: boolean, useSsl: boolean, sslEmail:
     case "proxy":
       config.upstreamUrl = fieldValue("target-url")
       break
+    case "docker":
+      config.port = fieldValue("docker-port")
+      config.composeService = fieldValue("docker-service")
+      config.workingDir = fieldValue("docker-workdir")
+      break
   }
 
   return config
@@ -86,8 +92,15 @@ function typeChecklist(type: SiteType, managed: boolean, hasSsl: boolean, lang: 
       lang === "en" ? "Downloading WordPress" : "WordPress indiriliyor"
     )
   }
+  if (type === "docker") {
+    items.push(
+      lang === "en" ? "Creating working directory" : "Çalışma dizini oluşturuluyor",
+      lang === "en" ? "Writing example docker-compose.yml (if missing)" : "Örnek docker-compose.yml yazılıyor (yoksa)",
+      lang === "en" ? "Starting Docker Compose" : "Docker Compose başlatılıyor"
+    )
+  }
   items.push(lang === "en" ? "Writing Nginx configuration" : "Nginx yapılandırması yazılıyor")
-  if (managed) {
+  if (managed && type !== "docker") {
     items.push(lang === "en" ? "Creating and starting systemd service" : "systemd servisi oluşturuluyor ve başlatılıyor")
   }
   if (hasSsl) {
@@ -111,6 +124,8 @@ function getTypeIcon(type: SiteType) {
       return Layers
     case "proxy":
       return Server
+    case "docker":
+      return Box
     default:
       return Globe
   }
@@ -279,7 +294,7 @@ export default function NewSitePage() {
               className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] disabled:opacity-40 cursor-pointer"
             >
               {t("sites.wizard.next")}
-              <ArrowRight className="size-4 text-[#dfc9a0] dark:text-white" />
+              <ArrowRight className="size-4 text-inherit" />
             </Button>
           </div>
         </div>
@@ -372,9 +387,9 @@ export default function NewSitePage() {
               className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-7 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] disabled:opacity-40 cursor-pointer"
             >
               {submitting ? (
-                <Loader2 className="size-4 animate-spin text-[#dfc9a0] dark:text-white" />
+                <Loader2 className="size-4 animate-spin text-inherit" />
               ) : (
-                <Check className="size-4 text-[#dfc9a0] dark:text-white" />
+                <Check className="size-4 text-inherit" />
               )}
               {t("sites.wizard.createSiteBtn")}
             </Button>
@@ -561,6 +576,59 @@ function TypeSpecificFields({
         <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-[#16223f]">
           <Label htmlFor="target-url" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.upstreamUrl")}</Label>
           <Input id="target-url" placeholder="http://127.0.0.1:8080" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
+        </div>
+      )
+    case "docker":
+      return (
+        <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-[#16223f]">
+          <div className="rounded-xl border border-blue-200/60 dark:border-[#1e3568] bg-blue-50/50 dark:bg-[#060d1f] p-3 text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+            {lang === "en"
+              ? "Panel will create the working directory, write an example docker-compose.yml (if none exists), and start the containers. You can update the compose file from the File Manager."
+              : "Panel çalışma dizinini oluşturacak, örnek docker-compose.yml yazacak (yoksa) ve konteynerleri başlatacak. Compose dosyasını Dosya Yöneticisi'nden güncelleyebilirsin."}
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="docker-port" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                {lang === "en" ? "Container Port" : "Konteyner Portu"}
+              </Label>
+              <Input
+                id="docker-port"
+                defaultValue="8080"
+                placeholder="8080"
+                className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
+              />
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {lang === "en" ? "Port the container exposes (nginx proxies to this)." : "Konteynerin yayınladığı port (nginx bu porta proxy yapar)."}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="docker-service" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                {lang === "en" ? "Compose Service (optional)" : "Compose Servis Adı (opsiyonel)"}
+              </Label>
+              <Input
+                id="docker-service"
+                placeholder={lang === "en" ? "e.g. app" : "örn. app"}
+                className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
+              />
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {lang === "en" ? "Service name in docker-compose.yml. Leave empty for all services." : "docker-compose.yml'deki servis adı. Boş bırakırsan tüm servisler başlatılır."}
+              </p>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="docker-workdir" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                {lang === "en" ? "Working Directory" : "Çalışma Dizini"}
+              </Label>
+              <Input
+                id="docker-workdir"
+                defaultValue={rootPlaceholder}
+                placeholder={rootPlaceholder}
+                className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
+              />
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {lang === "en" ? "Directory where docker-compose.yml lives." : "docker-compose.yml'nin bulunduğu dizin."}
+              </p>
+            </div>
+          </div>
         </div>
       )
   }

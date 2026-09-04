@@ -79,14 +79,29 @@ export function SideTerminalDock() {
     return null
   }
 
+  // Terminal tekrar açıldığında ekran boyutunu yeniden ayarla
+  useEffect(() => {
+    if (isOpen && !isMinimized) {
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new Event("resize"))
+      }, 120)
+      return () => clearTimeout(timer)
+    }
+  }, [isOpen, isMinimized])
+
   return (
     <>
       {/* ═══ 1. SAĞA TUTTURULMUŞ DOCK PANELİ (SOLU OVAL / YELKEN KAVİSLİ & ALTIN/LACİVERT ÇERÇEVELİ) ═══ */}
-      {isOpen && !isMinimized && (
+      {/* Oturumun ve komut geçmişinin kaybolmaması için küçültüldüğünde unmount edilmez, CSS ile gizlenir */}
+      {isOpen && (
         <aside
           style={{ width: `${width}px` }}
+          aria-hidden={isMinimized}
           className={cn(
-            "fixed right-0 top-0 bottom-0 z-40 flex flex-col bg-[#050811] border-l-2 border-[#c8a87c]/70 dark:border-[#2a4687]/80 rounded-l-[28px] shadow-[-20px_0_60px_rgba(0,0,0,0.65)] transition-[width] duration-75 p-3 overflow-hidden",
+            "fixed right-0 top-0 bottom-0 z-40 flex flex-col bg-[#050811] border-l-2 border-[#c8a87c]/70 dark:border-[#2a4687]/80 rounded-l-[28px] max-w-full shadow-[-20px_0_60px_rgba(0,0,0,0.65)] p-3 overflow-hidden transition-all duration-300",
+            isMinimized
+              ? "translate-x-full opacity-0 pointer-events-none invisible"
+              : "translate-x-0 opacity-100 pointer-events-auto visible",
             isDragging && "select-none transition-none"
           )}
         >
@@ -132,7 +147,7 @@ export function SideTerminalDock() {
             className="relative size-12 rounded-2xl border border-[#c8a87c]/60 dark:border-[#2a4687]/70 bg-[#2b040d] dark:bg-[#162752] hover:bg-[#420614] dark:hover:bg-[#1e346b] text-[#dfc9a0] dark:text-white shadow-[0_8px_24px_rgba(43,4,13,0.5)] dark:shadow-[0_8px_24px_rgba(22,39,82,0.5)] hover:border-[#dfc9a0] dark:hover:border-[#385db3] flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95"
           >
             {/* Terminal Prompt Icon */}
-            <TerminalIcon className="size-5 text-[#dfc9a0] dark:text-white" />
+            <TerminalIcon className="size-5 text-inherit" />
           </button>
         </div>
       )}

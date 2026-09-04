@@ -247,7 +247,7 @@ export default function DashboardPage() {
             className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-10 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] hover:scale-[1.02] cursor-pointer"
           >
             <Link href="/sites/new">
-              <Plus className="size-4 text-[#dfc9a0] dark:text-white" />
+              <Plus className="size-4 text-inherit" />
               {t("sites.newSite")}
             </Link>
           </Button>
@@ -549,7 +549,7 @@ export default function DashboardPage() {
               className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-bold text-xs uppercase tracking-wider px-8 py-3 rounded-xl shadow-lg transition-all flex items-center gap-2.5 h-12 hover:scale-[1.03] border border-[#c8a87c]/50 dark:border-[#2a4687]/60"
             >
               <Link href="/sites/new">
-                <Plus className="size-4.5 text-[#dfc9a0] dark:text-white" />
+                <Plus className="size-4.5 text-inherit" />
                 {t("dashboard.createFirstSite")}
               </Link>
             </Button>

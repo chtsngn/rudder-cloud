@@ -6,6 +6,7 @@ import {
   Pencil,
   Plus,
   Trash2,
+  AlertCircle,
   Settings as SettingsIcon,
   Globe,
   Lock,
@@ -30,6 +31,8 @@ import {
   GitBranch,
   RefreshCw,
   Languages,
+  Zap,
+  Type,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -38,37 +41,12 @@ import { Label } from "@/components/ui/label"
 import { useTheme } from "@/components/theme-provider"
 import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
-
-interface S3ConfigView {
-  id: string
-  label: string
-  bucket: string
-  region: string
-  endpoint: string | null
-  accessKeyId: string
-  pathPrefix: string
-  hasSecret: boolean
-}
-
-interface S3FormState {
-  label: string
-  bucket: string
-  region: string
-  endpoint: string
-  accessKeyId: string
-  secretAccessKey: string
-  pathPrefix: string
-}
-
-const EMPTY_FORM: S3FormState = {
-  label: "",
-  bucket: "",
-  region: "",
-  endpoint: "",
-  accessKeyId: "",
-  secretAccessKey: "",
-  pathPrefix: "",
-}
+import { S3ConfigDialog, type S3ConfigView } from "@/components/s3-config-dialog"
+import { ThemePalettePicker } from "@/components/theme-palette-picker"
+import { FontPicker } from "@/components/font-picker"
+import { useFontTheme } from "@/lib/font-theme"
+import { useSystemVersion } from "@/hooks/use-system-version"
+import { SystemUpdateModal } from "@/components/system-update-modal"
 
 interface PanelDomainSettings {
   domain: string | null
@@ -164,18 +142,17 @@ async function parseError(res: Response): Promise<string> {
 }
 
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme, toggleTheme } = useTheme()
   const { t, lang, setLang } = useTranslation()
+  const { activeOption: activeFont } = useFontTheme()
   const [configs, setConfigs] = useState<S3ConfigView[]>([])
   const [loading, setLoading] = useState(true)
   const [listError, setListError] = useState<string | null>(null)
 
-  const [formOpen, setFormOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState<S3FormState>(EMPTY_FORM)
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
-
+  const [s3DialogOpen, setS3DialogOpen] = useState(false)
+  const [dialogConfig, setDialogConfig] = useState<S3ConfigView | null>(null)
+  const [testingS3Id, setTestingS3Id] = useState<string | null>(null)
+  const [s3TestResults, setS3TestResults] = useState<Record<string, { ok: boolean; message?: string; error?: string }>>({})
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const [domainSettings, setDomainSettings] = useState<PanelDomainSettings | null>(null)
@@ -226,63 +203,56 @@ export default function SettingsPage() {
   }, [load, loadDomain])
 
   function openCreateForm() {
-    setEditingId(null)
-    setForm(EMPTY_FORM)
-    setSaveError(null)
-    setFormOpen(true)
+    setDialogConfig(null)
+    setS3DialogOpen(true)
   }
 
   function openEditForm(config: S3ConfigView) {
-    setEditingId(config.id)
-    setForm({
-      label: config.label,
-      bucket: config.bucket,
-      region: config.region,
-      endpoint: config.endpoint ?? "",
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: "",
-      pathPrefix: config.pathPrefix,
-    })
-    setSaveError(null)
-    setFormOpen(true)
+    setDialogConfig(config)
+    setS3DialogOpen(true)
   }
 
-  async function handleSave() {
-    setSaving(true)
-    setSaveError(null)
+  async function handleTestS3(id: string) {
+    setTestingS3Id(id)
+    setS3TestResults((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
     try {
-      const body = {
-        label: form.label,
-        bucket: form.bucket,
-        region: form.region,
-        endpoint: form.endpoint || null,
-        accessKeyId: form.accessKeyId,
-        pathPrefix: form.pathPrefix,
-        ...(form.secretAccessKey ? { secretAccessKey: form.secretAccessKey } : {}),
+      const res = await fetch("/api/settings/s3/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      })
+      const data = await res.json()
+      if (res.ok && data.ok) {
+        setS3TestResults((prev) => ({
+          ...prev,
+          [id]: {
+            ok: true,
+            message: lang === "tr" ? "Bağlantı başarılı! Bucket erişilebilir." : "Connection verified! Bucket accessible.",
+          },
+        }))
+      } else {
+        setS3TestResults((prev) => ({
+          ...prev,
+          [id]: {
+            ok: false,
+            error: data.error || (lang === "tr" ? "Bağlantı testi başarısız." : "Connection test failed."),
+          },
+        }))
       }
-      const res = editingId
-        ? await fetch(`/api/settings/s3/${editingId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          })
-        : await fetch("/api/settings/s3", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          })
-      if (!res.ok) {
-        setSaveError(await parseError(res))
-        return
-      }
-      setFormOpen(false)
-      setForm(EMPTY_FORM)
-      setEditingId(null)
-      await load()
     } catch {
-      setSaveError("Sunucuya bağlanılamadı.")
+      setS3TestResults((prev) => ({
+        ...prev,
+        [id]: {
+          ok: false,
+          error: lang === "tr" ? "Sunucuya bağlanılamadı." : "Failed to connect to server.",
+        },
+      }))
     } finally {
-      setSaving(false)
+      setTestingS3Id(null)
     }
   }
 
@@ -427,28 +397,37 @@ export default function SettingsPage() {
   }
 
 
+  const {
+    data: versionData,
+    loading: versionLoading,
+    checking: versionChecking,
+    checkUpdate,
+  } = useSystemVersion()
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
+
   const [openSections, setOpenSections] = useState<{
     language: boolean
     theme: boolean
+    typography: boolean
     domain: boolean
     s3: boolean
     github: boolean
+    system: boolean
   }>({
     language: false,
     theme: false,
+    typography: false,
     domain: false,
     s3: false,
     github: false,
+    system: false,
   })
 
-  const toggleSection = (section: "language" | "theme" | "domain" | "s3" | "github") => {
+  const toggleSection = (section: "language" | "theme" | "typography" | "domain" | "s3" | "github" | "system") => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }))
   }
 
   const canBindDomain = domainForm.domain.trim() && domainForm.email.trim() && !domainSaving
-
-  const canSubmit =
-    form.bucket.trim() && form.region.trim() && form.accessKeyId.trim() && (editingId ? true : form.secretAccessKey.trim())
 
   const domainStatus = domainSettings?.sslStatus
     ? SSL_STATUS_CONFIG[domainSettings.sslStatus] ?? SSL_STATUS_CONFIG.none
@@ -518,15 +497,15 @@ export default function SettingsPage() {
                 className={cn(
                   "relative flex flex-col p-5 rounded-2xl text-left border transition-all cursor-pointer",
                   lang === "tr"
-                    ? "border-[#c8a87c] dark:border-[#38bdf8] bg-slate-50/80 dark:bg-[#0c1630] shadow-md ring-2 ring-[#c8a87c]/30 dark:ring-[#38bdf8]/20"
-                    : "border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#060a17] hover:border-slate-300 dark:hover:border-[#2a4687]"
+                    ? "border-primary bg-primary/10 shadow-md ring-2 ring-primary/20"
+                    : "border-border bg-card hover:border-primary/50"
                 )}
               >
                 <div className="flex items-center justify-between w-full mb-2">
                   <span className="text-2xl">🇹🇷</span>
                   {lang === "tr" && (
-                    <span className="size-6 rounded-full bg-[#580619] dark:bg-[#38bdf8] text-white dark:text-[#060e24] flex items-center justify-center shadow-xs">
-                      <Check className="size-3.5 stroke-[3]" />
+                    <span className="size-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
+                      <Check className="size-3.5 stroke-[3] text-primary-foreground" />
                     </span>
                   )}
                 </div>
@@ -545,15 +524,15 @@ export default function SettingsPage() {
                 className={cn(
                   "relative flex flex-col p-5 rounded-2xl text-left border transition-all cursor-pointer",
                   lang === "en"
-                    ? "border-[#c8a87c] dark:border-[#38bdf8] bg-slate-50/80 dark:bg-[#0c1630] shadow-md ring-2 ring-[#c8a87c]/30 dark:ring-[#38bdf8]/20"
-                    : "border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#060a17] hover:border-slate-300 dark:hover:border-[#2a4687]"
+                    ? "border-primary bg-primary/10 shadow-md ring-2 ring-primary/20"
+                    : "border-border bg-card hover:border-primary/50"
                 )}
               >
                 <div className="flex items-center justify-between w-full mb-2">
                   <span className="text-2xl">🇬🇧</span>
                   {lang === "en" && (
-                    <span className="size-6 rounded-full bg-[#580619] dark:bg-[#38bdf8] text-white dark:text-[#060e24] flex items-center justify-center shadow-xs">
-                      <Check className="size-3.5 stroke-[3]" />
+                    <span className="size-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
+                      <Check className="size-3.5 stroke-[3] text-primary-foreground" />
                     </span>
                   )}
                 </div>
@@ -569,43 +548,90 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* ═══ 2. GÖRÜNÜM VE TEMA SEÇİM KARTI (AÇILIR SEKME) ═══ */}
+      {/* ═══ 2. TEMA VE RENK PALETİ SEÇİM KARTI ═══ */}
+      <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-5 md:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)] space-y-6 transition-all">
+        {/* Üst Kısım: Tema Seçimi (Koyu / Açık Mod) */}
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100">
+              Tema Seçimi
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
+              Uygulamanın açık veya koyu modda görünmesini ayarlayın.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Değiştir:</span>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Açık Moda Geç" : "Koyu Moda Geç"}
+              className="size-9 rounded-xl border border-slate-200 dark:border-[#1e3568] bg-slate-50 dark:bg-[#101c38] hover:bg-slate-100 dark:hover:bg-[#162752] text-slate-700 dark:text-blue-300 flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-2xs"
+            >
+              {theme === "dark" ? (
+                <Sun className="size-4.5 text-amber-400" />
+              ) : (
+                <Moon className="size-4.5 text-blue-500" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* İnce Ayırıcı Çizgi */}
+        <div className="border-t border-slate-100 dark:border-[#16223f]" />
+
+        {/* Alt Kısım: Renk Teması */}
+        <div className="space-y-3.5">
+          <div>
+            <h3 className="font-heading font-bold text-sm md:text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Palette className="size-4 text-emerald-500 dark:text-emerald-400" />
+              <span>Renk Teması</span>
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-sans leading-relaxed">
+              Uygulamanın renk ailesini seç — zeminler, kartlar, kenarlıklar ve vurgular birlikte o renge uyarlanır. Koyu/açık moddan bağımsızdır: ikisini istediğin gibi birleştirebilirsin.
+            </p>
+          </div>
+
+          {/* 9 Renk Ailesi Önizleme Kartları */}
+          <ThemePalettePicker />
+        </div>
+      </div>
+
+      {/* ═══ 2.5 YAZI FONTU & TİPOGRAFİ KARTI (AÇILIR SEKME - BAŞTAN KAPALI) ═══ */}
       <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden transition-all">
         {/* Tıklanabilir Başlık Çubuğu */}
         <div
-          onClick={() => toggleSection("theme")}
+          onClick={() => toggleSection("typography")}
           className="flex items-center justify-between p-5 md:p-6 select-none cursor-pointer hover:bg-slate-50/50 dark:hover:bg-[#0c1630]/50 transition-colors"
         >
           <div className="flex items-center gap-3.5">
-            <div className="size-10 rounded-2xl bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 flex items-center justify-center border border-transparent dark:border-[#1e3568]/50 shadow-2xs shrink-0">
-              <Palette className="size-5" />
+            <div className="size-10 rounded-2xl bg-sky-500/10 text-sky-700 dark:text-sky-400 flex items-center justify-center border border-transparent dark:border-sky-500/20 shadow-2xs shrink-0">
+              <Type className="size-5" />
             </div>
             <div>
               <h2 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100">
-                {t("settings.sections.theme")}
+                Yazı Fontu & Tipografi
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
-                {t("settings.theme.subtitle")}
+                Panel başlıkları ve arayüz için Google Fonts seçimi.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-700 dark:text-blue-300 border border-slate-200/80 dark:border-[#1e3568]/50">
-              {theme === "dark" ? (
-                <>
-                  <Moon className="size-3 text-blue-300" /> {t("settings.theme.dark")}
-                </>
-              ) : (
-                <>
-                  <Sun className="size-3 text-amber-600" /> {t("settings.theme.light")}
-                </>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-700 dark:text-sky-300 border border-slate-200/80 dark:border-[#1e3568]/50">
+              <span style={{ fontFamily: activeFont.family }} className="text-sm font-bold">
+                {activeFont.name}
+              </span>
+              {activeFont.isDefault && (
+                <span className="text-[10px] text-slate-400 font-mono">(Varsayılan)</span>
               )}
             </span>
             <div
               className={cn(
                 "size-8 rounded-xl flex items-center justify-center border border-slate-200 dark:border-[#16223f] bg-slate-50 dark:bg-[#060a17] text-slate-500 dark:text-slate-300 transition-transform duration-200",
-                openSections.theme && "rotate-180 bg-slate-100 dark:bg-[#101c38] text-slate-900 dark:text-blue-300 border-slate-300 dark:border-[#2a4687]"
+                openSections.typography && "rotate-180 bg-slate-100 dark:bg-[#101c38] text-slate-900 dark:text-blue-300 border-slate-300 dark:border-[#2a4687]"
               )}
             >
               <ChevronDown className="size-4" />
@@ -613,94 +639,10 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Aşağı Doğru Açılan İçerik */}
-        {openSections.theme && (
-          <div className="p-5 md:p-6 pt-0 border-t border-slate-100 dark:border-[#16223f] space-y-6 animate-in fade-in-0 duration-200">
-            <div className="grid sm:grid-cols-2 gap-4 pt-4">
-              {/* Açık Tema Seçenek Kartı */}
-              <div
-                onClick={() => setTheme("light")}
-                className={cn(
-                  "group relative flex flex-col justify-between p-5 rounded-2xl border-2 transition-all cursor-pointer",
-                  theme === "light"
-                    ? "border-[#580619] bg-[#580619]/5 shadow-sm"
-                    : "border-slate-200 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] hover:border-slate-300 dark:hover:border-[#2a4687]"
-                )}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="size-8 rounded-xl bg-amber-100/80 text-amber-800 flex items-center justify-center">
-                        <Sun className="size-4" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">{t("settings.theme.light")}</h3>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{t("settings.theme.lightDesc")}</p>
-                      </div>
-                    </div>
-                    {theme === "light" && (
-                      <div className="size-6 rounded-full bg-[#580619] text-white flex items-center justify-center shadow-xs">
-                        <Check className="size-3.5" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Tema Minyatür Önizleme */}
-                  <div className="rounded-xl border border-slate-200 bg-[#f8fafc] p-2.5 flex gap-2">
-                    <div className="w-12 h-14 rounded-lg bg-[#580619] flex flex-col items-center justify-center p-1">
-                      <div className="w-6 h-1 rounded bg-[#dfc9a0] mb-1" />
-                      <div className="w-4 h-1 rounded bg-white/40" />
-                    </div>
-                    <div className="flex-1 space-y-1.5 pt-1">
-                      <div className="w-16 h-2 rounded bg-slate-300" />
-                      <div className="w-full h-8 rounded-lg bg-white border border-slate-200" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Koyu Tema Seçenek Kartı */}
-              <div
-                onClick={() => setTheme("dark")}
-                className={cn(
-                  "group relative flex flex-col justify-between p-5 rounded-2xl border-2 transition-all cursor-pointer",
-                  theme === "dark"
-                    ? "border-[#2a4687] bg-[#101c38] shadow-sm ring-2 ring-[#2a4687]/40"
-                    : "border-slate-200 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] hover:border-slate-300 dark:hover:border-[#2a4687]"
-                )}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="size-8 rounded-xl bg-[#101c38] text-blue-300 border border-[#1e3568]/50 flex items-center justify-center">
-                        <Moon className="size-4" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">{t("settings.theme.dark")}</h3>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{t("settings.theme.darkDesc")}</p>
-                      </div>
-                    </div>
-                    {theme === "dark" && (
-                      <div className="size-6 rounded-full bg-[#162752] text-white flex items-center justify-center shadow-xs border border-[#2a4687]/60">
-                        <Check className="size-3.5 font-bold" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Tema Minyatür Önizleme */}
-                  <div className="rounded-xl border border-slate-800 bg-[#040711] p-2.5 flex gap-2">
-                    <div className="w-12 h-14 rounded-lg bg-[#0b1739] border border-[#16223f] flex flex-col items-center justify-center p-1">
-                      <div className="w-6 h-1 rounded bg-[#cbd5e1] mb-1" />
-                      <div className="w-4 h-1 rounded bg-slate-700" />
-                    </div>
-                    <div className="flex-1 space-y-1.5 pt-1">
-                      <div className="w-16 h-2 rounded bg-slate-700" />
-                      <div className="w-full h-8 rounded-lg bg-[#090e1f] border border-[#16223f]" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Aşağı Doğru Açılan İçerik (Baştan kapalıdır, tıklanınca açılır) */}
+        {openSections.typography && (
+          <div className="p-5 md:p-6 pt-0 border-t border-slate-100 dark:border-[#16223f] animate-in fade-in-0 duration-200">
+            <FontPicker />
           </div>
         )}
       </div>
@@ -861,9 +803,9 @@ export default function SettingsPage() {
                     className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] disabled:opacity-40 cursor-pointer"
                   >
                     {domainSaving ? (
-                      <Loader2 className="size-4 animate-spin text-[#dfc9a0] dark:text-white" />
+                      <Loader2 className="size-4 animate-spin text-inherit" />
                     ) : (
-                      <CheckCircle2 className="size-4 text-[#dfc9a0] dark:text-white" />
+                      <CheckCircle2 className="size-4 text-inherit" />
                     )}
                     {domainSaving ? t("settings.domain.bindingBtn") : (domainSettings?.domain ? t("common.save") : t("settings.domain.bindBtn"))}
                   </Button>
@@ -909,7 +851,7 @@ export default function SettingsPage() {
               }}
               className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-3.5 py-1.5 rounded-xl shadow-sm transition-all flex items-center gap-1.5 h-8.5 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] shrink-0 cursor-pointer"
             >
-              <Plus className="size-3.5 text-[#dfc9a0] dark:text-white" />
+              <Plus className="size-3.5 text-inherit" />
               <span className="hidden xs:inline">{t("settings.s3.newConfigBtn")}</span>
             </Button>
 
@@ -927,133 +869,6 @@ export default function SettingsPage() {
         {/* Aşağı Doğru Açılan İçerik */}
         {openSections.s3 && (
           <div className="p-5 md:p-6 pt-0 border-t border-slate-100 dark:border-[#16223f] space-y-6 animate-in fade-in-0 duration-200">
-            {/* Yeni / Düzenleme Formu */}
-            {formOpen && (
-              <div className="mt-4 rounded-2xl border border-[#c8a87c]/70 dark:border-[#2a4687] bg-slate-50/60 dark:bg-[#060a17] p-6 shadow-sm space-y-5 animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-[#16223f] pb-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="size-4 text-[#c8a87c] dark:text-blue-300" />
-                    <h3 className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
-                      {editingId ? t("settings.s3.modalTitleEdit") : t("settings.s3.modalTitleAdd")}
-                    </h3>
-                  </div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 font-sans">AWS S3 / R2 / MinIO</span>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {t("settings.s3.label")}
-                    </Label>
-                    <Input
-                      value={form.label}
-                      onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
-                      placeholder="AWS Frankfurt, Cloudflare R2"
-                      className="h-10 rounded-xl text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {t("settings.s3.bucket")}
-                    </Label>
-                    <Input
-                      value={form.bucket}
-                      onChange={(e) => setForm((f) => ({ ...f, bucket: e.target.value }))}
-                      placeholder="panel-backups-bucket"
-                      className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {t("settings.s3.region")}
-                    </Label>
-                    <Input
-                      value={form.region}
-                      onChange={(e) => setForm((f) => ({ ...f, region: e.target.value }))}
-                      placeholder="eu-central-1 / auto"
-                      className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {t("settings.s3.endpoint")}
-                    </Label>
-                    <Input
-                      value={form.endpoint}
-                      onChange={(e) => setForm((f) => ({ ...f, endpoint: e.target.value }))}
-                      placeholder="https://<accountid>.r2.cloudflarestorage.com"
-                      className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {t("settings.s3.accessKey")}
-                    </Label>
-                    <Input
-                      value={form.accessKeyId}
-                      onChange={(e) => setForm((f) => ({ ...f, accessKeyId: e.target.value }))}
-                      className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {t("settings.s3.secretKey")}
-                    </Label>
-                    <Input
-                      type="password"
-                      value={form.secretAccessKey}
-                      onChange={(e) => setForm((f) => ({ ...f, secretAccessKey: e.target.value }))}
-                      placeholder={editingId ? "••••••••••••••••••••••••" : ""}
-                      className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {t("settings.s3.prefix")}
-                    </Label>
-                    <Input
-                      value={form.pathPrefix}
-                      onChange={(e) => setForm((f) => ({ ...f, pathPrefix: e.target.value }))}
-                      placeholder="rudder-backups/"
-                      className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
-                    />
-                  </div>
-                </div>
-
-                {saveError && (
-                  <p className="text-xs text-red-600 dark:text-red-400 font-mono bg-red-50 dark:bg-red-950/40 p-2.5 rounded-lg border border-red-200 dark:border-red-900">
-                    {saveError}
-                  </p>
-                )}
-
-                <div className="flex items-center justify-end gap-2.5 pt-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setFormOpen(false)}
-                    className="h-10 px-4 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300 dark:hover:bg-[#111f40]"
-                  >
-                    {t("common.vazgec")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={!canSubmit || saving}
-                    onClick={handleSave}
-                    className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white h-10 px-6 rounded-xl text-xs font-semibold border border-[#c8a87c]/40 dark:border-[#2a4687]/60"
-                  >
-                    {saving && <Loader2 className="size-3.5 animate-spin mr-1 text-[#dfc9a0] dark:text-white" />}
-                    {editingId ? t("common.save") : t("settings.s3.saveBtn")}
-                  </Button>
-                </div>
-              </div>
-            )}
-
             {listError && (
               <p className="text-xs text-red-600 dark:text-red-400 font-mono bg-red-50 dark:bg-red-950/40 p-3 rounded-xl border border-red-200 dark:border-red-900">
                 {listError}
@@ -1081,82 +896,161 @@ export default function SettingsPage() {
                   onClick={openCreateForm}
                   className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white text-xs font-semibold px-4 h-9 rounded-xl border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer"
                 >
-                  <Plus className="size-3.5 mr-1 text-[#dfc9a0] dark:text-white" />
+                  <Plus className="size-3.5 mr-1 text-inherit" />
                   {t("settings.s3.createFirstBtn")}
                 </Button>
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 pt-4">
-                {configs.map((config) => (
-                  <div
-                    key={config.id}
-                    className="flex flex-col justify-between p-5 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#060a17] hover:border-[#c8a87c]/60 dark:hover:border-[#2a4687] shadow-xs hover:shadow-sm transition-all"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
-                          {config.label || "S3 Profile"}
-                        </span>
-                        <span className="text-[10px] font-mono font-bold bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 px-2 py-0.5 rounded-full border border-[#c8a87c]/30 dark:border-[#1e3568]/50">
-                          S3
-                        </span>
-                      </div>
+                {configs.map((config) => {
+                  const ep = (config.endpoint || "").toLowerCase()
+                  const providerBadge = !ep
+                    ? "AWS S3"
+                    : ep.includes("r2.cloudflarestorage")
+                    ? "Cloudflare R2"
+                    : ep.includes("wasabisys")
+                    ? "Wasabi"
+                    : ep.includes("digitaloceanspaces")
+                    ? "DO Spaces"
+                    : ep.includes("minio") || ep.includes(":9000")
+                    ? "MinIO"
+                    : "S3"
 
-                      <div className="mt-3 space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+                  const testRes = s3TestResults[config.id]
+                  const isTesting = testingS3Id === config.id
+
+                  return (
+                    <div
+                      key={config.id}
+                      className="flex flex-col justify-between p-5 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#060a17] hover:border-[#c8a87c]/60 dark:hover:border-[#2a4687] shadow-xs hover:shadow-sm transition-all"
+                    >
+                      <div>
                         <div className="flex items-center justify-between">
-                          <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.bucket")}:</span>
-                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{config.bucket}</span>
+                          <span className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
+                            {config.label || "S3 Profile"}
+                          </span>
+                          <span className="text-[10px] font-mono font-bold bg-[#580619]/10 dark:bg-[#101c38] text-[#580619] dark:text-blue-300 px-2 py-0.5 rounded-full border border-[#c8a87c]/30 dark:border-[#1e3568]/50">
+                            {providerBadge}
+                          </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.region")}:</span>
-                          <span className="font-mono text-slate-800 dark:text-slate-200">{config.region}</span>
-                        </div>
-                        {config.endpoint && (
+
+                        <div className="mt-3 space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
                           <div className="flex items-center justify-between">
-                            <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.endpoint")}:</span>
-                            <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300 truncate max-w-[200px]" title={config.endpoint}>
-                              {config.endpoint}
-                            </span>
+                            <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.bucket")}:</span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{config.bucket}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.region")}:</span>
+                            <span className="font-mono text-slate-800 dark:text-slate-200">{config.region}</span>
+                          </div>
+                          {config.endpoint && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.endpoint")}:</span>
+                              <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300 truncate max-w-[200px]" title={config.endpoint}>
+                                {config.endpoint}
+                              </span>
+                            </div>
+                          )}
+                          {config.pathPrefix && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.prefix")}:</span>
+                              <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300">{config.pathPrefix}</span>
+                            </div>
+                          )}
+
+                          {/* Bağlı Siteler */}
+                          <div className="pt-2 border-t border-slate-100 dark:border-[#16223f]/60">
+                            {config.sites && config.sites.length > 0 ? (
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                                  {lang === "tr" ? "Kullanan siteler:" : "Used by:"}
+                                </span>
+                                {config.sites.map((s) => (
+                                  <span
+                                    key={s.id}
+                                    className="font-mono text-[10px] font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-[#1e3568]"
+                                  >
+                                    {s.domain}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                                {lang === "tr" ? "Henüz hiçbir siteye atanmadı" : "Not assigned to any site yet"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {testRes && (
+                          <div
+                            className={`mt-2.5 p-2.5 rounded-xl border text-xs flex items-center gap-2 ${
+                              testRes.ok
+                                ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900"
+                                : "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900"
+                            }`}
+                          >
+                            {testRes.ok ? (
+                              <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            ) : (
+                              <AlertCircle className="size-3.5 text-red-600 dark:text-red-400 shrink-0" />
+                            )}
+                            <span>{testRes.ok ? testRes.message : testRes.error}</span>
                           </div>
                         )}
-                        {config.pathPrefix && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-400 dark:text-slate-500">{t("settings.s3.prefix")}:</span>
-                            <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300">{config.pathPrefix}</span>
-                          </div>
-                        )}
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-[#16223f]">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isTesting}
+                          onClick={() => handleTestS3(config.id)}
+                          className="h-8 rounded-xl text-xs font-semibold px-2.5 dark:border-[#16223f] dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer"
+                        >
+                          {isTesting ? (
+                            <Loader2 className="size-3 animate-spin mr-1 text-[#c8a87c] dark:text-blue-300" />
+                          ) : (
+                            <Zap className="size-3 mr-1 text-amber-500" />
+                          )}
+                          {lang === "tr" ? "Test Et" : "Test"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditForm(config)}
+                          className="h-8 rounded-xl text-xs font-semibold px-3 dark:border-[#16223f] dark:text-slate-300 dark:hover:border-[#2a4687] dark:hover:bg-[#111f40] cursor-pointer"
+                        >
+                          <Pencil className="size-3 mr-1 text-[#c8a87c] dark:text-blue-300" />
+                          {t("settings.s3.editBtn")}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={deletingId === config.id}
+                          onClick={() => handleDelete(config.id)}
+                          className="h-8 rounded-xl text-xs font-semibold px-3 border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
+                        >
+                          {deletingId === config.id ? (
+                            <Loader2 className="size-3 animate-spin mr-1" />
+                          ) : (
+                            <Trash2 className="size-3 mr-1" />
+                          )}
+                          {t("settings.s3.deleteBtn")}
+                        </Button>
                       </div>
                     </div>
-
-                    <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-[#16223f]">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditForm(config)}
-                        className="h-8 rounded-xl text-xs font-semibold px-3 dark:border-[#16223f] dark:text-slate-300 dark:hover:border-[#2a4687] dark:hover:bg-[#111f40]"
-                      >
-                        <Pencil className="size-3 mr-1 text-[#c8a87c] dark:text-blue-300" />
-                        {t("settings.s3.editBtn")}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={deletingId === config.id}
-                        onClick={() => handleDelete(config.id)}
-                        className="h-8 rounded-xl text-xs font-semibold px-3 border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
-                      >
-                        {deletingId === config.id ? (
-                          <Loader2 className="size-3 animate-spin mr-1" />
-                        ) : (
-                          <Trash2 className="size-3 mr-1" />
-                        )}
-                        {t("settings.s3.deleteBtn")}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
+
+            <S3ConfigDialog
+              open={s3DialogOpen}
+              onOpenChange={setS3DialogOpen}
+              initialConfig={dialogConfig}
+              onSuccess={() => load()}
+            />
           </div>
         )}
       </div>
@@ -1285,9 +1179,9 @@ export default function SettingsPage() {
                         className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 h-11 rounded-xl border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer shrink-0"
                       >
                         {githubConnecting ? (
-                          <Loader2 className="size-4 animate-spin text-[#dfc9a0] dark:text-white" />
+                          <Loader2 className="size-4 animate-spin text-inherit" />
                         ) : (
-                          <CheckCircle2 className="size-4 text-[#dfc9a0] dark:text-white" />
+                          <CheckCircle2 className="size-4 text-inherit" />
                         )}
                         {t("settings.github.connectBtn")}
                       </Button>
@@ -1411,6 +1305,208 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      {/* ═══ 6. SİSTEM & GÜNCELLEMELER KARTI (AÇILIR SEKME) ═══ */}
+      <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden transition-all">
+        {/* Tıklanabilir Başlık Çubuğu */}
+        <div
+          onClick={() => toggleSection("system")}
+          className="flex items-center justify-between p-5 md:p-6 select-none cursor-pointer hover:bg-slate-50/50 dark:hover:bg-[#0c1630]/50 transition-colors"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="size-10 rounded-2xl bg-sky-500/10 text-sky-700 dark:text-sky-400 flex items-center justify-center border border-transparent dark:border-sky-500/20 shadow-2xs shrink-0">
+              <RefreshCw className={cn("size-5", versionChecking && "animate-spin text-sky-500")} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100">
+                  {lang === "en" ? "System & Updates" : "Sistem & Güncellemeler"}
+                </h2>
+                {versionData?.hasUpdate && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 animate-pulse">
+                    <Sparkles className="size-3" />
+                    {lang === "en" ? "Update Available" : "Güncelleme Var"}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
+                {lang === "en"
+                  ? "Rudder Cloud version info, GitHub release tracking, and 1-click self-update."
+                  : "Rudder Cloud sürüm bilgisi, GitHub sürüm takibi ve tek tıkla otomatik güncelleme."}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            {versionData?.hasUpdate ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 font-mono">
+                {versionData.latestVersion}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-[#1e3568]/50 font-mono">
+                <span className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
+                {versionData?.currentVersion || "v1.1.0"}
+              </span>
+            )}
+            <div
+              className={cn(
+                "size-8 rounded-xl flex items-center justify-center border border-slate-200 dark:border-[#16223f] bg-slate-50 dark:bg-[#060a17] text-slate-500 dark:text-slate-300 transition-transform duration-200",
+                openSections.system && "rotate-180 bg-slate-100 dark:bg-[#101c38] text-slate-900 dark:text-blue-300 border-slate-300 dark:border-[#2a4687]"
+              )}
+            >
+              <ChevronDown className="size-4" />
+            </div>
+          </div>
+        </div>
+
+        {/* Açılan Bölüm */}
+        {openSections.system && (
+          <div className="p-5 md:p-6 pt-0 border-t border-slate-100 dark:border-[#16223f] space-y-6 animate-in fade-in-0 duration-200">
+            {/* 1. Sürüm Durum Kartları (Grid) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-4">
+              <div className="p-4 rounded-xl border border-slate-200/80 dark:border-[#16223f] bg-slate-50/60 dark:bg-[#060a17]">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  {lang === "en" ? "Current Version" : "Mevcut Sürüm"}
+                </span>
+                <div className="text-lg font-bold font-mono text-slate-900 dark:text-slate-100 mt-1 flex items-center gap-2">
+                  <span>{versionData?.currentVersion || "v1.1.0"}</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200 dark:bg-[#101c38] text-slate-600 dark:text-slate-300 font-sans">
+                    {lang === "en" ? "Active" : "Aktif"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-slate-200/80 dark:border-[#16223f] bg-slate-50/60 dark:bg-[#060a17]">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  {lang === "en" ? "Latest GitHub Release" : "En Son GitHub Sürümü"}
+                </span>
+                <div className="text-lg font-bold font-mono text-slate-900 dark:text-slate-100 mt-1 flex items-center gap-2">
+                  <span>{versionData?.latestVersion || "—"}</span>
+                  {versionData?.hasUpdate ? (
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-600 dark:text-amber-400 font-sans font-semibold">
+                      {lang === "en" ? "New!" : "Yeni!"}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-sans font-semibold">
+                      {lang === "en" ? "Up to date" : "Güncel"}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-slate-200/80 dark:border-[#16223f] bg-slate-50/60 dark:bg-[#060a17]">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  {lang === "en" ? "Git Commit" : "Git Commit"}
+                </span>
+                <div className="text-sm font-bold font-mono text-slate-900 dark:text-slate-100 mt-1.5 flex items-center gap-1.5">
+                  <GitBranch className="size-3.5 text-slate-400" />
+                  <span>{versionData?.gitInfo?.commit || "HEAD"}</span>
+                  {versionData?.gitInfo?.branch && (
+                    <span className="text-slate-400 font-normal">({versionData.gitInfo.branch})</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Güncelleme Durum Paneli */}
+            {versionData?.hasUpdate ? (
+              <div className="p-5 rounded-2xl border border-amber-300 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-950/20 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="size-9 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <Sparkles className="size-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                        {versionData.releaseName || `${versionData.latestVersion} Güncellemesi Yayında`}
+                      </h3>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                        {lang === "en"
+                          ? `A newer version (${versionData.latestVersion}) is available on GitHub. You can install it directly with 1 click.`
+                          : `GitHub üzerinde daha yeni bir sürüm (${versionData.latestVersion}) mevcut. Tek tıkla otomatik olarak paneli güncelleyebilirsiniz.`}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={() => setIsUpdateModalOpen(true)}
+                    className="h-10 px-5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md shadow-amber-500/20 shrink-0 gap-1.5 cursor-pointer"
+                  >
+                    <Sparkles className="size-4" />
+                    {lang === "en" ? "Update Now" : "Şimdi Güncelle"}
+                  </Button>
+                </div>
+
+                {versionData.releaseNotes && (
+                  <div className="p-3.5 rounded-xl border border-amber-200/80 dark:border-amber-900/40 bg-white/70 dark:bg-[#060a17]/80 text-xs text-slate-700 dark:text-slate-300 font-mono whitespace-pre-wrap max-h-48 overflow-y-auto">
+                    {versionData.releaseNotes}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17]">
+                <div className="flex items-center gap-3.5">
+                  <div className="size-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="size-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                      {lang === "en" ? "System is Up to Date" : "Sisteminiz Güncel"}
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {lang === "en"
+                        ? `You are running the latest version of Rudder Cloud (${versionData?.currentVersion || "v1.1.0"}).`
+                        : `Rudder Cloud'un en son kararlı sürümünü (${versionData?.currentVersion || "v1.1.0"}) çalıştırıyorsunuz.`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={versionChecking}
+                    onClick={() => checkUpdate(true)}
+                    className="h-9 px-3.5 rounded-xl text-xs font-semibold border-slate-200 dark:border-[#1e3568] text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#101c38] gap-1.5 cursor-pointer"
+                  >
+                    <RefreshCw className={cn("size-3.5", versionChecking && "animate-spin text-sky-500")} />
+                    {versionChecking
+                      ? (lang === "en" ? "Checking..." : "Denetleniyor...")
+                      : (lang === "en" ? "Check for Updates" : "Güncellemeleri Denetle")}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* 3. GitHub Depo Bilgisi */}
+            <div className="flex items-center justify-between pt-1 text-xs text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-2">
+                <span>GitHub:</span>
+                <a
+                  href={versionData?.githubUrl || "https://github.com/chtsngn/rudder-cloud"}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sky-600 dark:text-sky-400 font-mono hover:underline inline-flex items-center gap-1"
+                >
+                  chtsngn/rudder-cloud
+                  <ExternalLink className="size-3" />
+                </a>
+              </div>
+              <span className="font-mono text-[11px] text-slate-400">
+                {versionData?.checkedAt
+                  ? `Son Kontrol: ${new Date(versionData.checkedAt).toLocaleTimeString()}`
+                  : ""}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <SystemUpdateModal
+        open={isUpdateModalOpen}
+        onOpenChange={setIsUpdateModalOpen}
+        versionData={versionData}
+      />
     </div>
   )
 }

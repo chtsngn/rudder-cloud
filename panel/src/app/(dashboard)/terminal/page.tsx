@@ -59,7 +59,7 @@ export default function TerminalPage() {
             onClick={handleDockToRight}
             className="group inline-flex items-center gap-2 rounded-xl border border-[#c8a87c]/50 dark:border-[#2a4687]/60 bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] hover:border-[#dfc9a0] px-4 py-2 text-xs font-bold text-white shadow-2xs transition-all cursor-pointer hover:scale-102 active:scale-98 shrink-0"
           >
-            <Columns2 className="size-4 text-[#dfc9a0] dark:text-white transition-transform group-hover:scale-110" />
+            <Columns2 className="size-4 text-inherit transition-transform group-hover:scale-110" />
             <span className="font-heading tracking-wide">{t("terminal.dockRight")}</span>
           </button>
         </div>

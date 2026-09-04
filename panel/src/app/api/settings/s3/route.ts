@@ -20,6 +20,7 @@ function toPublic(config: {
   pathPrefix: string
   createdAt: Date
   updatedAt: Date
+  sites?: Array<{ id: string; domain: string }>
 }) {
   return {
     id: config.id,
@@ -32,15 +33,24 @@ function toPublic(config: {
     hasSecret: true,
     createdAt: config.createdAt,
     updatedAt: config.updatedAt,
+    sites: config.sites ?? [],
+    sitesCount: config.sites ? config.sites.length : 0,
   }
 }
 
 export async function GET() {
   const session = await getSession()
-  if (!session || !(await isSuperAdmin(session.userId))) {
-    return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 })
+  if (!session) {
+    return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 })
   }
-  const configs = await prisma.s3Config.findMany({ orderBy: { createdAt: "asc" } })
+  const configs = await prisma.s3Config.findMany({
+    orderBy: { createdAt: "asc" },
+    include: {
+      sites: {
+        select: { id: true, domain: true },
+      },
+    },
+  })
   return NextResponse.json(configs.map(toPublic))
 }
 

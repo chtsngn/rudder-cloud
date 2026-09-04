@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "./google-fonts.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -7,81 +7,111 @@
 :root {
   --radius: 0.75rem;
 
-  /* Temiz beyaz / aydinlik arka plan */
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  /* Zemin ve Yüzeyler (Koyu Taban - Zinc/Slate) */
+  --surface-0: #09090b;       /* Sayfa arka planı */
+  --surface-1: #0e0e11;       /* Sidebar / Kenar paneli */
+  --surface-2: #18181b;       /* Kartlar ve paneller */
+  --surface-3: #27272a;       /* Butonlar / Vurgulu alanlar */
+  --surface-inset: #121215;   /* İç panel zemini */
 
-  /* Kartlar: Saf beyaz */
-  --card: #ffffff;
-  --card-foreground: #0f172a;
+  /* Kenarlıklar */
+  --border: #27272a;
+  --border-strong: #3f3f46;
 
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  /* Metin Renkleri */
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
 
-  /* Canlı Kraliyet Bordosu (Royal Wine Burgundy - sıfır kahverengi) */
-  --primary: #6e0d25;
-  --primary-hover: #86102e;
-  --primary-foreground: #ffffff;
+  /* Aksan & Marka Renkleri (Orijinal Koyu Tema: Gece Mavisi Buton, Gökyüzü Mavisi Aksan) */
+  --accent: #162752;
+  --accent-hover: #1e346b;
+  --accent-fg: #ffffff;
+  --accent-text: #38bdf8;
+  --accent-subtle: rgba(56, 189, 248, 0.15);
+  --accent-veil: rgba(42, 70, 135, 0.6);
+  --brand: #162752;
+  --brand-light: #38bdf8;
+  --brand-dark: #1e346b;
 
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
+  /* Yüzen Paneller & Buzlu Cam */
+  --float-surface: rgba(24, 24, 27, 0.82);
+  --float-surface-strong: rgba(14, 14, 17, 0.94);
 
-  --muted: #f8fafc;
-  --muted-foreground: #64748b;
-
-  /* Aksan: Bronz / Altın */
-  --accent: #c8a87c;
-  --accent-foreground: #6e0d25;
-
-  --destructive: #dc2626;
-  --destructive-foreground: #ffffff;
-
-  --border: #e2e8f0;
-  --input: #cbd5e1;
-  --ring: #c8a87c;
-
-  --success: #16a34a;
-  --warning: #d97706;
-}
-
-.dark {
-  --radius: 0.75rem;
-
-  /* Gece Okyanusu Siyahımsı Zemin (Siyah-Lacivert) */
-  --background: #040711;
-  --foreground: #f1f5f9;
-
-  /* Kartlar & Yüzeyler: Gece Mavisi Arduvaz */
-  --card: #090e1f;
-  --card-foreground: #f1f5f9;
-
-  --popover: #090e1f;
-  --popover-foreground: #f1f5f9;
-
-  /* Koyu Lacivert Buton ve Vurgu */
-  --primary: #162752;
-  --primary-hover: #1e346b;
-  --primary-foreground: #ffffff;
-
-  --secondary: #0d162d;
-  --secondary-foreground: #f1f5f9;
-
-  --muted: #0b1329;
-  --muted-foreground: #94a3b8;
-
-  /* Aksan: Gece Mavisi */
-  --accent: #223e7c;
-  --accent-foreground: #ffffff;
-
+  /* Core Framework Bindings */
+  --background: var(--surface-0);
+  --foreground: var(--text-primary);
+  --card: var(--surface-2);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent);
+  --primary-hover: var(--accent-hover);
+  --primary-foreground: var(--accent-fg);
+  --secondary: var(--surface-3);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--surface-1);
+  --muted-foreground: var(--text-muted);
+  --input: var(--border);
+  --ring: var(--accent);
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-
-  --border: #16223f;
-  --input: #131f3b;
-  --ring: #223e7c;
-
   --success: #10b981;
   --warning: #f59e0b;
+}
+
+.light, [data-theme="light"] {
+  /* Zemin ve Yüzeyler (Açık Taban) */
+  --surface-0: #f4f4f5;
+  --surface-1: #ffffff;
+  --surface-2: #ffffff;
+  --surface-3: #f4f4f5;
+  --surface-inset: #ffffff;
+
+  /* Kenarlıklar */
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+
+  /* Metin Renkleri */
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #71717a;
+
+  /* Aksan Renkleri (Orijinal Açık Tema: Bordo Buton, Altın Aksan) */
+  --accent: #580619;
+  --accent-hover: #720a22;
+  --accent-fg: #ffffff;
+  --accent-text: #580619;
+  --accent-subtle: rgba(200, 168, 124, 0.15);
+  --accent-veil: rgba(200, 168, 124, 0.4);
+  --brand: #580619;
+  --brand-light: #dfc9a0;
+  --brand-dark: #720a22;
+
+  /* Yüzen Paneller */
+  --float-surface: rgba(255, 255, 255, 0.88);
+  --float-surface-strong: rgba(255, 255, 255, 0.97);
+
+  /* Core Framework Bindings */
+  --background: var(--surface-0);
+  --foreground: var(--text-primary);
+  --card: var(--surface-2);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent);
+  --primary-hover: var(--accent-hover);
+  --primary-foreground: var(--accent-fg);
+  --secondary: var(--surface-3);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--surface-1);
+  --muted-foreground: var(--text-muted);
+  --input: var(--border);
+  --ring: var(--accent);
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --success: #16a34a;
+  --warning: #d97706;
 }
 
 @theme inline {
@@ -103,6 +133,15 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-inset: var(--surface-inset);
+  --color-brand: var(--brand);
+  --color-brand-light: var(--brand-light);
+  --color-brand-dark: var(--brand-dark);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-success: var(--success);
@@ -111,9 +150,170 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: 'Plus Jakarta Sans', -apple-system, 'Segoe UI', sans-serif;
-  --font-heading: 'Cinzel', Georgia, serif;
+  --font-sans: var(--app-font, 'Grenze', serif);
+  --font-heading: var(--app-font, 'Grenze', serif);
+  --font-grenze: 'Grenze', serif;
+  --font-jim-nightshade: 'Jim Nightshade', cursive;
+  --font-cormorant: 'Cormorant Upright', serif;
+  --font-joan: 'Joan', serif;
+  --font-twinkle: 'Twinkle Star', cursive;
+  --font-cinzel: 'Cinzel', serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* ═══ DİNAMİK YAZI FONTU (TİPOGRAFİ) EŞLEMELERİ ═══ */
+:root,
+[data-font="grenze"] {
+  --app-font: 'Grenze', serif;
+  --app-font-heading: 'Grenze', serif;
+  --font-heading: 'Grenze', serif;
+  --font-sans: 'Grenze', serif;
+}
+[data-font="jim-nightshade"] {
+  --app-font: 'Jim Nightshade', cursive;
+  --app-font-heading: 'Jim Nightshade', cursive;
+  --font-heading: 'Jim Nightshade', cursive;
+  --font-sans: 'Jim Nightshade', cursive;
+}
+[data-font="cormorant-upright"] {
+  --app-font: 'Cormorant Upright', serif;
+  --app-font-heading: 'Cormorant Upright', serif;
+  --font-heading: 'Cormorant Upright', serif;
+  --font-sans: 'Cormorant Upright', serif;
+}
+[data-font="joan"] {
+  --app-font: 'Joan', serif;
+  --app-font-heading: 'Joan', serif;
+  --font-heading: 'Joan', serif;
+  --font-sans: 'Joan', serif;
+}
+[data-font="twinkle-star"] {
+  --app-font: 'Twinkle Star', cursive;
+  --app-font-heading: 'Twinkle Star', cursive;
+  --font-heading: 'Twinkle Star', cursive;
+  --font-sans: 'Twinkle Star', cursive;
+}
+
+.font-heading { font-family: var(--app-font, 'Grenze', serif) !important; }
+.font-sans { font-family: var(--app-font, 'Grenze', serif) !important; }
+.font-grenze { font-family: 'Grenze', serif !important; }
+.font-jim-nightshade { font-family: 'Jim Nightshade', cursive !important; }
+.font-cormorant { font-family: 'Cormorant Upright', serif !important; }
+.font-joan { font-family: 'Joan', serif !important; }
+.font-twinkle { font-family: 'Twinkle Star', cursive !important; }
+
+/* ═══ TÜM PANEL VE SAYFALARA DİNAMİK FONT UYGULANMASI ═══ */
+/* 
+ * Kullanıcının seçtiği font; sol menü sekmelerine, sayfalara, kartlara, pencerelere/diyaloglara, 
+ * butonlara, form kutularına ve tüm metinlere anında uygulanır.
+ */
+
+/* 1. Tüm DOM ağacı için font değişkeni */
+*,
+*::before,
+*::after {
+  font-family: var(--app-font, 'Grenze', serif);
+}
+
+/* 2. Kartlar, pencereler, sol menü, butonlar, tablolar ve tüm metin etiketleri */
+html,
+body,
+div,
+span,
+p,
+a,
+button,
+input,
+select,
+textarea,
+h1, h2, h3, h4, h5, h6,
+label,
+li,
+ul,
+ol,
+table,
+thead,
+tbody,
+tr,
+th,
+td,
+nav,
+header,
+footer,
+main,
+section,
+article,
+aside,
+form,
+dialog,
+summary,
+details,
+b,
+strong,
+em,
+i,
+small,
+.font-sans,
+.font-heading {
+  font-family: var(--app-font, 'Grenze', serif) !important;
+}
+
+/* 3. Kod blokları ve terminal alanları daima VS Code / JetBrains Mono kod fontunda kalır */
+.xterm,
+.xterm *,
+.xterm-viewport,
+.xterm-viewport *,
+.xterm-screen,
+.xterm-screen *,
+.xterm-rows,
+.xterm-rows *,
+.xterm-rows > div,
+.xterm-rows > div > span,
+.xterm-container,
+.xterm-container *,
+.terminal-wrapper,
+.terminal-wrapper *,
+.terminal-dock,
+.terminal-dock *,
+[data-terminal],
+[data-terminal] *,
+code,
+code *,
+kbd,
+kbd *,
+samp,
+samp *,
+pre,
+pre *,
+.font-mono,
+.font-mono * {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, ui-monospace, SFMono-Regular, Menlo, Monaco, monospace !important;
+}
+
+/* 4. Sol üstteki RUDDER marka logosu yazısı ASLA değişmez, daima asil ve varsayılan Grenze kalır */
+html body .rudder-brand-title,
+html body .rudder-brand-title *,
+.rudder-brand-title,
+.rudder-brand-title * {
+  font-family: 'Grenze', serif !important;
+}
+
+/* 5. Koyu modda metin veya kenarlık olarak text-primary/border-primary kullanıldığında görünürlük garantisi */
+.dark .text-primary,
+[data-theme="dark"] .text-primary,
+.dark a.text-primary,
+.dark span.text-primary,
+.dark button.text-primary,
+.dark .hover\:text-primary:hover,
+[data-theme="dark"] .hover\:text-primary:hover {
+  color: var(--accent-text, #38bdf8) !important;
+}
+
+.dark .border-primary,
+[data-theme="dark"] .border-primary,
+.dark .hover\:border-primary:hover,
+[data-theme="dark"] .hover\:border-primary:hover {
+  border-color: var(--accent-text, #38bdf8) !important;
 }
 
 @layer base {
@@ -121,6 +321,145 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground antialiased;
   }
+}
+
+/* ═══ DİNAMİK RENK TEMASI EŞLEMELERİ (YALNIZCA ÖZEL RENK PALETİ SEÇİLDİĞİNDE UYGULANIR) ═══ */
+/* Varsayılan (default) temadayken kullanıcının orijinal koyu ve açık mod renklerine ASLA dokunulmaz! */
+
+/* 1. Birincil Butonlar & Aksanlar */
+html:not(.palette-default) .bg-\[\#580619\], 
+html:not(.palette-default) .dark .dark\:bg-\[\#162752\], 
+html:not(.palette-default) .bg-\[\#162752\] {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+html:not(.palette-default) .hover\:bg-\[\#720a22\]:hover, 
+html:not(.palette-default) .dark .dark\:hover\:bg-\[\#1e346b\]:hover, 
+html:not(.palette-default) .hover\:bg-\[\#1e346b\]:hover {
+  background-color: var(--primary-hover) !important;
+}
+
+/* 2. Kart Zeminleri (Koyu modda lacivert kalan kart ve paneller) */
+html:not(.palette-default) .dark .dark\:bg-\[\#090e1f\],
+html:not(.palette-default) .dark .dark\:bg-\[\#040711\],
+html:not(.palette-default) .dark .dark\:bg-\[\#0c1630\],
+html:not(.palette-default) .dark .dark\:bg-\[\#0c1630\]\/50,
+html:not(.palette-default) .dark .dark\:bg-\[\#070c1a\],
+html:not(.palette-default) .bg-\[\#090e1f\],
+html:not(.palette-default) .bg-\[\#040711\] {
+  background-color: var(--surface-2) !important;
+}
+
+/* 3. İç Kutular, Form Inputları, Tablo İçleri ve Kod Blokları */
+html:not(.palette-default) .dark .dark\:bg-\[\#060a17\],
+html:not(.palette-default) .dark .dark\:bg-\[\#060a17\]\/50,
+html:not(.palette-default) .dark .dark\:bg-\[\#060a17\]\/70,
+html:not(.palette-default) .bg-\[\#060a17\] {
+  background-color: var(--surface-inset) !important;
+}
+
+/* 4. Kenarlıklar & Bölücüler */
+html:not(.palette-default) .dark .dark\:border-\[\#16223f\],
+html:not(.palette-default) .dark .dark\:border-slate-800,
+html:not(.palette-default) .dark .dark\:border-\[\#1e3568\]\/50,
+html:not(.palette-default) .dark .dark\:border-\[\#1e3568\],
+html:not(.palette-default) .border-\[\#c8a87c\]\/30,
+html:not(.palette-default) .dark .dark\:divide-\[\#16223f\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border) !important;
+}
+
+/* 5. Vurgulu Kenarlıklar ve Hover Çerçeveleri */
+html:not(.palette-default) .border-\[\#c8a87c\]\/40, 
+html:not(.palette-default) .border-\[\#c8a87c\]\/50, 
+html:not(.palette-default) .dark .dark\:border-\[\#2a4687\]\/60, 
+html:not(.palette-default) .dark .dark\:border-\[\#2a4687\],
+html:not(.palette-default) .dark .dark\:border-\[\#2a4687\]\/70,
+html:not(.palette-default) .dark .dark\:border-\[\#2a4687\]\/80,
+html:not(.palette-default) .dark .dark\:border-\[\#2a4687\]\/50,
+html:not(.palette-default) .dark .dark\:hover\:border-blue-500\/50:hover,
+html:not(.palette-default) .dark .dark\:hover\:border-\[\#385db3\]:hover,
+html:not(.palette-default) .dark .dark\:hover\:border-\[\#2a4687\]:hover,
+html:not(.palette-default) .hover\:border-\[\#c8a87c\]:hover,
+html:not(.palette-default) .hover\:border-\[\#c8a87c\]\/70:hover,
+html:not(.palette-default) .hover\:border-\[\#c8a87c\]\/40:hover {
+  border-color: var(--accent) !important;
+}
+
+/* 6. İkonlar, Başlıklar, Rozet Metinleri & Linkler */
+html:not(.palette-default) .dark .dark\:text-blue-300, 
+html:not(.palette-default) .dark .dark\:text-blue-400,
+html:not(.palette-default) .text-blue-300,
+html:not(.palette-default) .text-blue-400,
+html:not(.palette-default) .text-\[\#38bdf8\],
+html:not(.palette-default) .text-\[\#c8a87c\],
+html:not(.palette-default) .text-\[\#dfc9a0\],
+html:not(.palette-default) .hover\:text-\[\#580619\]:hover,
+html:not(.palette-default) .dark .dark\:hover\:text-blue-400:hover,
+html:not(.palette-default) .dark .dark\:hover\:text-blue-300:hover {
+  color: var(--accent-text) !important;
+}
+
+/* 7. Rozet & Hafif Vurgulu Zeminler */
+html:not(.palette-default) .bg-\[\#580619\]\/10, 
+html:not(.palette-default) .bg-\[\#580619\]\/5, 
+html:not(.palette-default) .dark .dark\:bg-\[\#101c38\], 
+html:not(.palette-default) .bg-\[\#101c38\],
+html:not(.palette-default) .dark .dark\:hover\:bg-\[\#111f40\]:hover {
+  background-color: var(--accent-subtle) !important;
+}
+
+/* 8. Açık Modda Kart Zeminleri ve Kenarlıkları (Resim 3'teki gibi temanın renk uyumu) */
+html:not(.palette-default) .bg-white:not(button):not(input):not(select):not(.text-white):not([data-no-theme]),
+html:not(.palette-default) .light .bg-white:not(button):not(input):not(select):not(.text-white):not([data-no-theme]) {
+  background-color: var(--surface-2) !important;
+}
+
+html:not(.palette-default) .border-slate-200,
+html:not(.palette-default) .border-slate-200\/90,
+html:not(.palette-default) .border-slate-200\/80,
+html:not(.palette-default) .border-slate-200\/60,
+html:not(.palette-default) .border-slate-100 {
+  border-color: var(--border) !important;
+}
+
+html:not(.palette-default) .bg-slate-50,
+html:not(.palette-default) .bg-slate-50\/50,
+html:not(.palette-default) .bg-slate-100 {
+  background-color: var(--surface-inset) !important;
+}
+
+/* 9. İkon Görünürlüğü & Kontrast Koruması (Tüm Temalarda Buton İkonlarının Görünürlüğü) */
+html:not(.palette-default) .bg-\[\#580619\] svg, 
+html:not(.palette-default) .dark .dark\:bg-\[\#162752\] svg, 
+html:not(.palette-default) .bg-\[\#162752\] svg,
+html:not(.palette-default) button.bg-primary svg,
+html:not(.palette-default) .bg-primary svg,
+html:not(.palette-default) [class*="bg-[#580619]"] svg,
+html:not(.palette-default) .dark [class*="dark:bg-[#162752]"] svg,
+html:not(.palette-default) [class*="rounded-full"][class*="bg-primary"] svg,
+html:not(.palette-default) [class*="rounded-full"][class*="bg-[#580619]"] svg,
+html:not(.palette-default) .dark [class*="rounded-full"][class*="dark:bg-[#38bdf8]"] svg {
+  color: currentColor !important;
+  stroke: currentColor !important;
+}
+
+html:not(.palette-default) .bg-\[\#580619\] .text-\[\#dfc9a0\],
+html:not(.palette-default) .dark .dark\:bg-\[\#162752\] .dark\:text-white,
+html:not(.palette-default) .dark .dark\:bg-\[\#162752\] .text-\[\#dfc9a0\],
+html:not(.palette-default) .bg-\[\#162752\] .dark\:text-white,
+html:not(.palette-default) .bg-\[\#162752\] .text-\[\#dfc9a0\],
+html:not(.palette-default) .bg-primary .dark\:text-white,
+html:not(.palette-default) .bg-primary .text-\[\#dfc9a0\] {
+  color: currentColor !important;
+  stroke: currentColor !important;
+}
+
+html:not(.palette-default) [class*="rounded-full"][class*="bg-[#580619]"],
+html:not(.palette-default) .dark [class*="rounded-full"][class*="dark:bg-[#38bdf8]"],
+html:not(.palette-default) [class*="rounded-full"][class*="bg-primary"] {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
 }

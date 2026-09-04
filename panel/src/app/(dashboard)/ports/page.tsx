@@ -62,7 +62,7 @@ export default function PortsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl font-semibold text-foreground">
             {t("ports.title")}
@@ -71,7 +71,7 @@ export default function PortsPage() {
             {t("ports.subtitle")}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={load} disabled={loading} className="self-start sm:self-auto">
           <RefreshCw className={loading ? "size-4 animate-spin" : "size-4"} />
           {t("common.refresh")}
         </Button>

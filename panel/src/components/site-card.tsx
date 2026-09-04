@@ -13,6 +13,7 @@ import {
   Layers,
   Code2,
   Server,
+  Box,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -62,6 +63,8 @@ function getTypeIcon(type: SiteType) {
       return Layers
     case "proxy":
       return Server
+    case "docker":
+      return Box
     default:
       return Globe
   }
