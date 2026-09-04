@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { execSync } from "child_process"
 import { getSession } from "@/lib/auth"
 
-export const CURRENT_VERSION = "v1.2.1"
+export const CURRENT_VERSION = "v1.2.2"
 export const GITHUB_REPO = "chtsngn/rudder-cloud"
 
 interface GitHubRelease {
