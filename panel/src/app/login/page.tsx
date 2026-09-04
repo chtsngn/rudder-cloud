@@ -107,7 +107,7 @@ export default function LoginPage() {
             {/* Sis Rozeti (Puslu Gri & Arduvaz) */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-950/60 backdrop-blur-md border border-slate-700/60 text-[11px] font-mono tracking-wider text-slate-300 uppercase shadow-lg">
               <Compass className="size-3.5 text-slate-400 animate-spin-slow" />
-              <span>36°58&apos;N • 28°14&apos;E &bull; {t("auth.navRoute")}</span>
+              <span>25°00&apos;N • 71°00&apos;W &bull; {t("auth.navRoute")}</span>
             </div>
 
             {/* Duman ve Sis İçinde Parlayan Puslu Gri Başlık (Grenze Fontu) */}
