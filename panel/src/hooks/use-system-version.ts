@@ -37,10 +37,14 @@ export function useSystemVersion() {
     }
   }, [])
 
-  const checkUpdate = useCallback(async (force = false) => {
+  const checkUpdate = useCallback(async (force = false, simulate = false) => {
     setChecking(true)
     try {
-      const res = await fetch(`/api/system/version${force ? "?force=true" : ""}`)
+      const params = new URLSearchParams()
+      if (force) params.set("force", "true")
+      if (simulate) params.set("simulate", "true")
+      const qs = params.toString() ? `?${params.toString()}` : ""
+      const res = await fetch(`/api/system/version${qs}`)
       if (res.ok) {
         const json = await res.json()
         notify(json)

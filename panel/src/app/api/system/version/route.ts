@@ -57,9 +57,25 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const force = searchParams.get("force") === "true"
+  const simulate = searchParams.get("simulate") === "true"
   const now = Date.now()
 
   const gitInfo = getLocalGitInfo()
+
+  if (simulate) {
+    return NextResponse.json({
+      ok: true,
+      currentVersion: CURRENT_VERSION,
+      latestVersion: "v1.2.0",
+      hasUpdate: true,
+      releaseName: "v1.2.0 — Otomatik Güncelleme & Yenilikler (Test Yayını)",
+      releaseNotes: "### 🚀 v1.2.0 Canlı Test Yayını\n- Tek tıkla GitHub OTA güncelleme sistemi entegre edildi.\n- Sol menüde yeni sürüm bildirim rozeti ve animasyonlar.\n- Terminal oturumu koruma ve monospace kod font kilidi.\n- Koyu mod görünürlük ve kontrast iyileştirmeleri.",
+      githubUrl: `https://github.com/${GITHUB_REPO}/releases`,
+      publishedAt: new Date().toISOString(),
+      checkedAt: new Date().toISOString(),
+      gitInfo,
+    })
+  }
 
   // Önbellek geçerli mi?
   if (!force && cachedRelease && now - cachedRelease.timestamp < CACHE_TTL_MS) {

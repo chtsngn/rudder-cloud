@@ -1428,13 +1428,24 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  <Button
-                    onClick={() => setIsUpdateModalOpen(true)}
-                    className="h-10 px-5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md shadow-amber-500/20 shrink-0 gap-1.5 cursor-pointer"
-                  >
-                    <Sparkles className="size-4" />
-                    {lang === "en" ? "Update Now" : "Şimdi Güncelle"}
-                  </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      onClick={() => setIsUpdateModalOpen(true)}
+                      className="h-10 px-5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md shadow-amber-500/20 shrink-0 gap-1.5 cursor-pointer"
+                    >
+                      <Sparkles className="size-4" />
+                      {lang === "en" ? "Update Now" : "Şimdi Güncelle"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => checkUpdate(true, false)}
+                      title="Gerçek GitHub sürümüne geri dön"
+                      className="h-9 px-2.5 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                    >
+                      {lang === "en" ? "Reset" : "Sıfırla"}
+                    </Button>
+                  </div>
                 </div>
 
                 {versionData.releaseNotes && (
@@ -1466,13 +1477,23 @@ export default function SettingsPage() {
                     variant="outline"
                     size="sm"
                     disabled={versionChecking}
-                    onClick={() => checkUpdate(true)}
+                    onClick={() => checkUpdate(true, false)}
                     className="h-9 px-3.5 rounded-xl text-xs font-semibold border-slate-200 dark:border-[#1e3568] text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#101c38] gap-1.5 cursor-pointer"
                   >
                     <RefreshCw className={cn("size-3.5", versionChecking && "animate-spin text-sky-500")} />
                     {versionChecking
                       ? (lang === "en" ? "Checking..." : "Denetleniyor...")
                       : (lang === "en" ? "Check for Updates" : "Güncellemeleri Denetle")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => checkUpdate(false, true)}
+                    title="Yeni sürüm geldiğinde ekranın nasıl göründüğünü simüle et"
+                    className="h-9 px-3 rounded-xl text-xs font-semibold border-dashed border-amber-300 dark:border-amber-700/60 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 gap-1.5 cursor-pointer"
+                  >
+                    <Sparkles className="size-3.5 text-amber-500" />
+                    <span>{lang === "en" ? "Simulate Update" : "🧪 Güncellemeyi Test Et"}</span>
                   </Button>
                 </div>
               </div>
