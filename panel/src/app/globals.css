@@ -162,30 +162,37 @@
 }
 
 /* ═══ DİNAMİK YAZI FONTU (TİPOGRAFİ) EŞLEMELERİ ═══ */
-:root {
-  --app-font-heading: 'Grenze', serif;
-}
+:root,
 [data-font="grenze"] {
+  --font-heading: 'Grenze', serif;
   --app-font-heading: 'Grenze', serif;
 }
 [data-font="jim-nightshade"] {
+  --font-heading: 'Jim Nightshade', cursive;
   --app-font-heading: 'Jim Nightshade', cursive;
 }
 [data-font="cormorant-upright"] {
+  --font-heading: 'Cormorant Upright', serif;
   --app-font-heading: 'Cormorant Upright', serif;
 }
 [data-font="joan"] {
+  --font-heading: 'Joan', serif;
   --app-font-heading: 'Joan', serif;
 }
 [data-font="twinkle-star"] {
+  --font-heading: 'Twinkle Star', cursive;
   --app-font-heading: 'Twinkle Star', cursive;
 }
 
-.font-grenze { font-family: 'Grenze', serif; }
-.font-jim-nightshade { font-family: 'Jim Nightshade', cursive; }
-.font-cormorant { font-family: 'Cormorant Upright', serif; }
-.font-joan { font-family: 'Joan', serif; }
-.font-twinkle { font-family: 'Twinkle Star', cursive; }
+.font-heading {
+  font-family: var(--font-heading, 'Grenze', serif) !important;
+}
+
+.font-grenze { font-family: 'Grenze', serif !important; }
+.font-jim-nightshade { font-family: 'Jim Nightshade', cursive !important; }
+.font-cormorant { font-family: 'Cormorant Upright', serif !important; }
+.font-joan { font-family: 'Joan', serif !important; }
+.font-twinkle { font-family: 'Twinkle Star', cursive !important; }
 
 @layer base {
   * {

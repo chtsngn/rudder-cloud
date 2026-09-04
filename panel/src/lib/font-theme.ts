@@ -95,7 +95,13 @@ export function applyFont(fontId: string) {
   const root = document.documentElement
 
   root.setAttribute("data-font", font.id)
+  root.style.setProperty("--font-heading", font.family)
   root.style.setProperty("--app-font-heading", font.family)
+
+  if (document.body) {
+    document.body.style.setProperty("--font-heading", font.family)
+    document.body.style.setProperty("--app-font-heading", font.family)
+  }
 
   try {
     localStorage.setItem(FONT_STORAGE_KEY, font.id)

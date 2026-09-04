@@ -44,6 +44,7 @@ import { cn } from "@/lib/utils"
 import { S3ConfigDialog, type S3ConfigView } from "@/components/s3-config-dialog"
 import { ThemePalettePicker } from "@/components/theme-palette-picker"
 import { FontPicker } from "@/components/font-picker"
+import { useFontTheme } from "@/lib/font-theme"
 
 interface PanelDomainSettings {
   domain: string | null
@@ -141,6 +142,7 @@ async function parseError(res: Response): Promise<string> {
 export default function SettingsPage() {
   const { theme, setTheme, toggleTheme } = useTheme()
   const { t, lang, setLang } = useTranslation()
+  const { activeOption: activeFont } = useFontTheme()
   const [configs, setConfigs] = useState<S3ConfigView[]>([])
   const [loading, setLoading] = useState(true)
   const [listError, setListError] = useState<string | null>(null)
@@ -396,18 +398,20 @@ export default function SettingsPage() {
   const [openSections, setOpenSections] = useState<{
     language: boolean
     theme: boolean
+    typography: boolean
     domain: boolean
     s3: boolean
     github: boolean
   }>({
     language: false,
     theme: false,
+    typography: false,
     domain: false,
     s3: false,
     github: false,
   })
 
-  const toggleSection = (section: "language" | "theme" | "domain" | "s3" | "github") => {
+  const toggleSection = (section: "language" | "theme" | "typography" | "domain" | "s3" | "github") => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }))
   }
 
@@ -580,25 +584,55 @@ export default function SettingsPage() {
           {/* 9 Renk Ailesi Önizleme Kartları */}
           <ThemePalettePicker />
         </div>
+      </div>
 
-        {/* İnce Ayırıcı Çizgi */}
-        <div className="border-t border-slate-100 dark:border-[#16223f]" />
-
-        {/* Alt Kısım: Yazı Fontu & Tipografi */}
-        <div className="space-y-3.5">
-          <div>
-            <h3 className="font-heading font-bold text-sm md:text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Type className="size-4 text-sky-500 dark:text-sky-400" />
-              <span>Yazı Fontu & Tipografi</span>
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-sans leading-relaxed">
-              Panel başlıkları, logolar ve kart isimleri için istediğiniz Google Fonts karakterini seçin. Seçtiğiniz font canlı vitrinde test edilebilir ve tüm arayüze anında yansır.
-            </p>
+      {/* ═══ 2.5 YAZI FONTU & TİPOGRAFİ KARTI (AÇILIR SEKME - BAŞTAN KAPALI) ═══ */}
+      <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden transition-all">
+        {/* Tıklanabilir Başlık Çubuğu */}
+        <div
+          onClick={() => toggleSection("typography")}
+          className="flex items-center justify-between p-5 md:p-6 select-none cursor-pointer hover:bg-slate-50/50 dark:hover:bg-[#0c1630]/50 transition-colors"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="size-10 rounded-2xl bg-sky-500/10 text-sky-700 dark:text-sky-400 flex items-center justify-center border border-transparent dark:border-sky-500/20 shadow-2xs shrink-0">
+              <Type className="size-5" />
+            </div>
+            <div>
+              <h2 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100">
+                Yazı Fontu & Tipografi
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
+                Panel başlıkları ve arayüz için Google Fonts seçimi.
+              </p>
+            </div>
           </div>
 
-          {/* 5 Font Canlı Önizlemeli Seçim Kartları */}
-          <FontPicker />
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-700 dark:text-sky-300 border border-slate-200/80 dark:border-[#1e3568]/50">
+              <span style={{ fontFamily: activeFont.family }} className="text-sm font-bold">
+                {activeFont.name}
+              </span>
+              {activeFont.isDefault && (
+                <span className="text-[10px] text-slate-400 font-mono">(Varsayılan)</span>
+              )}
+            </span>
+            <div
+              className={cn(
+                "size-8 rounded-xl flex items-center justify-center border border-slate-200 dark:border-[#16223f] bg-slate-50 dark:bg-[#060a17] text-slate-500 dark:text-slate-300 transition-transform duration-200",
+                openSections.typography && "rotate-180 bg-slate-100 dark:bg-[#101c38] text-slate-900 dark:text-blue-300 border-slate-300 dark:border-[#2a4687]"
+              )}
+            >
+              <ChevronDown className="size-4" />
+            </div>
+          </div>
         </div>
+
+        {/* Aşağı Doğru Açılan İçerik (Baştan kapalıdır, tıklanınca açılır) */}
+        {openSections.typography && (
+          <div className="p-5 md:p-6 pt-0 border-t border-slate-100 dark:border-[#16223f] animate-in fade-in-0 duration-200">
+            <FontPicker />
+          </div>
+        )}
       </div>
 
       {/* ═══ 3. PANEL ALAN ADI & SSL KARTI (AÇILIR SEKME) ═══ */}

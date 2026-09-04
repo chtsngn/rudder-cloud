@@ -87,8 +87,8 @@ export function AppSidebar() {
     ...(user?.role === "SUPER_ADMIN"
       ? [
           { href: "/terminal", label: t("nav.terminal"), icon: Terminal },
-          { href: "/settings", label: t("nav.settings"), icon: Settings },
           { href: "/users", label: t("nav.users"), icon: Users },
+          { href: "/settings", label: t("nav.settings"), icon: Settings },
           { href: "/audit", label: t("nav.audit"), icon: ClipboardList },
         ]
       : []),
