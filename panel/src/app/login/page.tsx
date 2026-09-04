@@ -2,27 +2,26 @@
 
 import { useState, useCallback } from "react"
 import Image from "next/image"
-import { ChevronDown, Compass, FastForward } from "lucide-react"
+import { Compass, FastForward } from "lucide-react"
 import { useTranslation } from "@/components/language-provider"
 import { CinematicCanvasScene } from "@/components/auth/cinematic-canvas-scene"
 import { GlassLoginCard } from "@/components/auth/glass-login-card"
 import { SailingShipRoute } from "@/components/auth/sailing-ship-route"
+import { cn } from "@/lib/utils"
 
 export default function LoginPage() {
   const { lang, setLang } = useTranslation()
   const [scrollProgress, setScrollProgress] = useState(0)
+  const [targetProgress, setTargetProgress] = useState<number | null>(null)
 
-  // Scroll ilerlemesi değiştikçe state güncelle
+  // Süzülüş ilerlemesi değiştikçe state güncelle
   const handleProgress = useCallback((progress: number) => {
     setScrollProgress(progress)
   }, [])
 
-  // Hızlıca kasırgaya ve login penceresine atla
+  // Hızlıca beklemeden login penceresine atla
   const handleSkipToLogin = () => {
-    window.scrollTo({
-      top: document.documentElement.scrollHeight,
-      behavior: "smooth",
-    })
+    setTargetProgress(1)
   }
 
   // 1. Sahne (Yıldızlı Gece & Solda Puslu Gri Rudder Yazısı) opaklığı
@@ -30,9 +29,12 @@ export default function LoginPage() {
   const isIntroVisible = introOpacity > 0.02
 
   return (
-    <div className="relative min-h-[850vh] bg-black selection:bg-slate-700/40 selection:text-white">
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black selection:bg-slate-700/40 selection:text-white">
       {/* ═══ 1. SİNEMATİK KANVAS (YILDIZLAR, BULUT DALIŞI, DÜMEN, GERÇEKÇİ KASIRGA) ═══ */}
-      <CinematicCanvasScene onProgress={handleProgress} />
+      <CinematicCanvasScene
+        onProgress={handleProgress}
+        targetProgress={targetProgress}
+      />
 
       {/* ═══ 2. SABİT GÖRÜNÜM ALANI (FIXED VIEWPORT) ═══ */}
       <div className="fixed inset-0 z-20 flex flex-col justify-between p-5 md:p-10 pointer-events-none">
@@ -154,26 +156,15 @@ export default function LoginPage() {
           </div>
         </main>
 
-        {/* ── Alt Bar: Scroll İpucu & İlerleme Çizgisi ── */}
-        <footer className="flex flex-col items-center justify-center w-full select-none">
-          {isIntroVisible && (
-            <div
-              style={{ opacity: introOpacity }}
-              className="flex flex-col items-center gap-2 pointer-events-auto cursor-pointer animate-bounce"
-              onClick={handleSkipToLogin}
-            >
-              {/* "Dümeni" kaldırıldı, sadece "Keşfetmek İçin Kaydırın" */}
-              <span className="text-[11px] tracking-[0.2em] font-mono uppercase text-slate-400">
-                Keşfetmek İçin Kaydırın
-              </span>
-              <div className="size-8 rounded-full bg-slate-950/60 backdrop-blur-md border border-slate-700/60 flex items-center justify-center text-slate-300 shadow-lg">
-                <ChevronDown className="size-4" />
-              </div>
-            </div>
-          )}
-
+        {/* ── Alt Bar: İlerleme Çizgisi (Giriş tamamlandığında zarifçe solar) ── */}
+        <footer className="flex flex-col items-center justify-center w-full select-none pb-1">
           {/* İlerleme Çubuğu */}
-          <div className="w-48 h-1 rounded-full bg-slate-800/60 overflow-hidden mt-3 backdrop-blur-xs">
+          <div
+            className={cn(
+              "w-48 h-1 rounded-full bg-slate-800/60 overflow-hidden backdrop-blur-xs transition-opacity duration-700",
+              scrollProgress >= 0.95 ? "opacity-0 pointer-events-none" : "opacity-100"
+            )}
+          >
             <div
               className="h-full bg-gradient-to-r from-slate-400 via-sky-400 to-slate-200 transition-all duration-75"
               style={{ width: `${Math.round(scrollProgress * 100)}%` }}

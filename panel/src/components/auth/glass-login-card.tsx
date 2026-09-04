@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useState, useRef, useEffect, type FormEvent } from "react"
 import { Loader2 } from "lucide-react"
 import { useTranslation } from "@/components/language-provider"
 
@@ -15,9 +15,10 @@ export function GlassLoginCard({ progress }: GlassLoginCardProps) {
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const usernameInputRef = useRef<HTMLInputElement>(null)
 
   // 🌪️ KASIRGA (VORTEX) GİRİŞ EŞİĞİ
-  // Scroll 0.74'te başlar, 0.88'de tam merkeze oturur ve dönüş durur
+  // 0.74'te başlar, 0.88'de tam merkeze oturur ve dönüş durur
   const appearStart = 0.74
   const appearEnd = 0.88
   const normalizedProgress = Math.min(
@@ -27,6 +28,16 @@ export function GlassLoginCard({ progress }: GlassLoginCardProps) {
 
   const isVisible = normalizedProgress > 0.01
   const isInteractive = normalizedProgress > 0.7
+
+  // Kart oturduğunda kullanıcı adına otomatik odaklan
+  useEffect(() => {
+    if (isInteractive && usernameInputRef.current) {
+      const timer = setTimeout(() => {
+        usernameInputRef.current?.focus()
+      }, 200)
+      return () => clearTimeout(timer)
+    }
+  }, [isInteractive])
 
   // Kasırgadan dönerek çıkış parametreleri
   const remaining = 1 - normalizedProgress
@@ -113,6 +124,7 @@ export function GlassLoginCard({ progress }: GlassLoginCardProps) {
               {t("auth.usernameLabel")}
             </label>
             <input
+              ref={usernameInputRef}
               id="username"
               type="text"
               autoComplete="username"

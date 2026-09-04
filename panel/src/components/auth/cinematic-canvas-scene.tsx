@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react"
 
 interface CinematicCanvasSceneProps {
   onProgress?: (progress: number) => void
+  targetProgress?: number | null
 }
 
 interface Star {
@@ -36,13 +37,15 @@ interface StormMistBand {
   hueType: "mist" | "cyan" | "white"
 }
 
-export function CinematicCanvasScene({ onProgress }: CinematicCanvasSceneProps) {
+export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCanvasSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const helmImgRef = useRef<HTMLImageElement | null>(null)
 
-  // Scroll & Lerp Değişkenleri
+  // Otomatik Süzülüş & İlerleme Değişkenleri
   const progressRef = useRef(0)
   const targetProgressRef = useRef(0)
+  const autoGlideRef = useRef(true)
+  const startTimeRef = useRef<number | null>(null)
   const animFrameRef = useRef<number | null>(null)
 
   // ═══ 1. LOGO DÜMEN RESMİ ÖN YÜKLEME ═══
@@ -54,23 +57,15 @@ export function CinematicCanvasScene({ onProgress }: CinematicCanvasSceneProps) 
     }
   }, [])
 
-  // ═══ 2. SCROLL DİNLENMESİ ═══
+  // ═══ 2. DIŞARIDAN BELİRLENEN HEDEF İLERLEME DEĞİŞİKLİĞİ ═══
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY || window.pageYOffset || 0
-      const maxScroll = Math.max(
-        1,
-        document.documentElement.scrollHeight - window.innerHeight
-      )
-      const rawProgress = Math.min(1, Math.max(0, scrollY / maxScroll))
-      targetProgressRef.current = rawProgress
+    if (typeof targetProgress === "number") {
+      autoGlideRef.current = false
+      targetProgressRef.current = targetProgress
+      // Hızlı geçişte anında hedef değere git
+      progressRef.current = targetProgress
     }
-
-    window.addEventListener("scroll", handleScroll, { passive: true })
-    handleScroll()
-
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+  }, [targetProgress])
 
   // ═══ 3. KANVAS FİZİK & GRAFİK MOTORU (60/120 FPS) ═══
   useEffect(() => {
@@ -161,13 +156,40 @@ export function CinematicCanvasScene({ onProgress }: CinematicCanvasSceneProps) 
       lastTime = now
       globalTime += dt
 
-      // Delta-time sönümleme (120Hz/60Hz akıcı geçiş)
-      const diff = targetProgressRef.current - progressRef.current
-      if (Math.abs(diff) > 0.0001) {
-        const damping = 1 - Math.exp(-dt * 3.6)
-        progressRef.current += diff * damping
+      // ── Otomatik Süzülüş (Giriş yapıldığı an sinematik aşağı akış) ──
+      if (autoGlideRef.current) {
+        if (startTimeRef.current === null) {
+          startTimeRef.current = now
+        }
+        const elapsed = now - startTimeRef.current
+        const INITIAL_PAUSE = 400 // ms: ilk sahnenin kısa nefes süresi
+        const DURATION = 2100 // ms: akıcı, sinematik dalış süresi
+
+        if (elapsed < INITIAL_PAUSE) {
+          targetProgressRef.current = 0
+          progressRef.current = 0
+        } else {
+          const t = Math.min(1, Math.max(0, (elapsed - INITIAL_PAUSE) / DURATION))
+          // Pürüzsüz cubic ease-in-out eğrisi
+          const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+          targetProgressRef.current = eased
+          progressRef.current = eased
+
+          if (t >= 1) {
+            autoGlideRef.current = false
+            targetProgressRef.current = 1
+            progressRef.current = 1
+          }
+        }
       } else {
-        progressRef.current = targetProgressRef.current
+        // Delta-time sönümleme (120Hz/60Hz akıcı geçiş)
+        const diff = targetProgressRef.current - progressRef.current
+        if (Math.abs(diff) > 0.0001) {
+          const damping = 1 - Math.exp(-dt * 4.5)
+          progressRef.current += diff * damping
+        } else {
+          progressRef.current = targetProgressRef.current
+        }
       }
 
       const p = progressRef.current
