@@ -11,6 +11,7 @@ import {
   LogOut,
   Network,
   Settings,
+  Sparkles,
   Terminal,
   Users,
 } from "lucide-react"
@@ -20,6 +21,8 @@ import { useCurrentUser } from "@/hooks/use-current-user"
 import { useTheme } from "@/components/theme-provider"
 import { useTranslation } from "@/components/language-provider"
 import { useSidebar } from "@/components/sidebar-context"
+import { useSystemVersion } from "@/hooks/use-system-version"
+import { SystemUpdateModal } from "@/components/system-update-modal"
 import { cn } from "@/lib/utils"
 
 const SIDEBAR_KEY = "panel:sidebar-collapsed"
@@ -34,6 +37,8 @@ export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [isSpinning, setIsSpinning] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const { data: versionData } = useSystemVersion()
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
 
   const isDark =
     theme === "dark" ||
@@ -479,6 +484,55 @@ export function AppSidebar() {
           </div>
         </div>
 
+        {/* ── 2.6 SİSTEM GÜNCELLEME BİLDİRİMİ / SÜRÜM BİLGİSİ ── */}
+        <div className={cn("px-3.5 pb-2 transition-all duration-300", effectivelyCollapsed ? "px-2" : "pr-8 pl-3.5")}>
+          {versionData?.hasUpdate ? (
+            <button
+              type="button"
+              onClick={() => setIsUpdateModalOpen(true)}
+              title={`Yeni Sürüm: ${versionData.latestVersion} (Güncellemek için tıklayın)`}
+              className={cn(
+                "w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 transition-all text-xs font-semibold cursor-pointer border shadow-sm group",
+                effectivelyCollapsed ? "justify-center px-0 py-2" : "justify-between"
+              )}
+              style={{
+                background: "linear-gradient(135deg, rgba(234, 179, 8, 0.22), rgba(249, 115, 22, 0.22))",
+                borderColor: "rgba(234, 179, 8, 0.55)",
+                color: "#fef08a",
+                boxShadow: "0 0 12px rgba(234, 179, 8, 0.25)",
+              }}
+            >
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Sparkles className="size-3.5 shrink-0 text-amber-300 animate-pulse" />
+                {!effectivelyCollapsed && (
+                  <span className="truncate text-[11px] font-bold tracking-tight text-amber-200 group-hover:text-white transition-colors">
+                    {versionData.latestVersion} Yayında
+                  </span>
+                )}
+              </div>
+              {!effectivelyCollapsed && (
+                <span className="text-[10px] bg-amber-500/30 text-amber-200 px-1.5 py-0.5 rounded-md uppercase tracking-wider font-mono border border-amber-400/30 shrink-0">
+                  Güncelle
+                </span>
+              )}
+            </button>
+          ) : (
+            !effectivelyCollapsed && (
+              <div className="flex items-center justify-between px-1.5 py-0.5 text-[10.5px] font-mono text-white/40">
+                <span className="tracking-wide">Rudder Cloud</span>
+                <button
+                  type="button"
+                  onClick={() => setIsUpdateModalOpen(true)}
+                  className="hover:text-white/80 transition-colors cursor-pointer text-white/50"
+                  title="Sistem ve Sürüm Detayları"
+                >
+                  {versionData?.currentVersion || "v1.1.0"}
+                </button>
+              </div>
+            )
+          )}
+        </div>
+
         {/* ── 3. ALT PROFİL KARTI (Kavis içine tam oturtulmuş, taşma sıfır) ── */}
         <div
           className={cn(
@@ -542,6 +596,13 @@ export function AppSidebar() {
 
       </div>
     </aside>
+
+    {/* Güncelleme Modal'ı */}
+    <SystemUpdateModal
+      open={isUpdateModalOpen}
+      onOpenChange={setIsUpdateModalOpen}
+      versionData={versionData}
+    />
     </>
   )
 }

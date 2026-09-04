@@ -45,6 +45,8 @@ import { S3ConfigDialog, type S3ConfigView } from "@/components/s3-config-dialog
 import { ThemePalettePicker } from "@/components/theme-palette-picker"
 import { FontPicker } from "@/components/font-picker"
 import { useFontTheme } from "@/lib/font-theme"
+import { useSystemVersion } from "@/hooks/use-system-version"
+import { SystemUpdateModal } from "@/components/system-update-modal"
 
 interface PanelDomainSettings {
   domain: string | null
@@ -395,6 +397,14 @@ export default function SettingsPage() {
   }
 
 
+  const {
+    data: versionData,
+    loading: versionLoading,
+    checking: versionChecking,
+    checkUpdate,
+  } = useSystemVersion()
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
+
   const [openSections, setOpenSections] = useState<{
     language: boolean
     theme: boolean
@@ -402,6 +412,7 @@ export default function SettingsPage() {
     domain: boolean
     s3: boolean
     github: boolean
+    system: boolean
   }>({
     language: false,
     theme: false,
@@ -409,9 +420,10 @@ export default function SettingsPage() {
     domain: false,
     s3: false,
     github: false,
+    system: false,
   })
 
-  const toggleSection = (section: "language" | "theme" | "typography" | "domain" | "s3" | "github") => {
+  const toggleSection = (section: "language" | "theme" | "typography" | "domain" | "s3" | "github" | "system") => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }))
   }
 
@@ -1293,6 +1305,208 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      {/* ═══ 6. SİSTEM & GÜNCELLEMELER KARTI (AÇILIR SEKME) ═══ */}
+      <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden transition-all">
+        {/* Tıklanabilir Başlık Çubuğu */}
+        <div
+          onClick={() => toggleSection("system")}
+          className="flex items-center justify-between p-5 md:p-6 select-none cursor-pointer hover:bg-slate-50/50 dark:hover:bg-[#0c1630]/50 transition-colors"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="size-10 rounded-2xl bg-sky-500/10 text-sky-700 dark:text-sky-400 flex items-center justify-center border border-transparent dark:border-sky-500/20 shadow-2xs shrink-0">
+              <RefreshCw className={cn("size-5", versionChecking && "animate-spin text-sky-500")} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100">
+                  {lang === "en" ? "System & Updates" : "Sistem & Güncellemeler"}
+                </h2>
+                {versionData?.hasUpdate && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 animate-pulse">
+                    <Sparkles className="size-3" />
+                    {lang === "en" ? "Update Available" : "Güncelleme Var"}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
+                {lang === "en"
+                  ? "Rudder Cloud version info, GitHub release tracking, and 1-click self-update."
+                  : "Rudder Cloud sürüm bilgisi, GitHub sürüm takibi ve tek tıkla otomatik güncelleme."}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            {versionData?.hasUpdate ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 font-mono">
+                {versionData.latestVersion}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-[#1e3568]/50 font-mono">
+                <span className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
+                {versionData?.currentVersion || "v1.1.0"}
+              </span>
+            )}
+            <div
+              className={cn(
+                "size-8 rounded-xl flex items-center justify-center border border-slate-200 dark:border-[#16223f] bg-slate-50 dark:bg-[#060a17] text-slate-500 dark:text-slate-300 transition-transform duration-200",
+                openSections.system && "rotate-180 bg-slate-100 dark:bg-[#101c38] text-slate-900 dark:text-blue-300 border-slate-300 dark:border-[#2a4687]"
+              )}
+            >
+              <ChevronDown className="size-4" />
+            </div>
+          </div>
+        </div>
+
+        {/* Açılan Bölüm */}
+        {openSections.system && (
+          <div className="p-5 md:p-6 pt-0 border-t border-slate-100 dark:border-[#16223f] space-y-6 animate-in fade-in-0 duration-200">
+            {/* 1. Sürüm Durum Kartları (Grid) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-4">
+              <div className="p-4 rounded-xl border border-slate-200/80 dark:border-[#16223f] bg-slate-50/60 dark:bg-[#060a17]">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  {lang === "en" ? "Current Version" : "Mevcut Sürüm"}
+                </span>
+                <div className="text-lg font-bold font-mono text-slate-900 dark:text-slate-100 mt-1 flex items-center gap-2">
+                  <span>{versionData?.currentVersion || "v1.1.0"}</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200 dark:bg-[#101c38] text-slate-600 dark:text-slate-300 font-sans">
+                    {lang === "en" ? "Active" : "Aktif"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-slate-200/80 dark:border-[#16223f] bg-slate-50/60 dark:bg-[#060a17]">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  {lang === "en" ? "Latest GitHub Release" : "En Son GitHub Sürümü"}
+                </span>
+                <div className="text-lg font-bold font-mono text-slate-900 dark:text-slate-100 mt-1 flex items-center gap-2">
+                  <span>{versionData?.latestVersion || "—"}</span>
+                  {versionData?.hasUpdate ? (
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-600 dark:text-amber-400 font-sans font-semibold">
+                      {lang === "en" ? "New!" : "Yeni!"}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-sans font-semibold">
+                      {lang === "en" ? "Up to date" : "Güncel"}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-slate-200/80 dark:border-[#16223f] bg-slate-50/60 dark:bg-[#060a17]">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  {lang === "en" ? "Git Commit" : "Git Commit"}
+                </span>
+                <div className="text-sm font-bold font-mono text-slate-900 dark:text-slate-100 mt-1.5 flex items-center gap-1.5">
+                  <GitBranch className="size-3.5 text-slate-400" />
+                  <span>{versionData?.gitInfo?.commit || "HEAD"}</span>
+                  {versionData?.gitInfo?.branch && (
+                    <span className="text-slate-400 font-normal">({versionData.gitInfo.branch})</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Güncelleme Durum Paneli */}
+            {versionData?.hasUpdate ? (
+              <div className="p-5 rounded-2xl border border-amber-300 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-950/20 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="size-9 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <Sparkles className="size-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                        {versionData.releaseName || `${versionData.latestVersion} Güncellemesi Yayında`}
+                      </h3>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                        {lang === "en"
+                          ? `A newer version (${versionData.latestVersion}) is available on GitHub. You can install it directly with 1 click.`
+                          : `GitHub üzerinde daha yeni bir sürüm (${versionData.latestVersion}) mevcut. Tek tıkla otomatik olarak paneli güncelleyebilirsiniz.`}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={() => setIsUpdateModalOpen(true)}
+                    className="h-10 px-5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md shadow-amber-500/20 shrink-0 gap-1.5 cursor-pointer"
+                  >
+                    <Sparkles className="size-4" />
+                    {lang === "en" ? "Update Now" : "Şimdi Güncelle"}
+                  </Button>
+                </div>
+
+                {versionData.releaseNotes && (
+                  <div className="p-3.5 rounded-xl border border-amber-200/80 dark:border-amber-900/40 bg-white/70 dark:bg-[#060a17]/80 text-xs text-slate-700 dark:text-slate-300 font-mono whitespace-pre-wrap max-h-48 overflow-y-auto">
+                    {versionData.releaseNotes}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17]">
+                <div className="flex items-center gap-3.5">
+                  <div className="size-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="size-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                      {lang === "en" ? "System is Up to Date" : "Sisteminiz Güncel"}
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {lang === "en"
+                        ? `You are running the latest version of Rudder Cloud (${versionData?.currentVersion || "v1.1.0"}).`
+                        : `Rudder Cloud'un en son kararlı sürümünü (${versionData?.currentVersion || "v1.1.0"}) çalıştırıyorsunuz.`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={versionChecking}
+                    onClick={() => checkUpdate(true)}
+                    className="h-9 px-3.5 rounded-xl text-xs font-semibold border-slate-200 dark:border-[#1e3568] text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#101c38] gap-1.5 cursor-pointer"
+                  >
+                    <RefreshCw className={cn("size-3.5", versionChecking && "animate-spin text-sky-500")} />
+                    {versionChecking
+                      ? (lang === "en" ? "Checking..." : "Denetleniyor...")
+                      : (lang === "en" ? "Check for Updates" : "Güncellemeleri Denetle")}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* 3. GitHub Depo Bilgisi */}
+            <div className="flex items-center justify-between pt-1 text-xs text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-2">
+                <span>GitHub:</span>
+                <a
+                  href={versionData?.githubUrl || "https://github.com/chtsngn/rudder-cloud"}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sky-600 dark:text-sky-400 font-mono hover:underline inline-flex items-center gap-1"
+                >
+                  chtsngn/rudder-cloud
+                  <ExternalLink className="size-3" />
+                </a>
+              </div>
+              <span className="font-mono text-[11px] text-slate-400">
+                {versionData?.checkedAt
+                  ? `Son Kontrol: ${new Date(versionData.checkedAt).toLocaleTimeString()}`
+                  : ""}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <SystemUpdateModal
+        open={isUpdateModalOpen}
+        onOpenChange={setIsUpdateModalOpen}
+        versionData={versionData}
+      />
     </div>
   )
 }
