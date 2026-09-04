@@ -32,6 +32,7 @@ import {
   RefreshCw,
   Languages,
   Zap,
+  Type,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -42,6 +43,7 @@ import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
 import { S3ConfigDialog, type S3ConfigView } from "@/components/s3-config-dialog"
 import { ThemePalettePicker } from "@/components/theme-palette-picker"
+import { FontPicker } from "@/components/font-picker"
 
 interface PanelDomainSettings {
   domain: string | null
@@ -577,6 +579,25 @@ export default function SettingsPage() {
 
           {/* 9 Renk Ailesi Önizleme Kartları */}
           <ThemePalettePicker />
+        </div>
+
+        {/* İnce Ayırıcı Çizgi */}
+        <div className="border-t border-slate-100 dark:border-[#16223f]" />
+
+        {/* Alt Kısım: Yazı Fontu & Tipografi */}
+        <div className="space-y-3.5">
+          <div>
+            <h3 className="font-heading font-bold text-sm md:text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Type className="size-4 text-sky-500 dark:text-sky-400" />
+              <span>Yazı Fontu & Tipografi</span>
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-sans leading-relaxed">
+              Panel başlıkları, logolar ve kart isimleri için istediğiniz Google Fonts karakterini seçin. Seçtiğiniz font canlı vitrinde test edilebilir ve tüm arayüze anında yansır.
+            </p>
+          </div>
+
+          {/* 5 Font Canlı Önizlemeli Seçim Kartları */}
+          <FontPicker />
         </div>
       </div>
 

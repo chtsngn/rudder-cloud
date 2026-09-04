@@ -24,12 +24,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const langCookie = cookieStore.get("rudder_lang")?.value;
   const initialLang: Language = langCookie === "en" || langCookie === "tr" ? langCookie : "tr";
 
+  const fontCookie = cookieStore.get("rudder_font")?.value;
+  const initialFont = fontCookie || "grenze";
+
   return (
     <html
       lang={initialLang}
       className={`h-full antialiased ${initialTheme === "dark" ? "dark" : ""} palette-default`}
       data-theme={initialTheme}
       data-palette="default"
+      data-font={initialFont}
       style={{ colorScheme: initialTheme }}
       suppressHydrationWarning
     >
@@ -38,7 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           id="rudder-theme-init"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `try{var p=localStorage.getItem('app_color_theme')||'default';document.documentElement.setAttribute('data-palette',p);document.documentElement.classList.remove('palette-default');document.documentElement.classList.add('palette-'+p);var t=localStorage.getItem('rudder:theme');if(t==='light'){document.documentElement.classList.remove('dark');document.documentElement.classList.add('light');document.documentElement.setAttribute('data-theme','light');document.documentElement.style.colorScheme='light'}else{document.documentElement.classList.add('dark');document.documentElement.classList.remove('light');document.documentElement.setAttribute('data-theme','dark');document.documentElement.style.colorScheme='dark'}}catch(e){}`,
+            __html: `try{var p=localStorage.getItem('app_color_theme')||'default';document.documentElement.setAttribute('data-palette',p);document.documentElement.classList.remove('palette-default');document.documentElement.classList.add('palette-'+p);var f=localStorage.getItem('app_font_family')||'grenze';document.documentElement.setAttribute('data-font',f);var t=localStorage.getItem('rudder:theme');if(t==='light'){document.documentElement.classList.remove('dark');document.documentElement.classList.add('light');document.documentElement.setAttribute('data-theme','light');document.documentElement.style.colorScheme='light'}else{document.documentElement.classList.add('dark');document.documentElement.classList.remove('light');document.documentElement.setAttribute('data-theme','dark');document.documentElement.style.colorScheme='dark'}}catch(e){}`,
           }}
         />
         <ThemeProvider initialTheme={initialTheme}>
