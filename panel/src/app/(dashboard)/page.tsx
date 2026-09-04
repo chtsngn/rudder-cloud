@@ -226,7 +226,7 @@ export default function DashboardPage() {
           <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
             {t("nav.home")}
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-sans">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-sans">
             {t("dashboard.subtitle")}
           </p>
         </div>

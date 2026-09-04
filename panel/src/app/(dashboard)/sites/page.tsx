@@ -86,7 +86,7 @@ export default function SitesListPage() {
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-sans">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-sans">
             {t("sites.subtitle")}
           </p>
         </div>

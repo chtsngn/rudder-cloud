@@ -320,9 +320,65 @@ html body .rudder-brand-title *,
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    font-size: 17.2px;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  @media (min-width: 1024px) {
+    html {
+      font-size: 17.6px;
+    }
+  }
   body {
     @apply bg-background text-foreground antialiased;
+    letter-spacing: 0.012em;
   }
+}
+
+/* ═══ MİKRO VE KÜÇÜK YAZI BOYUTU DENGELEMESİ ═══ */
+/* Serif ve dekoratif fontlarda aşırı küçük kalan etiket, rozet ve alt metinleri rahat okunabilir seviyeye yükselt */
+.text-\[9px\] {
+  font-size: 11px !important;
+}
+.text-\[9\.5px\] {
+  font-size: 11.5px !important;
+}
+.text-\[10px\] {
+  font-size: 12px !important;
+}
+.text-\[10\.5px\] {
+  font-size: 12.5px !important;
+}
+.text-\[11px\] {
+  font-size: 13px !important;
+}
+.text-\[11\.5px\] {
+  font-size: 13.5px !important;
+}
+.text-\[12px\] {
+  font-size: 13.8px !important;
+}
+.text-\[12\.5px\] {
+  font-size: 14.2px !important;
+}
+.text-\[13px\] {
+  font-size: 14.8px !important;
+}
+.text-\[14px\] {
+  font-size: 15.6px !important;
+}
+
+/* Kod ve terminal alanlarında harf aralığını kesin olarak sıfırla (VS Code sütun hizalaması) */
+.font-mono,
+.font-mono *,
+.xterm,
+.xterm *,
+code,
+code *,
+kbd,
+pre {
+  letter-spacing: normal !important;
 }
 
 /* ═══ DİNAMİK RENK TEMASI EŞLEMELERİ (YALNIZCA ÖZEL RENK PALETİ SEÇİLDİĞİNDE UYGULANIR) ═══ */

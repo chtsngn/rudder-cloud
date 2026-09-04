@@ -445,7 +445,7 @@ export default function SettingsPage() {
             <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-[#580619] dark:text-slate-100">
               {t("settings.title")}
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-sans mt-0.5">
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-sans mt-0.5">
               {t("settings.subtitle")}
             </p>
           </div>

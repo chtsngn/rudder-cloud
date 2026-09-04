@@ -223,7 +223,7 @@ function UsersContent() {
                 {users.length}
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-sans mt-0.5">
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-sans mt-0.5">
               {t("users.subtitle")}
             </p>
           </div>
