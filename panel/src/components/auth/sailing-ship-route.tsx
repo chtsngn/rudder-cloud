@@ -14,9 +14,9 @@ interface RippleRing {
 export function SailingShipRoute() {
   const pathRef = useRef<SVGPathElement>(null)
   const [ship, setShip] = useState({
-    x: 140,
-    y: 115,
-    angle: -10,
+    x: 365,
+    y: 165,
+    angle: 0,
     opacity: 1,
   })
   const [ripples, setRipples] = useState<RippleRing[]>([])
@@ -30,7 +30,7 @@ export function SailingShipRoute() {
 
   useEffect(() => {
     let animFrame: number
-    let progress = 0.1 // Rotanın ortasından, hemen görünür başlar
+    let progress = 0.5 // Rotanın tam ortasından başlar
     let lastRippleTime = 0
 
     const update = (time: number) => {
