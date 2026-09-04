@@ -79,9 +79,9 @@ export function GlassLoginCard({ progress }: GlassLoginCardProps) {
         filter: blur > 0.5 ? `blur(${blur}px)` : "none",
         pointerEvents: isInteractive ? "auto" : "none",
         visibility: isVisible ? "visible" : "hidden",
-        willChange: "transform, opacity, filter",
+        willChange: "transform, opacity",
       }}
-      className="relative z-30 w-full max-w-md transition-all duration-75 ease-out px-4"
+      className="relative z-30 w-full max-w-md px-4"
     >
       {/* ── Lüks Buzlu Obsidyen Gece Camı (Kahverengisiz, Saf Gece Tonları) ── */}
       <div className="relative overflow-hidden rounded-3xl backdrop-blur-2xl bg-slate-950/70 border border-slate-700/60 shadow-[0_25px_80px_rgba(0,0,0,0.95),0_0_50px_rgba(30,41,59,0.5)] p-7 md:p-8 space-y-6">

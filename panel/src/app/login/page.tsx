@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import Image from "next/image"
 import { Compass, FastForward } from "lucide-react"
 import { useTranslation } from "@/components/language-provider"
@@ -14,6 +14,12 @@ export default function LoginPage() {
   const { lang, setLang, t } = useTranslation()
   const [scrollProgress, setScrollProgress] = useState(0)
   const [targetProgress, setTargetProgress] = useState<number | null>(null)
+
+  // Gemi görselini tarayıcı bellek önbelleğine anında al
+  useEffect(() => {
+    const preloadImg = new window.Image()
+    preloadImg.src = "/sailing-ship-real.png"
+  }, [])
 
   // Süzülüş ilerlemesi değiştikçe state güncelle
   const handleProgress = useCallback((progress: number) => {
@@ -146,7 +152,7 @@ export default function LoginPage() {
               transform: `translate3d(0, ${scrollProgress * -70}px, 0)`,
               display: isIntroVisible ? "flex" : "none",
             }}
-            className="hidden md:flex flex-1 items-center justify-end select-none pointer-events-none pr-10 lg:pr-20"
+            className="hidden sm:flex flex-1 items-center justify-end select-none pointer-events-none pr-4 md:pr-10 lg:pr-20"
           >
             <SailingShipRoute />
           </div>

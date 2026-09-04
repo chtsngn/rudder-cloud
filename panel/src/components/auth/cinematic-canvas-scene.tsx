@@ -37,6 +37,29 @@ interface StormMistBand {
   hueType: "mist" | "cyan" | "white"
 }
 
+// GPU için önceden rasterize edilmiş yumuşak duman/sis sprite üretici
+function createPuffSprite(
+  stops: [number, string][],
+  size = 128
+): HTMLCanvasElement | null {
+  if (typeof document === "undefined") return null
+  const c = document.createElement("canvas")
+  c.width = size
+  c.height = size
+  const ctx = c.getContext("2d")
+  if (!ctx) return null
+  const half = size / 2
+  const grad = ctx.createRadialGradient(half, half, 0, half, half, half)
+  for (const [pos, col] of stops) {
+    grad.addColorStop(pos, col)
+  }
+  ctx.fillStyle = grad
+  ctx.beginPath()
+  ctx.arc(half, half, half, 0, Math.PI * 2)
+  ctx.fill()
+  return c
+}
+
 export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCanvasSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const helmImgRef = useRef<HTMLImageElement | null>(null)
@@ -44,6 +67,7 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
   // Otomatik Süzülüş & İlerleme Değişkenleri
   const progressRef = useRef(0)
   const targetProgressRef = useRef(0)
+  const lastReportedProgressRef = useRef(-1)
   const autoGlideRef = useRef(true)
   const startTimeRef = useRef<number | null>(null)
   const animFrameRef = useRef<number | null>(null)
@@ -67,12 +91,44 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
     }
   }, [targetProgress])
 
-  // ═══ 3. KANVAS FİZİK & GRAFİK MOTORU (60/120 FPS) ═══
+  // ═══ 3. KANVAS FİZİK & GRAFİK MOTORU (60/120 FPS GPU HIZLANDIRMALI) ═══
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext("2d")
     if (!ctx) return
+
+    // Donanım hızlandırmalı önbellek spriteları (Her karede radial gradient hesaplamasını 0'a indirir)
+    const cloudSprite = createPuffSprite([
+      [0, "rgba(30, 41, 59, 1.0)"],
+      [0.4, "rgba(15, 23, 42, 0.65)"],
+      [0.8, "rgba(8, 14, 28, 0.25)"],
+      [1.0, "rgba(0, 0, 0, 0)"],
+    ], 128)
+
+    const mistSprite = createPuffSprite([
+      [0, "rgba(51, 65, 85, 1.0)"],
+      [0.5, "rgba(30, 41, 59, 0.55)"],
+      [1.0, "rgba(0, 0, 0, 0)"],
+    ], 128)
+
+    const cyanSprite = createPuffSprite([
+      [0, "rgba(56, 189, 248, 0.95)"],
+      [0.5, "rgba(14, 116, 144, 0.45)"],
+      [1.0, "rgba(0, 0, 0, 0)"],
+    ], 128)
+
+    const whiteSprite = createPuffSprite([
+      [0, "rgba(226, 232, 240, 1.0)"],
+      [0.6, "rgba(148, 163, 184, 0.5)"],
+      [1.0, "rgba(0, 0, 0, 0)"],
+    ], 128)
+
+    const auraSprite = createPuffSprite([
+      [0, "rgba(56, 189, 248, 0.22)"],
+      [0.4, "rgba(148, 163, 184, 0.15)"],
+      [1.0, "rgba(0, 0, 0, 0)"],
+    ], 256)
 
     // ── A. Yıldızlar ──
     const stars: Star[] = []
@@ -80,6 +136,7 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
     const clouds: CloudPuff[] = []
     // ── C. Kasırga Sis Kuşakları (Harbi Girdap/Kasırga) ──
     const stormMist: StormMistBand[] = []
+    let cachedBgGrad: CanvasGradient | null = null
 
     const initEntities = (w: number, h: number) => {
       // 1. Kristal Yıldızlar
@@ -110,16 +167,14 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
         })
       }
 
-      // 3. Kasırga / Girdap (Çubuksuz, Organik Dönen Sis & Fırtına Kolları)
+      // 3. Kasırga / Girdap (Çubuksuz, Organik Dönen Sis & Fırtına Kolları - 90 Partikül)
       stormMist.length = 0
-      // 4 ana spiral fırtına kolu üzerinde dönen yumuşak sis dumanları
       const arms = 4
-      for (let i = 0; i < 180; i++) {
+      for (let i = 0; i < 90; i++) {
         const armIndex = i % arms
         const baseAngle = (armIndex * (Math.PI * 2)) / arms
         const distRatio = Math.pow(Math.random(), 0.7) // Merkeze doğru yoğunlaşma
         const radialDist = distRatio * (Math.min(w, h) * 0.58) + 25
-        // Logaritmik spiral açısı
         const spiralAngle = baseAngle + distRatio * 3.5 + (Math.random() - 0.5) * 0.4
 
         const typeRand = Math.random()
@@ -129,9 +184,9 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
         stormMist.push({
           armAngle: spiralAngle,
           radialDist,
-          radius: (Math.random() * 38 + 18) * (0.8 + distRatio * 1.2),
-          opacity: Math.random() * 0.18 + 0.08,
-          speed: (0.02 + (1 - distRatio) * 0.04), // Merkeze yakın olanlar daha hızlı döner
+          radius: (Math.random() * 42 + 22) * (0.8 + distRatio * 1.2),
+          opacity: Math.random() * 0.2 + 0.1,
+          speed: (0.02 + (1 - distRatio) * 0.04),
           hueType,
         })
       }
@@ -141,6 +196,13 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       canvas.width = Math.round(window.innerWidth * dpr)
       canvas.height = Math.round(window.innerHeight * dpr)
+
+      // Arka plan gradyanını tek seferlik önbelleğe al
+      cachedBgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height)
+      cachedBgGrad.addColorStop(0, "#010308")
+      cachedBgGrad.addColorStop(0.45, "#030713")
+      cachedBgGrad.addColorStop(1, "#02040b")
+
       initEntities(canvas.width, canvas.height)
     }
 
@@ -163,14 +225,13 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
         }
         const elapsed = now - startTimeRef.current
         const INITIAL_PAUSE = 500 // ms: yukarıdaki bekleme 0.2s azaltılarak 0.5s yapıldı
-        const DURATION = 2800 // ms: aşağı süzülüş uzatıldı, toplam süre 3.3s (0.5s + 2.8s) ile 3-3.5 sn arasında dengelendi
+        const DURATION = 2800 // ms: aşağı süzülüş uzatıldı, toplam süre 3.3s
 
         if (elapsed < INITIAL_PAUSE) {
           targetProgressRef.current = 0
           progressRef.current = 0
         } else {
           const t = Math.min(1, Math.max(0, (elapsed - INITIAL_PAUSE) / DURATION))
-          // Pürüzsüz cubic ease-in-out eğrisi
           const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
           targetProgressRef.current = eased
           progressRef.current = eased
@@ -182,7 +243,6 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
           }
         }
       } else {
-        // Delta-time sönümleme (120Hz/60Hz akıcı geçiş)
         const diff = targetProgressRef.current - progressRef.current
         if (Math.abs(diff) > 0.0001) {
           const damping = 1 - Math.exp(-dt * 4.5)
@@ -194,7 +254,16 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
 
       const p = progressRef.current
       if (onProgress) {
-        onProgress(p)
+        // Parent React ağacını 60 FPS gereksiz re-render'a boğmamak için akıllı eşikleme
+        if (
+          lastReportedProgressRef.current < 0 ||
+          Math.abs(p - lastReportedProgressRef.current) >= 0.007 ||
+          p === 0 ||
+          p === 1
+        ) {
+          lastReportedProgressRef.current = p
+          onProgress(p)
+        }
       }
 
       const w = canvas.width
@@ -205,19 +274,16 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
       ctx.clearRect(0, 0, w, h)
 
       // ════════════════════════════════════════════════════════════
-      // 1. ZİFİRİ DERİN GECE GRADYANI (Kahverengisiz, Saf Gece Mavisi/Obsidyen)
+      // 1. ZİFİRİ DERİN GECE GRADYANI (Önbellekten Hızlı Çizim)
       // ════════════════════════════════════════════════════════════
-      const bgGrad = ctx.createLinearGradient(0, 0, 0, h)
-      bgGrad.addColorStop(0, "#010308")
-      bgGrad.addColorStop(0.45, "#030713")
-      bgGrad.addColorStop(1, "#02040b")
-      ctx.fillStyle = bgGrad
-      ctx.fillRect(0, 0, w, h)
+      if (cachedBgGrad) {
+        ctx.fillStyle = cachedBgGrad
+        ctx.fillRect(0, 0, w, h)
+      }
 
       // ════════════════════════════════════════════════════════════
-      // 2. KRİSTAL YILDIZLAR (Parallax Uzay Kayması)
+      // 2. KRİSTAL YILDIZLAR (CPU Blur Olmadan Doğal Işıltı)
       // ════════════════════════════════════════════════════════════
-      // Scroll %50'ye kadar yıldızlar görünür, bulutlara daldıkça sise karışır
       const starFade = Math.max(0, 1 - p * 2.2)
       if (starFade > 0) {
         for (const s of stars) {
@@ -225,65 +291,58 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
             0.65 + 0.35 * Math.sin(globalTime * s.twinkleSpeed + s.twinklePhase)
           const currentY = (s.y - p * h * s.z * 2.0) % h
           const finalY = currentY < 0 ? currentY + h : currentY
-
-          ctx.beginPath()
-          ctx.arc(s.x, finalY, s.baseSize * twinkle, 0, Math.PI * 2)
-
-          // Saf gümüş ve soğuk buz mavisi ışıltılar
           const alpha = s.z * twinkle * starFade
+
           if (s.z > 0.8) {
+            // Dış yumuşak parlama
+            ctx.fillStyle = `rgba(148, 163, 184, ${alpha * 0.35})`
+            ctx.beginPath()
+            ctx.arc(s.x, finalY, s.baseSize * twinkle * 1.8, 0, Math.PI * 2)
+            ctx.fill()
+
+            // Çekirdek yıldız
             ctx.fillStyle = `rgba(241, 245, 249, ${alpha})`
-            ctx.shadowColor = "rgba(148, 163, 184, 0.7)"
-            ctx.shadowBlur = 3
+            ctx.beginPath()
+            ctx.arc(s.x, finalY, s.baseSize * twinkle, 0, Math.PI * 2)
+            ctx.fill()
           } else {
             ctx.fillStyle = `rgba(203, 213, 225, ${alpha * 0.85})`
-            ctx.shadowBlur = 0
+            ctx.beginPath()
+            ctx.arc(s.x, finalY, s.baseSize * twinkle, 0, Math.PI * 2)
+            ctx.fill()
           }
-          ctx.fill()
         }
-        ctx.shadowBlur = 0
       }
 
       // ════════════════════════════════════════════════════════════
-      // 3. SAHNE 2: BULUTLAR VE SİSLER ARASINDAN GEÇİŞ (ÇİZGİSİZ, SİNEMATİK DALIŞ)
+      // 3. SAHNE 2: BULUTLAR VE SİSLER ARASINDAN GEÇİŞ (GPU Sprite Blit)
       // ════════════════════════════════════════════════════════════
-      // p: 0.15 ile 0.75 arasında kamera devasa bulutların arasından süzülür
-      if (p > 0.12 && p < 0.82) {
-        // Bulut yoğunluğu p = 0.40 civarında zirveye çıkar
+      if (p > 0.12 && p < 0.82 && cloudSprite) {
         const cloudPeak =
           p < 0.42
             ? (p - 0.12) / 0.3
             : Math.max(0, 1 - (p - 0.42) / 0.38)
 
         for (const c of clouds) {
-          // Scroll ilerledikçe bulutlar aşağıdan yukarı ve yanlara açılarak kamerayı geçer
           const verticalOffset = (p - 0.12) * h * (1.2 + c.depth * 1.5)
-          const spreadOutX = (c.xRatio - 0.5) * (p * w * 0.4) // Yanlara açılma
+          const spreadOutX = (c.xRatio - 0.5) * (p * w * 0.4)
           const px = c.xRatio * w + spreadOutX + Math.sin(globalTime * 0.4 + c.phase) * 15
           const py = c.yRatio * h + (h * 0.5) - verticalOffset
 
           const currentRadius = c.baseRadius * (0.9 + (p - 0.12) * 0.8)
-          const grad = ctx.createRadialGradient(
-            px,
-            py,
-            0,
-            px,
-            py,
-            currentRadius
-          )
-
           const alpha = c.opacity * cloudPeak
-          // Puslu gece sis rengi: Soğuk arduvaz grisi ve derin lacivert sis
-          grad.addColorStop(0, `rgba(30, 41, 59, ${alpha * 0.95})`)
-          grad.addColorStop(0.4, `rgba(15, 23, 42, ${alpha * 0.6})`)
-          grad.addColorStop(0.8, `rgba(8, 14, 28, ${alpha * 0.25})`)
-          grad.addColorStop(1, "rgba(0, 0, 0, 0)")
+          if (alpha <= 0.005) continue
 
-          ctx.fillStyle = grad
-          ctx.beginPath()
-          ctx.arc(px, py, currentRadius, 0, Math.PI * 2)
-          ctx.fill()
+          ctx.globalAlpha = Math.min(1, Math.max(0, alpha))
+          ctx.drawImage(
+            cloudSprite,
+            px - currentRadius,
+            py - currentRadius,
+            currentRadius * 2,
+            currentRadius * 2
+          )
         }
+        ctx.globalAlpha = 1.0
       }
 
       // ════════════════════════════════════════════════════════════
@@ -294,17 +353,12 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
         const helmScale = (0.3 + helmFactor * 0.8) * (w < 800 ? 0.72 : 1)
         const helmOpacity = Math.min(1, helmFactor * 1.5)
 
-        // 🛑 KULLANICI İSTEĞİ: "login sayfası ekrana geldikten sonra dönmeye devam etmesin"
-        // p >= 0.86 iken login kartı ekrana oturur ve dümenin dönüşü 0 derecede sabitlenir!
         let rotSpeed = 0
         if (p < 0.86) {
-          // Giriş esnasında dönme hızı
           rotSpeed = Math.pow(helmFactor, 1.8) * 4.2
           currentHelmRotation += rotSpeed * dt
         } else {
-          // Kart oturduktan sonra dönmeyi sönümle ve durdur (hareketsiz / sakin)
           const settleProgress = Math.min(1, (p - 0.86) / 0.08)
-          // Yumuşakça dik konuma (0 veya en yakın spoke açısına) kilitlen
           currentHelmRotation += (0 - (currentHelmRotation % (Math.PI * 2))) * (settleProgress * 0.15)
         }
 
@@ -314,15 +368,10 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
         ctx.scale(helmScale, helmScale)
         ctx.globalAlpha = helmOpacity
 
-        // Dümen Arkası Safir ve Gümüş Işıma Halesi (Kahverengi kaldırıldı!)
-        const auraGrad = ctx.createRadialGradient(0, 0, 20, 0, 0, 250)
-        auraGrad.addColorStop(0, "rgba(56, 189, 248, 0.22)")
-        auraGrad.addColorStop(0.4, "rgba(148, 163, 184, 0.15)")
-        auraGrad.addColorStop(1, "rgba(0, 0, 0, 0)")
-        ctx.fillStyle = auraGrad
-        ctx.beginPath()
-        ctx.arc(0, 0, 250, 0, Math.PI * 2)
-        ctx.fill()
+        // Dümen Arkası Safir ve Gümüş Işıma Halesi (GPU Sprite Blit)
+        if (auraSprite) {
+          ctx.drawImage(auraSprite, -250, -250, 500, 500)
+        }
 
         // Amblem Dümen Görseli
         if (helmImgRef.current && helmImgRef.current.complete) {
@@ -341,58 +390,43 @@ export function CinematicCanvasScene({ onProgress, targetProgress }: CinematicCa
       }
 
       // ════════════════════════════════════════════════════════════
-      // 5. SAHNE 4: GERÇEKÇİ KASIRGA / VORTEX GİRDABI (ÇUBUKSIZ!)
+      // 5. SAHNE 4: GERÇEKÇİ KASIRGA / VORTEX GİRDABI (GPU Sprite Blit)
       // ════════════════════════════════════════════════════════════
-      // Kullanıcı İsteği: "arkada dönen kasırgada çubuklar şeklinde olmasın... harbi kasırga gibi olsun... login sayfası ekrana geldikten sonra dönmeye devam etmesin"
       if (p > 0.58) {
         const vortexFactor = Math.min(1, (p - 0.58) / 0.28) // 0 -> 1
-
-        // Kart ekrana oturduktan sonra (p >= 0.88), kasırga sakinleşir ve hafif arka plan sis aurasına dönüşür
         const isSettled = p >= 0.88
         const stormActivity = isSettled
-          ? Math.max(0.12, 1 - (p - 0.88) * 7.0) // Dönüş hızı neredeyse sıfıra iner
+          ? Math.max(0.12, 1 - (p - 0.88) * 7.0)
           : 1.0
 
         for (const band of stormMist) {
-          // Açıyı döndür (Çubuk yok! Yumuşak dönen sis dumanları)
           band.armAngle += band.speed * vortexFactor * stormActivity
 
-          // Spiral yörünge
           const px = cx + Math.cos(band.armAngle) * band.radialDist
-          const py = cy + Math.sin(band.armAngle) * (band.radialDist * 0.9) // Perspektif basıklığı
+          const py = cy + Math.sin(band.armAngle) * (band.radialDist * 0.9)
 
           const alpha = band.opacity * vortexFactor * (isSettled ? 0.35 : 1.0)
           if (alpha <= 0.005) continue
 
-          const mistGrad = ctx.createRadialGradient(
-            px,
-            py,
-            0,
-            px,
-            py,
-            band.radius
-          )
+          const sprite =
+            band.hueType === "mist"
+              ? mistSprite
+              : band.hueType === "cyan"
+              ? cyanSprite
+              : whiteSprite
 
-          // Soğuk gece renkleri: Puslu fırtına grisi, buz mavisi ve saf beyaz sis
-          if (band.hueType === "mist") {
-            mistGrad.addColorStop(0, `rgba(51, 65, 85, ${alpha * 1.1})`)
-            mistGrad.addColorStop(0.5, `rgba(30, 41, 59, ${alpha * 0.6})`)
-            mistGrad.addColorStop(1, "rgba(0, 0, 0, 0)")
-          } else if (band.hueType === "cyan") {
-            mistGrad.addColorStop(0, `rgba(56, 189, 248, ${alpha * 0.85})`)
-            mistGrad.addColorStop(0.5, `rgba(14, 116, 144, ${alpha * 0.4})`)
-            mistGrad.addColorStop(1, "rgba(0, 0, 0, 0)")
-          } else {
-            mistGrad.addColorStop(0, `rgba(226, 232, 240, ${alpha * 1.3})`)
-            mistGrad.addColorStop(0.6, `rgba(148, 163, 184, ${alpha * 0.5})`)
-            mistGrad.addColorStop(1, "rgba(0, 0, 0, 0)")
+          if (sprite) {
+            ctx.globalAlpha = Math.min(1, Math.max(0, alpha))
+            ctx.drawImage(
+              sprite,
+              px - band.radius,
+              py - band.radius,
+              band.radius * 2,
+              band.radius * 2
+            )
           }
-
-          ctx.fillStyle = mistGrad
-          ctx.beginPath()
-          ctx.arc(px, py, band.radius, 0, Math.PI * 2)
-          ctx.fill()
         }
+        ctx.globalAlpha = 1.0
       }
 
       animFrameRef.current = requestAnimationFrame(renderLoop)
