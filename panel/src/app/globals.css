@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Grenze:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600;1,700&family=Jim+Nightshade&family=Cormorant+Upright:wght@300;400;500;600;700&family=Joan&family=Twinkle+Star&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "./google-fonts.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -150,8 +150,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--app-font-heading, 'Grenze', serif);
+  --font-sans: var(--app-font, 'Grenze', serif);
+  --font-heading: var(--app-font, 'Grenze', serif);
   --font-grenze: 'Grenze', serif;
   --font-jim-nightshade: 'Jim Nightshade', cursive;
   --font-cormorant: 'Cormorant Upright', serif;
@@ -164,42 +164,79 @@
 /* ═══ DİNAMİK YAZI FONTU (TİPOGRAFİ) EŞLEMELERİ ═══ */
 :root,
 [data-font="grenze"] {
-  --font-heading: 'Grenze', serif;
+  --app-font: 'Grenze', serif;
   --app-font-heading: 'Grenze', serif;
+  --font-heading: 'Grenze', serif;
+  --font-sans: 'Grenze', serif;
 }
 [data-font="jim-nightshade"] {
-  --font-heading: 'Jim Nightshade', cursive;
+  --app-font: 'Jim Nightshade', cursive;
   --app-font-heading: 'Jim Nightshade', cursive;
+  --font-heading: 'Jim Nightshade', cursive;
+  --font-sans: 'Jim Nightshade', cursive;
 }
 [data-font="cormorant-upright"] {
-  --font-heading: 'Cormorant Upright', serif;
+  --app-font: 'Cormorant Upright', serif;
   --app-font-heading: 'Cormorant Upright', serif;
+  --font-heading: 'Cormorant Upright', serif;
+  --font-sans: 'Cormorant Upright', serif;
 }
 [data-font="joan"] {
-  --font-heading: 'Joan', serif;
+  --app-font: 'Joan', serif;
   --app-font-heading: 'Joan', serif;
+  --font-heading: 'Joan', serif;
+  --font-sans: 'Joan', serif;
 }
 [data-font="twinkle-star"] {
-  --font-heading: 'Twinkle Star', cursive;
+  --app-font: 'Twinkle Star', cursive;
   --app-font-heading: 'Twinkle Star', cursive;
+  --font-heading: 'Twinkle Star', cursive;
+  --font-sans: 'Twinkle Star', cursive;
 }
 
-.font-heading {
-  font-family: var(--font-heading, 'Grenze', serif) !important;
-}
-
+.font-heading { font-family: var(--app-font, 'Grenze', serif) !important; }
+.font-sans { font-family: var(--app-font, 'Grenze', serif) !important; }
 .font-grenze { font-family: 'Grenze', serif !important; }
 .font-jim-nightshade { font-family: 'Jim Nightshade', cursive !important; }
 .font-cormorant { font-family: 'Cormorant Upright', serif !important; }
 .font-joan { font-family: 'Joan', serif !important; }
 .font-twinkle { font-family: 'Twinkle Star', cursive !important; }
 
+/* ═══ TÜM PANEL VE SAYFALARA DİNAMİK FONT UYGULANMASI ═══ */
+/* Sol üstteki 'RUDDER' logo yazısı ve kod/terminal alanları hariç her yere uygulanır */
+html,
+body,
+button,
+input,
+select,
+textarea,
+p,
+a:not(:has(.rudder-brand-title)),
+h1, h2, h3, h4, h5, h6,
+label,
+li,
+td,
+th {
+  font-family: var(--app-font, 'Grenze', serif) !important;
+}
+
+/* Kod blokları ve terminal alanları daima JetBrains Mono kalır */
+code, kbd, samp, pre, .font-mono, [data-terminal], [data-terminal] * {
+  font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+}
+
+/* Sol üstteki RUDDER marka logosu yazısı ASLA değişmez, daima asil Grenze kalır */
+.rudder-brand-title,
+.rudder-brand-title * {
+  font-family: 'Grenze', serif !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground antialiased;
   }
 }
 

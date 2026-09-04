@@ -18,8 +18,11 @@ export function FontPicker() {
             {activeOption.name}
           </div>
           <p
-            style={{ fontFamily: activeOption.family }}
-            className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 truncate"
+            style={{
+              fontFamily: activeOption.family,
+              fontWeight: activeOption.category === "Cursive" || activeOption.id === "joan" ? 400 : 600,
+            }}
+            className="text-base sm:text-lg text-slate-900 dark:text-slate-100 truncate"
           >
             {customText || "Rudder Cloud — Sislerin arasından doğan asil dümen"}
           </p>
@@ -55,8 +58,11 @@ export function FontPicker() {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h4
-                    style={{ fontFamily: font.family }}
-                    className="text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors leading-tight"
+                    style={{
+                      fontFamily: font.family,
+                      fontWeight: font.category === "Cursive" || font.id === "joan" ? 400 : 700,
+                    }}
+                    className="text-lg text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors leading-tight"
                   >
                     {font.name}
                   </h4>
@@ -83,8 +89,11 @@ export function FontPicker() {
 
               {/* Kısa Önizleme Cümlesi */}
               <p
-                style={{ fontFamily: font.family }}
-                className="text-sm font-medium text-slate-700 dark:text-slate-300 my-2.5 line-clamp-1"
+                style={{
+                  fontFamily: font.family,
+                  fontWeight: 400,
+                }}
+                className="text-sm text-slate-700 dark:text-slate-300 my-2.5 line-clamp-1"
               >
                 Rudder Cloud v1.1
               </p>
@@ -111,7 +120,7 @@ export function FontPicker() {
       {/* İnce Bilgi İpucu */}
       <p className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1.5 pt-1">
         <Sparkles className="size-3 text-sky-400 shrink-0" />
-        <span>Seçilen font tüm panel başlıklarına ve butonlarına anında yansır.</span>
+        <span>Seçilen font (sol üst logo hariç) menü, kartlar, pencereler ve tüm sayfalara anında yansır.</span>
       </p>
     </div>
   )

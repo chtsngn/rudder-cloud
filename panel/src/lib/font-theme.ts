@@ -95,10 +95,14 @@ export function applyFont(fontId: string) {
   const root = document.documentElement
 
   root.setAttribute("data-font", font.id)
+  root.style.setProperty("--app-font", font.family)
+  root.style.setProperty("--font-sans", font.family)
   root.style.setProperty("--font-heading", font.family)
   root.style.setProperty("--app-font-heading", font.family)
 
   if (document.body) {
+    document.body.style.setProperty("--app-font", font.family)
+    document.body.style.setProperty("--font-sans", font.family)
     document.body.style.setProperty("--font-heading", font.family)
     document.body.style.setProperty("--app-font-heading", font.family)
   }
