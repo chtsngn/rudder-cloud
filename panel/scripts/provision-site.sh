@@ -332,6 +332,18 @@ NGINX
       [[ "$upstream" =~ ^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~%/-]*)?$ ]] \
         || die "Geçersiz upstream adresi: $upstream"
 
+      # REVERSE_PROXY tipi bir uygulama süreci ÇALIŞTIRMAZ (nginx yalnızca
+      # harici bir URL'e proxy yapar) — bu yüzden diğer tiplerin aksine
+      # (STATIC/PHP/WORDPRESS: yukarıda `${site_root}/public`; NODEJS/PYTHON:
+      # cmd_create_service'in kendi mkdir'i) burada hiçbir zaman bir dizin
+      # OLUŞTURULMUYORDU. Panelin dosya yöneticisi ve olası bir git-clone
+      # (bkz. src/lib/site-paths.ts resolveSiteWorkdir -> defaultSiteRoot)
+      # her zaman `/var/www/<domain>` bekliyor — o yüzden burada da diğer
+      # tiplerle TUTARLI şekilde (bkz. DOCKER case'i) elle oluşturuluyor.
+      local reverse_proxy_root="/var/www/${domain}"
+      mkdir -p "$reverse_proxy_root"
+      chown panel:panel "$reverse_proxy_root" 2>/dev/null || true
+
       cat > "$conf" <<NGINX
 server {
   listen 80;

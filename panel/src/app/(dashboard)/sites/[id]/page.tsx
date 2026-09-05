@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { BusyPortsHint } from "@/components/busy-ports-hint"
 import { SiteAccessCard } from "@/components/site-access-card"
 import { SiteBackupCard } from "@/components/site-backup-card"
 import { SiteGithubKeysCard } from "@/components/site-github-keys-card"
@@ -913,6 +914,8 @@ export default function SiteDetailPage() {
                   {upstreamSaving ? t("sites.detail.updatingBtn") : t("sites.detail.updateBtn")}
                 </Button>
               </div>
+
+              <BusyPortsHint />
 
               {upstreamSaveError && <p className="text-xs text-red-600 dark:text-red-400 font-mono">{upstreamSaveError}</p>}
               {upstreamSaveOk && !upstreamSaveError && (

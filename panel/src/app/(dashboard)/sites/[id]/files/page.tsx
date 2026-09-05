@@ -66,7 +66,6 @@ export default function SiteFilesPage() {
   const siteId = params.id
 
   const [domain, setDomain] = useState<string>("")
-  const [siteNotSupported, setSiteNotSupported] = useState(false)
 
   const [currentPath, setCurrentPath] = useState("")
   const [entries, setEntries] = useState<SiteEntry[]>([])
@@ -103,10 +102,6 @@ export default function SiteFilesPage() {
           cache: "no-store",
         })
         if (!res.ok) {
-          if (res.status === 400) {
-            setSiteNotSupported(true)
-            return
-          }
           setDirError(await parseError(res))
           return
         }
@@ -144,7 +139,6 @@ export default function SiteFilesPage() {
         if (!res.ok) return
         const data = (await res.json()) as { domain: string; type: string }
         if (!cancelled) setDomain(data.domain)
-        if (!cancelled && data.type === "REVERSE_PROXY") setSiteNotSupported(true)
       } catch {
         // sessiz geç — üstteki dizin yüklemesi zaten hatayı gösterecek
       }
@@ -331,21 +325,6 @@ export default function SiteFilesPage() {
   }
 
   const breadcrumbSegments = currentPath ? currentPath.split("/") : []
-
-  if (siteNotSupported) {
-    return (
-      <div className="space-y-4">
-        <BackLink siteId={siteId} />
-        <Card>
-          <CardContent className="pt-6 text-sm text-muted-foreground">
-            {lang === "en"
-              ? "File manager is not supported for this site type (Reverse Proxy sites do not store local files)."
-              : "Bu site türü için dosya yöneticisi desteklenmiyor (Ters Proxy siteleri yerel dosya bulundurmaz)."}
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-6">

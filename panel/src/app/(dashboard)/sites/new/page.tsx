@@ -29,6 +29,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { BusyPortsHint } from "@/components/busy-ports-hint"
 import { cn } from "@/lib/utils"
 import { SITE_TYPES, type SiteType } from "@/lib/mock-data"
 import { uiTypeToDbType, type ApiSite } from "@/lib/site-adapter"
@@ -84,7 +85,7 @@ function buildConfig(type: SiteType, useWww: boolean, useSsl: boolean, sslEmail:
   return config
 }
 
-function typeChecklist(type: SiteType, managed: boolean, hasSsl: boolean, lang: "tr" | "en"): string[] {
+function typeChecklist(type: SiteType, managed: boolean, hasSsl: boolean, lang: "tr" | "en", connectingRepo: boolean): string[] {
   const items: string[] = []
   if (type === "wordpress") {
     items.push(
@@ -106,12 +107,28 @@ function typeChecklist(type: SiteType, managed: boolean, hasSsl: boolean, lang: 
   if (hasSsl) {
     items.push(lang === "en" ? "Requesting SSL certificate (Let's Encrypt)" : "SSL sertifikası isteniyor (Let's Encrypt)")
   }
+  if (connectingRepo) {
+    items.push(lang === "en" ? "Connecting repository and cloning into site root" : "Depo bağlanıyor ve site köküne klonlanıyor")
+  }
   return items
 }
 
 type ProvisionResult =
-  | { ok: true; site: ApiSite }
+  | { ok: true; site: ApiSite; repoConnectError?: string | null }
   | { ok: false; message: string; siteId?: string }
+
+/** `GET /api/settings/github/repos` — GitHub App kurulumlarının izin verdiği depolar. */
+interface InstalledRepoOption {
+  fullName: string
+  private: boolean
+  defaultBranch: string
+  installationId: string
+}
+
+/** Sihirbazda opsiyonel repo bağlama yalnızca git-pull desteklenen tipler için
+ * (bkz. src/lib/git.ts GIT_PULL_TYPES) — STATIC/PHP/WORDPRESS dedicated bir
+ * linux user kullanabildiği için panelin o dizine yazma izni garanti değil. */
+const GIT_CONNECTABLE_TYPES: SiteType[] = ["nodejs", "python", "proxy"]
 
 function getTypeIcon(type: SiteType) {
   switch (type) {
@@ -143,7 +160,27 @@ export default function NewSitePage() {
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<ProvisionResult | null>(null)
 
+  // Opsiyonel: sihirbazda GitHub App'e bağlı bir depo seçilebilir (yalnızca
+  // git-pull desteklenen tipler için) — site oluşturulur oluşturulmaz
+  // `github-connect` ile hem bağlanır hem de kök dizine klonlanır.
+  const [installedRepos, setInstalledRepos] = useState<InstalledRepoOption[]>([])
+  const [selectedRepoFullName, setSelectedRepoFullName] = useState("")
+
+  useEffect(() => {
+    let cancelled = false
+    fetch("/api/settings/github/repos", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { repos?: InstalledRepoOption[] } | null) => {
+        if (!cancelled && data?.repos) setInstalledRepos(data.repos)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const typeInfo = SITE_TYPES.find((t) => t.type === selectedType)
+  const canConnectRepo = !!selectedType && GIT_CONNECTABLE_TYPES.includes(selectedType) && installedRepos.length > 0
 
   async function handleCreate() {
     if (!selectedType || !domain.trim()) return
@@ -178,7 +215,35 @@ export default function NewSitePage() {
         return
       }
 
-      setResult({ ok: true, site: data })
+      // Site (ve dolayısıyla kök klasörü) hazır — opsiyonel repo seçildiyse
+      // hemen bağla ve klonla. Bu adımın başarısız olması site oluşturmayı
+      // BAŞARISIZ SAYMAZ — site zaten ayakta, kullanıcı repoyu site detay
+      // sayfasındaki Git & Dağıtım sekmesinden her zaman tekrar bağlayabilir.
+      let repoConnectError: string | null = null
+      if (canConnectRepo && selectedRepoFullName) {
+        const repo = installedRepos.find((r) => r.fullName === selectedRepoFullName)
+        if (repo) {
+          try {
+            const connectRes = await fetch(`/api/sites/${data.id}/github-connect`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                installationId: repo.installationId,
+                repoFullName: repo.fullName,
+                branch: repo.defaultBranch,
+              }),
+            })
+            if (!connectRes.ok) {
+              const connectData = await connectRes.json().catch(() => null)
+              repoConnectError = connectData?.error ?? (lang === "en" ? "Repository connection failed." : "Depo bağlanamadı.")
+            }
+          } catch {
+            repoConnectError = lang === "en" ? "Could not connect to server." : "Sunucuya bağlanılamadı."
+          }
+        }
+      }
+
+      setResult({ ok: true, site: data, repoConnectError })
     } catch {
       setResult({ ok: false, message: lang === "en" ? "Could not connect to server. Please try again." : "Sunucuya bağlanılamadı. Lütfen tekrar deneyin." })
     } finally {
@@ -368,6 +433,33 @@ export default function NewSitePage() {
               )}
 
               <TypeSpecificFields type={typeInfo.type} domain={domain} t={t} lang={lang} />
+
+              {canConnectRepo && (
+                <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-[#16223f]">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {lang === "en" ? "Connect a GitHub repository (optional)" : "Bir GitHub deposu bağla (opsiyonel)"}
+                  </Label>
+                  <select
+                    value={selectedRepoFullName}
+                    onChange={(e) => setSelectedRepoFullName(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl text-xs bg-white dark:bg-[#060a17] border border-slate-200 dark:border-[#16223f] text-slate-900 dark:text-slate-100 font-mono outline-none focus:ring-1 focus:ring-[#c8a87c] dark:focus:ring-[#2a4687]"
+                  >
+                    <option value="">
+                      {lang === "en" ? "— Don't connect a repository —" : "— Depo bağlama —"}
+                    </option>
+                    {installedRepos.map((r) => (
+                      <option key={r.fullName} value={r.fullName}>
+                        {r.private ? "🔒 " : "🌐 "} {r.fullName} ({r.defaultBranch})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {lang === "en"
+                      ? "As soon as the site's folder exists, this repo is cloned straight into it."
+                      : "Sitenin klasörü oluşur oluşmaz bu depo doğrudan içine klonlanır."}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -428,7 +520,7 @@ export default function NewSitePage() {
 
           {result === null ? (
             <div className="space-y-3 py-4">
-              {typeChecklist(typeInfo.type, typeInfo.managed, useSsl, lang).map((item, index) => (
+              {typeChecklist(typeInfo.type, typeInfo.managed, useSsl, lang, canConnectRepo && !!selectedRepoFullName).map((item, index) => (
                 <div key={index} className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-300 font-medium">
                   <span className="size-2 rounded-full bg-[#580619] dark:bg-blue-300 animate-pulse" />
                   {item}
@@ -444,6 +536,13 @@ export default function NewSitePage() {
                   <>Tebrikler! <strong>{result.site.domain}</strong> başarıyla yapılandırıldı ve sunucunuzda çalışıyor.</>
                 )}
               </div>
+              {result.repoConnectError && (
+                <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/60 p-4 text-xs text-amber-800 dark:text-amber-300">
+                  {lang === "en"
+                    ? `Site created, but the repository could not be connected: ${result.repoConnectError} You can retry from the site's Git & Deployment tab.`
+                    : `Site oluşturuldu ama depo bağlanamadı: ${result.repoConnectError} Sitenin Git & Dağıtım sekmesinden tekrar deneyebilirsiniz.`}
+                </div>
+              )}
               <div className="flex justify-end gap-3">
                 <Button asChild variant="outline" className="h-10 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300 dark:hover:bg-[#111f40]">
                   <Link href="/sites">{t("sites.wizard.listBtn")}</Link>
@@ -500,6 +599,7 @@ function TypeSpecificFields({
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="port" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.appPort")}</Label>
               <Input id="port" defaultValue="3000" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
+              <BusyPortsHint />
             </div>
           </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 font-sans">
@@ -522,6 +622,7 @@ function TypeSpecificFields({
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="port" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.appPort")}</Label>
               <Input id="port" defaultValue="8000" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
+              <BusyPortsHint />
             </div>
           </div>
         </div>
@@ -576,6 +677,7 @@ function TypeSpecificFields({
         <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-[#16223f]">
           <Label htmlFor="target-url" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.upstreamUrl")}</Label>
           <Input id="target-url" placeholder="http://127.0.0.1:8080" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
+          <BusyPortsHint />
         </div>
       )
     case "docker":
@@ -600,6 +702,7 @@ function TypeSpecificFields({
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 {lang === "en" ? "Port the container exposes (nginx proxies to this)." : "Konteynerin yayınladığı port (nginx bu porta proxy yapar)."}
               </p>
+              <BusyPortsHint />
             </div>
             <div className="space-y-2">
               <Label htmlFor="docker-service" className="text-xs font-bold text-slate-700 dark:text-slate-300">

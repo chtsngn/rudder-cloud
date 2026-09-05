@@ -14,6 +14,7 @@ import {
   Sparkles,
   Terminal,
   Users,
+  Zap,
 } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -23,6 +24,7 @@ import { useTranslation } from "@/components/language-provider"
 import { useSidebar } from "@/components/sidebar-context"
 import { useSystemVersion } from "@/hooks/use-system-version"
 import { SystemUpdateModal } from "@/components/system-update-modal"
+import { QuickCommandsDialog } from "@/components/quick-commands-dialog"
 import { APP_VERSION } from "@/lib/version"
 import { cn } from "@/lib/utils"
 
@@ -38,6 +40,7 @@ export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [isSpinning, setIsSpinning] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [quickCommandsOpen, setQuickCommandsOpen] = useState(false)
   const { data: versionData } = useSystemVersion()
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
 
@@ -403,7 +406,40 @@ export function AppSidebar() {
               </Link>
             )
           })}
+
+          {/* Hızlı Komutlar — Aşama I'in temeli (bkz. quick-commands-dialog.tsx).
+              Bir Link DEĞİL, bir dialog açan buton olduğu için nav listesinin
+              kendi map'inin dışında, ayrı bir <button> olarak eklendi. Site
+              oluşturma zaten SUPER_ADMIN-only olduğu için (bkz. docs/ARCHITECTURE.md
+              Aşama G) buradaki komutlar da şimdilik SUPER_ADMIN'e görünür. */}
+          {user?.role === "SUPER_ADMIN" && (
+            <button
+              type="button"
+              onClick={() => setQuickCommandsOpen(true)}
+              title={effectivelyCollapsed ? (lang === "en" ? "Quick Commands" : "Hızlı Komutlar") : undefined}
+              className={cn(
+                "relative flex items-center gap-3.5 font-medium transition-all duration-200 group cursor-pointer text-white/80 hover:text-white hover:bg-white/[0.08]",
+                effectivelyCollapsed
+                  ? "justify-center rounded-xl p-3 size-12"
+                  : "rounded-l-xl rounded-r-md px-4 py-3"
+              )}
+            >
+              <Zap
+                className={cn(
+                  "shrink-0 transition-all duration-200 group-hover:scale-110 text-white/80",
+                  effectivelyCollapsed ? "size-5" : "size-[19px]"
+                )}
+              />
+              {!effectivelyCollapsed && (
+                <span className="text-[14px] tracking-wide font-sans font-normal">
+                  {lang === "en" ? "Quick Commands" : "Hızlı Komutlar"}
+                </span>
+              )}
+            </button>
+          )}
         </nav>
+
+        <QuickCommandsDialog open={quickCommandsOpen} onOpenChange={setQuickCommandsOpen} />
 
         {/* ── 2.5 DİL GEÇİŞ DÜĞMESİ (TR | EN) ── */}
         <div className={cn("px-3.5 pb-2 transition-all duration-300", effectivelyCollapsed ? "px-2" : "pr-8 pl-3.5")}>

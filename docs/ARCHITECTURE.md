@@ -707,6 +707,81 @@ GitHub hesabıyla App oluşturma/kurma akışının tam GitHub arayüzü — bu,
 tanım gereği admin'in kendi GitHub hesabıyla, gerçek bir tarayıcı oturumunda
 yapması gereken bir adım.
 
+### 2026-09-05 güncellemesi: Aşama I — site klasör tutarlılığı, sihirbazda opsiyonel repo bağlama, meşgul port ipuçları, Hızlı Komutlar temeli
+
+Kullanıcıdan gelen 5 istekten 4'ü bu turda tamamlandı (5.si — terminal RBAC'ının
+site bazlı sınırlandırılması — gerçek bir güvenlik izolasyonu (chroot/container)
+mi yoksa yalnızca kolaylık amaçlı bir sınırlama mı istendiğine dair kullanıcıyla
+netleştirilmesi gerektiği için kasıtlı olarak ERTELENDİ, bkz. proje hafızası
+`project_v1.2.4_pending_fixes.md`).
+
+**1) Her site türü artık gerçekten bir klasöre sahip:** `REVERSE_PROXY`
+(`provision-site.sh` → `cmd_create_vhost`) hiçbir zaman bir dizin/kullanıcı
+oluşturmuyordu (NODEJS/PYTHON'un aksine — onlar `cmd_create_service` üzerinden
+kendi çalışma dizinini zaten oluşturuyordu). Artık DOCKER case'indeki
+`mkdir -p` + `chown panel:panel` deseniyle TUTARLI şekilde `/var/www/<domain>`
+oluşturuluyor. Ayrıca `src/lib/site-paths.ts`'in `resolveSiteWorkdir`'ı
+`DOCKER` tipini hiç TANIMIYORDU (`default: return null`) — `config.workingDir`
+zaten saklanıyordu (bkz. `POST /api/sites` DOCKER planı) ama okunmuyordu; bu
+da Dosya Yöneticisi'nin DOCKER sitelerinde de (REVERSE_PROXY'de olduğu gibi)
+"desteklenmiyor" hatası vermesine yol açıyordu. İkisi de NODEJS/PYTHON'un
+kullandığı case'e eklendi. Dosya yöneticisi sayfasındaki (`sites/[id]/files/page.tsx`)
+REVERSE_PROXY'e özel sabit kodlanmış engelleme TAMAMEN kaldırıldı — artık
+tek bir genel güvenlik ağı var: backend (`site-fs.ts`) hangi sebeple olursa
+olsun 400 dönerse gerçek hata mesajı `dirError` olarak gösteriliyor (önceden
+yalnızca REVERSE_PROXY için "desteklenmiyor" diye SESSİZCE farklı bir mesaj
+gösteren ayrı bir state (`siteNotSupported`) vardı, artık yok).
+
+**2) Site sihirbazında opsiyonel GitHub repo bağlama:** yalnızca git-pull
+desteklenen 3 tip için (`nodejs/python/proxy` — bkz. `src/lib/git.ts`
+`GIT_PULL_TYPES`; STATIC/PHP/WORDPRESS dedicated bir linux user
+kullanabildiği için KASITLI olarak dışarıda bırakıldı, aynı Aşama B/H
+gerekçesi) ve yalnızca bir GitHub App kurulumu varsa (`/api/settings/github/repos`
+boş dönmüyorsa), 2. adımda bir depo seçici beliriyor. Site oluşturulduktan
+HEMEN SONRA (`POST /api/sites` başarılı olduktan sonra, aynı `handleCreate`
+içinde) `POST /api/sites/[id]/github-connect` çağrılıp hem bağlanıyor hem de
+kök dizine klonlanıyor — repo bağlama adımının başarısız olması site
+oluşturmayı BAŞARISIZ SAYMIYOR (ayrı bir `repoConnectError`, kullanıcı site
+detayından tekrar deneyebilir).
+
+**3) Meşgul port ipuçları:** yeni `src/components/busy-ports-hint.tsx` —
+mevcut `GET /api/system/ports`'u (Aşama A, kendi port tespiti YOK) yeniden
+kullanan, port giren HER yere eklenebilen küçük bir bileşen. Bu uç nokta
+KASITLI olarak SUPER_ADMIN-only (dinlenen portlar sistem bilgisi sızdırır)
+ama zaten yalnızca SUPER_ADMIN site oluşturabildiği için (Aşama G) ek bir
+sızıntı değil; bir MEMBER'a 403 dönerse bileşen SESSİZCE hiçbir şey
+göstermez. Eklendiği yerler: site sihirbazının Node.js/Python/Ters
+Proxy/Docker adımlarındaki port alanları + site detay sayfasının Ters Proxy
+"hedef adres" düzenleyicisi.
+
+**4) "Hızlı Komutlar" — Aşama 5'in (gelecekteki AI entegrasyonu) temeli:**
+yeni `src/components/quick-commands-dialog.tsx`, kenar çubuğuna (SUPER_ADMIN-only,
+zira tek komut site oluşturuyor) eklenen bir buton ile açılıyor. Tasarım
+KASITLI: her komut ZATEN gerçek API'yi çağıran bağımsız bir `run()`
+fonksiyonu — ileride bir AI dispatcher'ı (MCP-tarzı, niyet → araç çağrısı)
+bu fonksiyonları DOĞRUDAN çağırabilsin diye, UI'ı yeniden yazmaya gerek
+kalmadan. Şimdilik tek gerçek komut: "Ters Proxy Sitesi Oluştur" (domain +
+port → `POST /api/sites`). Gerçek uçtan uca testte bulunup düzeltilen bir
+hata: `POST /api/sites` provizyon (nginx/systemd) başarısız olsa bile 200 ve
+bir site kaydı döner (gerçek sonuç `status: "FAILED"` alanında, bkz.
+`sites/new/page.tsx`'in wizard'daki AYNI kontrolü) — `run()` başta yalnızca
+`res.ok`'a bakıyordu, bu yüzden başarısız bir provizyonu "başarılı" diye
+gösteriyordu; `data.status === "FAILED"` kontrolü eklenip gerçek
+`provisionError` mesajı yüzeye çıkarıldı. Bu hata, Mac üzerinde gerçek
+`sudo provision-site.sh` çağrısının (parola/terminal olmadığı için) başarısız
+olmasıyla test sırasında GERÇEKTEN yakalandı — mock bir testte fark edilmezdi.
+
+**Doğrulama:** gerçek Postgres 16 + Docker konteynerleri (port tespiti için)
+ile uçtan uca: `/api/system/ports` gerçek docker port eşlemelerini
+(`ss` macOS'ta yok, yalnızca `docker ps` yoluyla) doğru döndü; sihirbazda
+Node.js adımında meşgul port ipucu gerçek verilerle render edildi; elle
+oluşturulmuş bir dizini olan bir REVERSE_PROXY sitesinin dosya yöneticisi
+artık "desteklenmiyor" DEMEDEN dizini gerçekten listeledi; Hızlı Komutlar
+diyaloğu gerçek bir site oluşturma isteği gönderdi, provizyon Mac'te
+(beklendiği gibi) başarısız oldu ve bu YUKARIDAKİ bug'ı ortaya çıkardı,
+düzeltme sonrası aynı senaryo doğru şekilde hata olarak raporlandı. `next
+typegen`/`tsc --noEmit`/`eslint`/`npm run build` — yeni kodda ek hata yok.
+
 ## Klasör Yapısı (bu repo)
 
 ```
