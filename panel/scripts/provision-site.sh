@@ -154,6 +154,13 @@ ensure_linux_user() {
     adduser --disabled-password --gecos "" --home "$home_dir" "$user" >/dev/null
     msg "Linux kullanıcısı oluşturuldu: ${user}"
   fi
+  # `siteusers` grubu (doctor.sh tarafından oluşturulur) — panelin site
+  # bazlı terminal izolasyonu (bkz. doctor.sh Aşama I notu, server.mjs)
+  # yalnızca BU gruptaki kullanıcılara sudo izni veriyor; her dedicated site
+  # kullanıcısı burada eklenir ki MEMBER'lara TERMINAL izni verilebilsin.
+  # Grup henüz yoksa (eski bir doctor.sh ile kurulmuş sunucu) sessizce atla —
+  # terminal özelliği o durumda devre dışı kalır, provisioning'i engellemez.
+  usermod -aG siteusers "$user" 2>/dev/null || true
 }
 
 # ------------------------------------------------------------

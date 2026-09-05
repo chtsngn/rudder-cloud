@@ -16,6 +16,7 @@ const VALID_PERMISSIONS = new Set<SitePermission>([
   "DELETE",
   "MANAGE_BACKUPS",
   "MANAGE_DEPLOY_KEYS",
+  "TERMINAL",
 ])
 
 /**

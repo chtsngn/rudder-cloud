@@ -91,26 +91,79 @@ function parseCookie(header, name) {
   return null
 }
 
-async function isAuthorizedTerminalRequest(req) {
+/**
+ * `STATIC`/`PHP`/`WORDPRESS` siteleri için `resolveSiteWorkdir`'ın
+ * (`src/lib/site-paths.ts`) AYNI kuralının kasıtlı bir kopyası — bu dosya
+ * derleme zincirinden geçmediği için (bkz. dosya başlığı) o TypeScript
+ * modülü buraya import EDİLEMEZ. Yalnızca dedicated linux user'ı olabilen
+ * bu üç tip için anlamlı: `ensure_linux_user` (provision-site.sh) yalnızca
+ * bunlarda çağrılıyor, dolayısıyla site-scoped terminal de yalnızca bunlarla
+ * sınırlı.
+ */
+function resolveMemberSiteWorkdir(site) {
+  const cfg = site.config && typeof site.config === "object" ? site.config : {}
+  const siteRoot = typeof cfg.siteRoot === "string" && cfg.siteRoot ? cfg.siteRoot : `/var/www/${site.domain}`
+  return `${siteRoot}/public`
+}
+
+/**
+ * Terminal WS bağlantısı için tam yetkilendirme kararı. SUPER_ADMIN her
+ * zaman tam bir ROOT kabuğu alır (mevcut davranış, değişmedi). MEMBER
+ * yalnızca `siteId` sorgu parametresiyle bağlanabilir VE o site için AÇIKÇA
+ * `TERMINAL` izni verilmiş OLMALI VE o sitenin dedicated bir linux
+ * kullanıcısı OLMALI (bkz. docs/ARCHITECTURE.md Aşama I) — üçünden biri
+ * eksikse bağlantı reddedilir, asla "sahte" bir kısıtlamayla (ör. yalnızca
+ * `cwd` ayarlayıp gerçek erişimi kısıtlamadan) devam edilmez.
+ */
+async function resolveTerminalAuthorization(req, siteId) {
   const token = parseCookie(req.headers.cookie, SESSION_COOKIE_NAME)
-  if (!token) return false
+  if (!token) return { authorized: false, reason: "NO_SESSION" }
   let userId
   try {
     const { payload } = await jwtVerify(token, getAuthSecret())
     userId = payload.userId
-    if (typeof userId !== "string") return false
+    if (typeof userId !== "string") return { authorized: false, reason: "NO_SESSION" }
   } catch {
-    return false
+    return { authorized: false, reason: "NO_SESSION" }
   }
+
   try {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } })
-    // Terminal SADECE SUPER_ADMIN'e açık (bkz. yukarıdaki not) — MEMBER
-    // hesapları, kendilerine site bazlı `UserSiteAccess` ile verilmiş
-    // izinlerle sınırlı; ham kabuk erişimi bu modelin tamamen dışında.
-    return user?.role === "SUPER_ADMIN"
+    if (!user) return { authorized: false, reason: "NO_SESSION" }
+
+    if (user.role === "SUPER_ADMIN") {
+      return { authorized: true, mode: "root" }
+    }
+
+    // MEMBER — site-scoped, gerçek izolasyon.
+    if (!siteId) return { authorized: false, reason: "SITE_REQUIRED" }
+
+    const site = await prisma.site.findUnique({ where: { id: siteId } })
+    if (!site) return { authorized: false, reason: "SITE_NOT_FOUND" }
+
+    const access = await prisma.userSiteAccess.findUnique({
+      where: { userId_siteId: { userId, siteId } },
+    })
+    if (!access || !access.permissions.includes("TERMINAL")) {
+      return { authorized: false, reason: "NO_PERMISSION" }
+    }
+
+    const cfg = site.config && typeof site.config === "object" ? site.config : {}
+    const linuxUser = typeof cfg.linuxUser === "string" ? cfg.linuxUser.trim() : ""
+    if (!linuxUser) {
+      return { authorized: false, reason: "NO_DEDICATED_USER" }
+    }
+
+    return {
+      authorized: true,
+      mode: "site",
+      linuxUser,
+      siteId,
+      workdir: resolveMemberSiteWorkdir(site),
+    }
   } catch (error) {
     console.error("Terminal yetki kontrolü başarısız (DB erişilemedi):", error)
-    return false
+    return { authorized: false, reason: "ERROR" }
   }
 }
 
@@ -129,17 +182,20 @@ function resolveShell() {
 }
 
 /**
- * Web terminali ROOT olarak çalışır (bkz. doctor.sh → "Panel sudoers" adım 2
- * — panel kullanıcısına yalnızca bu amaçla şifresiz `sudo /bin/bash`/`/bin/sh`
- * izni verilir). `-n` (non-interactive): sudoers izni eksik/bozuksa
- * parolayı SESSİZCE bekleyip pty'yi asılı bırakmak yerine hemen hata ile
- * döner — `panel` kullanıcısının zaten bir parolası yok (`adduser
- * --disabled-password`), bu yüzden parola tabanlı sudo bu hesapta hiçbir
- * zaman çalışamaz, NOPASSWD tek yoldur. Terminal SADECE SUPER_ADMIN'e açık
- * olduğundan (bkz. isAuthorizedTerminalRequest) bu root erişimi doğrudan
- * panelin en yetkili insan operatörüne devrediliyor.
+ * SUPER_ADMIN için: web terminali ROOT olarak çalışır (bkz. doctor.sh →
+ * "Panel sudoers" adım 2 — panel kullanıcısına yalnızca bu amaçla şifresiz
+ * `sudo /bin/bash`/`/bin/sh` izni verilir). MEMBER için (`auth.mode ===
+ * "site"`): panele YALNIZCA `siteusers` grubundaki kullanıcılar olarak sudo
+ * izni var (doctor.sh adım 3, `(%siteusers)` runas-spec) — root DEĞİL,
+ * sistemdeki BAŞKA bir kullanıcı da DEĞİL, yalnızca panelin kendi
+ * oluşturduğu, ayrıcalıksız dedicated site kullanıcıları. İkisinde de `-n`
+ * (non-interactive): sudoers izni eksik/bozuksa parolayı SESSİZCE bekleyip
+ * pty'yi asılı bırakmak yerine hemen hata ile döner.
  */
-function resolveTerminalCommand() {
+function resolveTerminalCommand(auth) {
+  if (auth.mode === "site") {
+    return { command: "sudo", args: ["-n", "-u", auth.linuxUser, resolveShell()] }
+  }
   return { command: "sudo", args: ["-n", resolveShell()] }
 }
 
@@ -175,21 +231,23 @@ const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_WS_PAYLOAD_BYT
 const livePtys = new Set()
 
 httpServer.on("upgrade", (req, socket, head) => {
-  const { pathname } = parse(req.url || "")
+  const { pathname, query } = parse(req.url || "", true)
   if (pathname !== TERMINAL_WS_PATH) {
     // Next.js'in kendi upgrade ihtiyaçları için dokunmuyoruz — aynı
     // `httpServer` nesnesi yukarıda `next({ httpServer })`'a verildi.
     return
   }
+  const siteId = typeof query.siteId === "string" && query.siteId.trim() ? query.siteId.trim() : null
 
-  isAuthorizedTerminalRequest(req)
-    .then((ok) => {
-      if (!ok) {
+  resolveTerminalAuthorization(req, siteId)
+    .then((auth) => {
+      if (!auth.authorized) {
         socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n")
         socket.destroy()
         return
       }
       wss.handleUpgrade(req, socket, head, (ws) => {
+        ws.terminalAuth = auth
         wss.emit("connection", ws, req)
       })
     })
@@ -205,14 +263,15 @@ wss.on("connection", (ws) => {
     ws.isAlive = true
   })
 
+  const auth = ws.terminalAuth
   let ptyProcess
   try {
-    const { command, args } = resolveTerminalCommand()
+    const { command, args } = resolveTerminalCommand(auth)
     ptyProcess = pty.spawn(command, args, {
       name: "xterm-256color",
       cols: 80,
       rows: 24,
-      cwd: homedir(),
+      cwd: auth.mode === "site" ? auth.workdir : homedir(),
       env: { ...process.env, TERM: "xterm-256color" },
     })
   } catch (error) {

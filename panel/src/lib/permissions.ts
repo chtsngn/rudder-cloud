@@ -21,6 +21,7 @@ export type SitePermission =
   | "DELETE"
   | "MANAGE_BACKUPS"
   | "MANAGE_DEPLOY_KEYS"
+  | "TERMINAL"
 
 /** Kullanıcının rolünü döner (kullanıcı bulunamazsa null — silinmiş/geçersiz
  * oturum durumunda çağıranlar bunu "yetkisiz" olarak ele almalı). */

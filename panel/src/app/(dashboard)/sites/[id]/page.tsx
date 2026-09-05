@@ -1205,7 +1205,10 @@ export default function SiteDetailPage() {
       {/* ── TAB 4: ERİŞİM YETKİLERİ ── */}
       {activeTab === "access" && (
         <div className="space-y-6">
-          <SiteAccessCard siteId={site.id} />
+          <SiteAccessCard
+            siteId={site.id}
+            hasLinuxUser={typeof config.linuxUser === "string" && config.linuxUser.trim().length > 0}
+          />
         </div>
       )}
 

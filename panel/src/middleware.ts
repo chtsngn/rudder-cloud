@@ -66,6 +66,7 @@ export const config = {
     "/audit/:path*",
     "/login",
     "/api/system/:path*",
+    "/api/terminal/:path*",
     "/api/sites/:path*",
     "/api/settings/:path*",
     "/api/users/:path*",

@@ -8,9 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useCurrentUser } from "@/hooks/use-current-user"
 import { useTranslation } from "@/components/language-provider"
 
-type SitePermission = "VIEW" | "EDIT_FILES" | "RESTART" | "DELETE" | "MANAGE_BACKUPS" | "MANAGE_DEPLOY_KEYS"
+type SitePermission = "VIEW" | "EDIT_FILES" | "RESTART" | "DELETE" | "MANAGE_BACKUPS" | "MANAGE_DEPLOY_KEYS" | "TERMINAL"
 
-const ALL_PERMISSIONS: SitePermission[] = [
+const BASE_PERMISSIONS: SitePermission[] = [
   "VIEW",
   "EDIT_FILES",
   "RESTART",
@@ -36,7 +36,13 @@ async function parseError(res: Response): Promise<string> {
  * ayrıca `isSuperAdmin()` kontrolü yapıyor). Sistemde MEMBER rolünde
  * kullanıcı yoksa boş bir durum mesajı gösterir.
  */
-export function SiteAccessCard({ siteId }: { siteId: string }) {
+export function SiteAccessCard({ siteId, hasLinuxUser = false }: { siteId: string; hasLinuxUser?: boolean }) {
+  // TERMINAL izni yalnızca dedicated bir linux kullanıcısı olan sitelerde
+  // (STATIC/PHP/WORDPRESS) ANLAMLI — server.mjs bunu vermeden hiçbir zaman
+  // gerçek bir terminal açmıyor (bkz. docs/ARCHITECTURE.md Aşama I). Diğer
+  // tiplerde bu izni GÖSTERMEK, verilse bile hiçbir şey yapmayacak sahte bir
+  // seçenek sunmak olurdu — o yüzden listeye hiç eklenmiyor.
+  const allPermissions: SitePermission[] = hasLinuxUser ? [...BASE_PERMISSIONS, "TERMINAL"] : BASE_PERMISSIONS
   const { t, lang } = useTranslation()
   const { user: me, loading: meLoading } = useCurrentUser()
 
@@ -116,6 +122,7 @@ export function SiteAccessCard({ siteId }: { siteId: string }) {
     DELETE: lang === "en" ? "Delete files (file manager)" : "Dosya sil (dosya yöneticisi)",
     MANAGE_BACKUPS: lang === "en" ? "Manage backups" : "Yedeklemeleri yönet",
     MANAGE_DEPLOY_KEYS: lang === "en" ? "Manage GitHub keys" : "GitHub anahtarlarını yönet",
+    TERMINAL: lang === "en" ? "Terminal (as this site's Linux user)" : "Terminal (bu sitenin linux kullanıcısı olarak)",
   }
 
   return (
@@ -154,7 +161,7 @@ export function SiteAccessCard({ siteId }: { siteId: string }) {
                 <div key={row.userId} className="space-y-2 rounded-md border border-border p-3">
                   <p className="font-medium text-foreground">{row.username}</p>
                   <div className="grid gap-1.5 sm:grid-cols-2">
-                    {ALL_PERMISSIONS.map((perm) => (
+                    {allPermissions.map((perm) => (
                       <label key={perm} className="flex items-center gap-2 text-sm text-foreground">
                         <input
                           type="checkbox"

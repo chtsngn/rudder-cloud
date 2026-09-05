@@ -55,6 +55,12 @@ enum SitePermission {
   DELETE
   MANAGE_BACKUPS
   MANAGE_DEPLOY_KEYS
+  // Aşama I: web terminaline site-scoped erişim. Yalnızca dedicated bir
+  // linux kullanıcısı olan sitelerde (STATIC/PHP/WORDPRESS) ANLAMLI —
+  // server.mjs bu izni GERÇEK izolasyonla uyguluyor (o kullanıcı olarak
+  // sudo, root DEĞİL). Dedicated user'ı olmayan bir sitede bu izin verilse
+  // bile terminal açılmaz (bkz. src/lib/terminal-access.ts).
+  TERMINAL
 }
 
 model User {

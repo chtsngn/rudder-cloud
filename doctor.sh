@@ -363,6 +363,19 @@ fi
 # var (provision-site.sh'ın kapsamadığı işlemler için). Dosya `visudo -c` ile
 # doğrulanmadan asla kurulmaz (bozuk bir sudoers dosyası tüm sunucuda
 # sudo'yu kilitleyebilir).
+#
+# ÜÇÜNCÜ satır (SITE_USER_TERMINAL_SUDOERS_LINE, Aşama I): bir MEMBER'a
+# yalnızca kendisine `TERMINAL` izniyle açıkça verilmiş, dedicated bir linux
+# kullanıcısı olan (STATIC/PHP/WORDPRESS) bir sitenin terminaline erişim
+# verir — root DEĞİL, doğrudan o sitenin kendi kullanıcısı olarak (bkz.
+# server.mjs resolveTerminalCommand). Bunun GERÇEK bir izolasyon olması için
+# `panel`'e "ANY user" değil, yalnızca `siteusers` GRUBUNDAKİ kullanıcılar
+# olarak sudo izni veriliyor (`(%siteusers)` runas-spec) — her dedicated site
+# kullanıcısı oluşturulurken bu gruba eklenir (bkz. provision-site.sh
+# `ensure_linux_user`). Böylece panel `sudo -u root` veya sistemdeki BAŞKA
+# bir kullanıcı (postgres, www-data, ...) olarak ASLA çalıştıramaz — yalnızca
+# siteusers grubundaki (yani panelin kendi oluşturduğu, ayrıcalıksız site
+# kullanıcıları) hesaplar olarak.
 # ------------------------------------------------------------
 hr
 info "Panel sudoers izinleri hazırlanıyor..."
@@ -370,10 +383,16 @@ PROVISION_SCRIPT="${PANEL_DIR}/scripts/provision-site.sh"
 SUDOERS_FILE="/etc/sudoers.d/panel-provisioning"
 SUDOERS_LINE="${PANEL_USER} ALL=(root) NOPASSWD: ${PROVISION_SCRIPT}"
 TERMINAL_SUDOERS_LINE="${PANEL_USER} ALL=(root) NOPASSWD: /bin/bash, /bin/sh"
+SITE_USER_TERMINAL_SUDOERS_LINE="${PANEL_USER} ALL=(%siteusers) NOPASSWD: /bin/bash, /bin/sh"
+
+info "siteusers grubu hazırlanıyor (site bazlı terminal izolasyonu için)..."
+groupadd -f siteusers
+msg "Grup hazır: siteusers"
 
 if [[ -f "${SUDOERS_FILE}" ]] \
   && grep -qF "${SUDOERS_LINE}" "${SUDOERS_FILE}" 2>/dev/null \
-  && grep -qF "${TERMINAL_SUDOERS_LINE}" "${SUDOERS_FILE}" 2>/dev/null; then
+  && grep -qF "${TERMINAL_SUDOERS_LINE}" "${SUDOERS_FILE}" 2>/dev/null \
+  && grep -qF "${SITE_USER_TERMINAL_SUDOERS_LINE}" "${SUDOERS_FILE}" 2>/dev/null; then
   msg "Sudoers izinleri zaten mevcut: ${SUDOERS_FILE}"
 else
   TMP_SUDOERS="$(mktemp)"
@@ -395,11 +414,18 @@ ${SUDOERS_LINE}
 #    yöneticisi, terminal ona provision-site.sh'ın kapsamadığı işler için
 #    tam kontrol veriyor.
 ${TERMINAL_SUDOERS_LINE}
+#
+# 3) ${PANEL_USER} kullanıcısına, YALNIZCA siteusers grubundaki kullanıcılar
+#    olarak (root veya başka bir sistem kullanıcısı OLARAK DEĞİL) şifresiz
+#    kabuk izni verir — bir MEMBER'a site bazlı, gerçekten izole terminal
+#    erişimi için (bkz. server.mjs, yalnızca TERMINAL izni verilmiş VE
+#    dedicated linux kullanıcısı olan siteler için kullanılır).
+${SITE_USER_TERMINAL_SUDOERS_LINE}
 EOF
   if visudo -c -f "${TMP_SUDOERS}" >/dev/null 2>&1; then
     install -o root -g root -m 0440 "${TMP_SUDOERS}" "${SUDOERS_FILE}"
     rm -f "${TMP_SUDOERS}"
-    msg "Sudoers izinleri kuruldu: ${SUDOERS_FILE} (${PANEL_USER} -> ${PROVISION_SCRIPT} + root terminal, şifresiz)"
+    msg "Sudoers izinleri kuruldu: ${SUDOERS_FILE} (${PANEL_USER} -> ${PROVISION_SCRIPT} + root terminal + siteusers terminal, şifresiz)"
   else
     rm -f "${TMP_SUDOERS}"
     die "sudoers dosyası doğrulanamadı (visudo -c başarısız) — güvenlik nedeniyle kurulum durduruldu, hiçbir şey değiştirilmedi."

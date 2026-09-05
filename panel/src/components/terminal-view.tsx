@@ -89,9 +89,18 @@ export interface TerminalViewProps {
   isDocked?: boolean
   onClose?: () => void
   onMinimize?: () => void
+  /** MEMBER'ların site-scoped terminali için (bkz. docs/ARCHITECTURE.md Aşama I)
+   * — verilirse WS bağlantısına `?siteId=` olarak eklenir, sunucu (server.mjs)
+   * bu siteye TERMINAL izni + dedicated linux user'ı olup olmadığını TAZE
+   * doğrular. SUPER_ADMIN için hiç geçirilmez (sınırsız kök kabuk, değişmedi). */
+  siteId?: string
+  /** Başlıktaki "kullanıcı adı" göstergesi — site-scoped modda gerçek linux
+   * kullanıcısını göstermek için (ör. "www-blog@rudder-cloud"), root modda
+   * `root` (varsayılan). Yalnızca kozmetik, yetkilendirme sunucuda. */
+  promptUser?: string
 }
 
-export function TerminalView({ isDocked = false, onClose, onMinimize }: TerminalViewProps) {
+export function TerminalView({ isDocked = false, onClose, onMinimize, siteId, promptUser }: TerminalViewProps) {
   const { theme } = useTheme()
   const { t, lang } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -350,7 +359,10 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
     }, 50)
 
     const proto = window.location.protocol === "https:" ? "wss:" : "ws:"
-    const ws = new WebSocket(`${proto}//${window.location.host}/api/terminal/socket`)
+    const wsUrl = siteId
+      ? `${proto}//${window.location.host}/api/terminal/socket?siteId=${encodeURIComponent(siteId)}`
+      : `${proto}//${window.location.host}/api/terminal/socket`
+    const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
     function sendResize() {
@@ -417,7 +429,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
       fitAddonRef.current = null
       wsRef.current = null
     }
-  }, [reconnectKey])
+  }, [reconnectKey, siteId])
 
   // Tema değiştiğinde açık olan terminal renklerini dinamik güncelle
   useEffect(() => {
@@ -578,7 +590,7 @@ export function TerminalView({ isDocked = false, onClose, onMinimize }: Terminal
             <div className="flex items-center gap-1.5 font-mono text-xs font-semibold text-[#dfc9a0] dark:text-slate-200">
               <TerminalIcon className="size-3.5 text-[#c8a87c] dark:text-blue-300 shrink-0" />
               <span className="truncate max-w-[140px] sm:max-w-none text-slate-200 dark:text-slate-100 font-bold">
-                root@rudder-cloud:~
+                {promptUser ?? "root"}@rudder-cloud:~
               </span>
             </div>
           </div>

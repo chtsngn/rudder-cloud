@@ -782,6 +782,85 @@ diyaloğu gerçek bir site oluşturma isteği gönderdi, provizyon Mac'te
 düzeltme sonrası aynı senaryo doğru şekilde hata olarak raporlandı. `next
 typegen`/`tsc --noEmit`/`eslint`/`npm run build` — yeni kodda ek hata yok.
 
+### 2026-09-05 güncellemesi: Aşama I (devam) — site bazlı terminal erişimi, GERÇEK izolasyonla
+
+5 maddenin sonuncusu: bir MEMBER'a bir veya birkaç siteye terminal erişimi
+verilince YALNIZCA o sitelerle sınırlı olması. Kullanıcıya iki seçenek
+sunuldu (bkz. proje hafızası): (a) dedicated linux user'ı olan sitelerde
+GERÇEK izolasyon + olmayanlarda tamamen engelle, (b) her sitede yalnızca
+`cwd` ayarlayan sahte/kolaylık amaçlı bir sınırlama, (c) her tip için
+container/chroot ile tam izolasyon. Kullanıcı (a)'yı seçti — sahte bir
+güvenlik hissi vermemek için dedicated user'ı OLMAYAN sitelerde (NODEJS/
+PYTHON/REVERSE_PROXY/DOCKER, hepsi paylaşımlı `panel` hesabı altında)
+terminal MEMBER'a hiç açılmıyor.
+
+**Sudoers — üçüncü, dar kapsamlı bir grant:** `doctor.sh`'ın mevcut
+`/etc/sudoers.d/panel-provisioning` dosyasına (zaten iki satır vardı: TEK
+provisioning betiği + SUPER_ADMIN için root terminal) üçüncü bir satır
+eklendi: `panel ALL=(%siteusers) NOPASSWD: /bin/bash, /bin/sh` — sudoers'ın
+`(%group)` runas-spec söz dizimi, `panel`'in YALNIZCA `siteusers`
+GRUBUNDAKİ kullanıcılar olarak sudo yapabilmesini sağlıyor (root veya
+sistemdeki başka bir kullanıcı OLARAK ASLA değil). `doctor.sh` bu grubu
+(`groupadd -f siteusers`) oluşturuyor; `provision-site.sh`'ın
+`ensure_linux_user()`'ı her dedicated site kullanıcısını (`usermod -aG
+siteusers`) bu gruba ekliyor — mevcut kullanıcılar için de idempotent.
+
+**Yeni izin:** `SitePermission` enum'ına `TERMINAL` eklendi (yeni migration
+`20260905020000_site_terminal_permission`, `ALTER TYPE ... ADD VALUE`,
+aynı Aşama'daki DOCKER site tipi eklemesiyle AYNI desen — tek başına bir
+migration olmak ZORUNDA). `site-access-card.tsx`'te bu seçenek YALNIZCA
+sitenin `config.linuxUser`'ı varsa gösteriliyor (`hasLinuxUser` prop'u, site
+detay sayfasından geçiriliyor) — dedicated user'ı olmayan bir sitede bu
+izni GÖSTERMEK, verilse bile hiçbir şey yapmayacak sahte bir seçenek sunmak
+olurdu.
+
+**`server.mjs` — `resolveTerminalAuthorization`:** eski `isAuthorizedTerminalRequest`
+(yalnızca boolean dönen) yerine tam bir yetkilendirme kararı dönüyor.
+SUPER_ADMIN: değişmedi, sınırsız kök kabuk. MEMBER: WS URL'sine
+`?siteId=...` GEREKİR (upgrade handler'da `url.parse(..., true)` ile
+ayrıştırılıyor); o site için `TERMINAL` izni VE `config.linuxUser` İKİSİ DE
+olmalı — biri eksikse 401. Geçerse `resolveTerminalCommand` `sudo -n -u
+<linuxUser> <shell>` çalıştırıyor (root modunda `sudo -n <shell>`, aynı
+kaldı) ve pty'nin `cwd`'si o sitenin dizinine (`resolveMemberSiteWorkdir` —
+`resolveSiteWorkdir`'ın STATIC/PHP/WORDPRESS case'inin, bu dosya derleme
+zincirinden geçmediği için elle tutulan bir kopyası, `site-paths.ts` AYNI
+kalınca burada da güncellenmeli) ayarlanıyor.
+
+**Yeni uç nokta:** `GET /api/terminal/eligible-sites` — SUPER_ADMIN için
+`{unrestricted:true}`; MEMBER için yalnızca YUKARIDAKİ iki şartı (TERMINAL
+izni + dedicated user) birlikte sağlayan siteleri (id/domain/linuxUser)
+döner — terminal sayfasındaki site seçicinin veri kaynağı, gerçek
+yetkilendirme kararı yine de her bağlantıda `server.mjs`'te TAZE veriliyor
+(bu yalnızca UI'ın hangi seçenekleri göstereceği).
+
+**UI:** `/terminal` artık SUPER_ADMIN-only bir sayfa DEĞİL (kenar
+çubuğundaki nav öğesi herkese görünür) — SUPER_ADMIN aynı sınırsız kök
+terminali görmeye devam ediyor; MEMBER bir site seçici (`MemberTerminalGate`)
+görüyor: hiç uygun sitesi yoksa NEDEN'i açıkça anlatan bir mesaj (sahte bir
+"bağlanıyor..." durumunda bırakmak yerine), varsa bir `<select>` + seçilen
+sitenin `TerminalView`'ı (`siteId`/`promptUser` prop'larıyla — başlıktaki
+`root@` yerine gerçek `<linuxUser>@` gösteriliyor, salt kozmetik, gerçek
+yetki her zaman sunucuda). Güvenlik bandındaki başlık/açıklama MEMBER için
+ayrı metinlerle "root erişimi YOK" diye AÇIKÇA belirtiyor (SUPER_ADMIN'in
+"Root/Sudo Erişimi" başlığını MEMBER'a göstermek yanıltıcı olurdu).
+
+**Doğrulama:** gerçek Postgres 16 ile uçtan uca — yeni `TERMINAL` migration'ı
+sorunsuz uygulandı; bir MEMBER + iki site (biri dedicated user'lı, biri
+değil) + HER İKİSİNE de `TERMINAL` izni verilerek TAM OLARAK bu senaryo test
+edildi: `eligible-sites` yalnızca dedicated-user'lı siteyi döndü (izin
+verilmiş olmasına rağmen diğeri elendi); gerçek bir WS bağlantı denemesinde
+dedicated-user'sız site 401 ile reddedildi, `siteId` olmadan 401, var
+olmayan site 401, uygun site ise bağlantıyı KABUL EDİP `sudo -n -u
+static_with_user /bin/bash`'i gerçekten ÇALIŞTIRMAYA ÇALIŞTI (bu Mac'te
+gerçek kullanıcı/sudoers olmadığı için beklendiği gibi exit code 1 ile
+sonlandı — SUPER_ADMIN'in kendi root denemesi de AYNI sebeple aynı şekilde
+başarısız oldu, yani buradaki hata ortam kısıtı, mantık hatası değil).
+Tarayıcıda: `site-access-card.tsx`'te TERMINAL onay kutusu yalnızca
+dedicated-user'lı sitede göründü; MEMBER olarak `/terminal`'e girildiğinde
+site seçici doğru tek seçeneği gösterdi, seçilince başlıkta gerçekten
+`static_with_user@rudder-cloud:~` yazdığı (root DEĞİL) doğrulandı. `next
+typegen`/`tsc --noEmit`/`eslint`/`npm run build` — yeni kodda ek hata yok.
+
 ## Klasör Yapısı (bu repo)
 
 ```

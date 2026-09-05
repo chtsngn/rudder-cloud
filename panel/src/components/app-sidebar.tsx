@@ -93,9 +93,14 @@ export function AppSidebar() {
   const navItems = [
     { href: "/", label: t("nav.home"), icon: Home },
     { href: "/sites", label: t("nav.sites"), icon: Globe },
+    // Terminal artık SUPER_ADMIN-only DEĞİL (bık. docs/ARCHITECTURE.md Aşama I) —
+    // bir MEMBER, kendisine TERMINAL izni verilmiş dedicated-user'lı bir sitesi
+    // varsa da erişebilir. Navı her zaman gösteriyoruz (ekstra bir eligibility
+    // fetch'i burada YAPMIYORUZ) — hiç erişilebilir sitesi olmayan bir MEMBER
+    // sayfanın kendisinde net bir açıklama görür.
+    { href: "/terminal", label: t("nav.terminal"), icon: Terminal },
     ...(user?.role === "SUPER_ADMIN"
       ? [
-          { href: "/terminal", label: t("nav.terminal"), icon: Terminal },
           { href: "/users", label: t("nav.users"), icon: Users },
           { href: "/audit", label: t("nav.audit"), icon: ClipboardList },
           { href: "/settings", label: t("nav.settings"), icon: Settings },
