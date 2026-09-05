@@ -33,6 +33,8 @@ import {
   Languages,
   Zap,
   Type,
+  TerminalSquare,
+  Infinity as InfinityIcon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -64,6 +66,10 @@ interface DomainFormState {
 }
 
 const EMPTY_DOMAIN_FORM: DomainFormState = { domain: "", email: "" }
+
+interface TerminalSettingsView {
+  idleTimeoutSeconds: number | null
+}
 
 interface GitHubAccountView {
   id: string
@@ -195,13 +201,71 @@ export default function SettingsPage() {
     }
   }, [])
 
+  // ═══ TERMİNAL BOŞTA-KALMA ZAMAN AŞIMI STATE'LERİ ═══
+  const [terminalSettings, setTerminalSettings] = useState<TerminalSettingsView | null>(null)
+  const [terminalLoading, setTerminalLoading] = useState(true)
+  const [terminalUnlimited, setTerminalUnlimited] = useState(true)
+  const [terminalMinutes, setTerminalMinutes] = useState("15")
+  const [terminalSaving, setTerminalSaving] = useState(false)
+  const [terminalError, setTerminalError] = useState<string | null>(null)
+  const [terminalSuccess, setTerminalSuccess] = useState<string | null>(null)
+
+  const loadTerminalSettings = useCallback(async () => {
+    setTerminalLoading(true)
+    try {
+      const res = await fetch("/api/settings/terminal", { cache: "no-store" })
+      if (!res.ok) return
+      const data = (await res.json()) as TerminalSettingsView
+      setTerminalSettings(data)
+      setTerminalUnlimited(data.idleTimeoutSeconds === null)
+      if (data.idleTimeoutSeconds) {
+        setTerminalMinutes(String(Math.round(data.idleTimeoutSeconds / 60)))
+      }
+    } catch {
+      // sessizce yoksay
+    } finally {
+      setTerminalLoading(false)
+    }
+  }, [])
+
+  async function handleSaveTerminalSettings() {
+    setTerminalSaving(true)
+    setTerminalError(null)
+    setTerminalSuccess(null)
+    try {
+      const minutesNum = parseInt(terminalMinutes, 10)
+      const idleTimeoutSeconds = terminalUnlimited
+        ? null
+        : Number.isFinite(minutesNum) && minutesNum > 0
+        ? minutesNum * 60
+        : null
+      const res = await fetch("/api/settings/terminal", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idleTimeoutSeconds }),
+      })
+      const data = (await res.json().catch(() => null)) as (TerminalSettingsView & { error?: string }) | null
+      if (!res.ok) {
+        setTerminalError(data?.error ?? `İstek başarısız oldu (${res.status}).`)
+        return
+      }
+      if (data) setTerminalSettings(data)
+      setTerminalSuccess(lang === "en" ? "Terminal settings saved." : "Terminal ayarları kaydedildi.")
+    } catch {
+      setTerminalError(lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı.")
+    } finally {
+      setTerminalSaving(false)
+    }
+  }
+
   useEffect(() => {
     const timer = setTimeout(() => {
       load()
       loadDomain()
+      loadTerminalSettings()
     }, 0)
     return () => clearTimeout(timer)
-  }, [load, loadDomain])
+  }, [load, loadDomain, loadTerminalSettings])
 
   function openCreateForm() {
     setDialogConfig(null)
@@ -411,6 +475,7 @@ export default function SettingsPage() {
     theme: boolean
     typography: boolean
     domain: boolean
+    terminal: boolean
     s3: boolean
     github: boolean
     system: boolean
@@ -419,12 +484,15 @@ export default function SettingsPage() {
     theme: false,
     typography: false,
     domain: false,
+    terminal: false,
     s3: false,
     github: false,
     system: false,
   })
 
-  const toggleSection = (section: "language" | "theme" | "typography" | "domain" | "s3" | "github" | "system") => {
+  const toggleSection = (
+    section: "language" | "theme" | "typography" | "domain" | "terminal" | "s3" | "github" | "system"
+  ) => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }))
   }
 
@@ -809,6 +877,143 @@ export default function SettingsPage() {
                       <CheckCircle2 className="size-4 text-inherit" />
                     )}
                     {domainSaving ? t("settings.domain.bindingBtn") : (domainSettings?.domain ? t("common.save") : t("settings.domain.bindBtn"))}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ═══ 3.5 TERMİNAL AYARLARI KARTI (AÇILIR SEKME) ═══ */}
+      <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden transition-all">
+        <div
+          onClick={() => toggleSection("terminal")}
+          className="flex items-center justify-between p-5 md:p-6 select-none cursor-pointer hover:bg-slate-50/50 dark:hover:bg-[#0c1630]/50 transition-colors"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="size-10 rounded-2xl bg-slate-900/5 dark:bg-[#101c38] text-slate-700 dark:text-blue-300 flex items-center justify-center border border-transparent dark:border-[#1e3568]/50 shadow-2xs shrink-0">
+              <TerminalSquare className="size-5" />
+            </div>
+            <div>
+              <h2 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100">
+                {lang === "en" ? "Terminal" : "Terminal"}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
+                {lang === "en"
+                  ? "Auto-disconnect the web terminal after a period of inactivity."
+                  : "Web terminalinin hareketsizlikte otomatik kapanma süresi."}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <span
+              className={cn(
+                "hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold border",
+                terminalSettings?.idleTimeoutSeconds
+                  ? "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60"
+                  : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/50"
+              )}
+            >
+              {terminalSettings?.idleTimeoutSeconds ? (
+                <span>{Math.round(terminalSettings.idleTimeoutSeconds / 60)} {lang === "en" ? "min" : "dk"}</span>
+              ) : (
+                <>
+                  <InfinityIcon className="size-3" />
+                  {lang === "en" ? "Unlimited" : "Sınırsız"}
+                </>
+              )}
+            </span>
+            <div
+              className={cn(
+                "size-8 rounded-xl flex items-center justify-center border border-slate-200 dark:border-[#16223f] bg-slate-50 dark:bg-[#060a17] text-slate-500 dark:text-slate-300 transition-transform duration-200",
+                openSections.terminal && "rotate-180 bg-slate-100 dark:bg-[#101c38] text-slate-900 dark:text-blue-300 border-slate-300 dark:border-[#2a4687]"
+              )}
+            >
+              <ChevronDown className="size-4" />
+            </div>
+          </div>
+        </div>
+
+        {openSections.terminal && (
+          <div className="p-5 md:p-6 pt-0 border-t border-slate-100 dark:border-[#16223f] space-y-6 animate-in fade-in-0 duration-200">
+            {terminalLoading ? (
+              <div className="flex items-center justify-center py-8 text-slate-400">
+                <Loader2 className="size-6 animate-spin text-[#580619] dark:text-blue-400" />
+              </div>
+            ) : (
+              <div className="space-y-5 pt-4">
+                <div className="flex items-start gap-3 p-4 rounded-2xl border border-slate-200/80 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17]">
+                  <input
+                    type="checkbox"
+                    id="terminal-unlimited"
+                    checked={terminalUnlimited}
+                    onChange={(e) => setTerminalUnlimited(e.target.checked)}
+                    className="size-4 mt-0.5 rounded accent-[#580619] dark:accent-[#162752] cursor-pointer shrink-0"
+                  />
+                  <Label htmlFor="terminal-unlimited" className="text-xs cursor-pointer select-none">
+                    <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <InfinityIcon className="size-3.5 text-[#580619] dark:text-blue-300" />
+                      {lang === "en" ? "Unlimited (never auto-disconnect)" : "Sınırsız (asla otomatik kapanmaz)"}
+                    </span>
+                    <span className="block text-slate-500 dark:text-slate-400 mt-1 font-normal">
+                      {lang === "en"
+                        ? "Default. The terminal stays connected regardless of inactivity."
+                        : "Varsayılan. Terminal, hareketsizlikten bağımsız olarak bağlı kalır."}
+                    </span>
+                  </Label>
+                </div>
+
+                {!terminalUnlimited && (
+                  <div className="space-y-2 max-w-xs">
+                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {lang === "en" ? "Auto-disconnect after (minutes)" : "Şu süre sonra otomatik kapat (dakika)"}
+                    </Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={1440}
+                      value={terminalMinutes}
+                      onChange={(e) => setTerminalMinutes(e.target.value)}
+                      className="h-11 rounded-xl font-mono text-xs bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
+                    />
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-amber-200/80 dark:border-[#16223f] bg-amber-50/50 dark:bg-[#060a17] p-3.5 text-xs text-amber-900 dark:text-slate-300 flex items-start gap-2.5">
+                  <ShieldAlert className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <span>
+                    {lang === "en"
+                      ? "This is unrelated to the connection dropping on its own after ~1 minute of inactivity — that was a background keep-alive bug and is now fixed regardless of this setting. This option only controls a deliberate, security-motivated auto-logout for an unattended root shell."
+                      : "Bu, bağlantının kendiliğinden ~1 dakika hareketsizlikte kopması sorunuyla ilgili değildir — o arka planda bir keep-alive hatasıydı ve bu ayardan bağımsız olarak zaten düzeltildi. Bu seçenek yalnızca denetimsiz bırakılan bir root kabuğu için isteğe bağlı, güvenlik amaçlı bir otomatik çıkışı kontrol eder."}
+                  </span>
+                </div>
+
+                {terminalError && (
+                  <p className="text-xs text-red-600 dark:text-red-400 font-mono bg-red-50 dark:bg-red-950/40 p-3 rounded-xl border border-red-200 dark:border-red-900">
+                    {terminalError}
+                  </p>
+                )}
+                {terminalSuccess && (
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 p-3 rounded-xl border border-emerald-200 dark:border-emerald-900">
+                    {terminalSuccess}
+                  </p>
+                )}
+
+                <div className="flex justify-end pt-1">
+                  <Button
+                    size="sm"
+                    disabled={terminalSaving || (!terminalUnlimited && !terminalMinutes.trim())}
+                    onClick={handleSaveTerminalSettings}
+                    className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] disabled:opacity-40 cursor-pointer"
+                  >
+                    {terminalSaving ? (
+                      <Loader2 className="size-4 animate-spin text-inherit" />
+                    ) : (
+                      <CheckCircle2 className="size-4 text-inherit" />
+                    )}
+                    {t("common.save")}
                   </Button>
                 </div>
               </div>

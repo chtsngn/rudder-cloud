@@ -204,14 +204,23 @@ model AuditLog {
 // :24428 her zaman yedek erişim yolu olarak çalışmaya devam eder (bkz.
 // scripts/provision-site.sh → configure-panel-domain notu, panel.conf'a hiç
 // dokunulmaz). `sslStatus`: none | pending | active | error.
+// `terminalIdleTimeoutSeconds`: web terminalinde kullanıcı girdisi olmadan
+// geçebilecek azami süre (bkz. server.mjs → enforceIdleTimeout). NULL/0 =
+// SINIRSIZ (varsayılan) — terminal hiçbir zaman kendiliğinden kapanmaz. Bu,
+// Nginx'in websocket tüneli için varsayılan ~60sn'lik boşta-kalma zaman
+// aşımından TAMAMEN AYRI bir kavram: o sorun server.mjs'teki ping/pong
+// heartbeat ile (her zaman aktif) çözülüyor; buradaki alan yalnızca isteğe
+// bağlı, kullanıcı girdisine dayalı bir GÜVENLİK önlemi (ör. denetimsiz
+// bırakılan bir root kabuğunu otomatik kapatmak).
 model PanelSettings {
-  id          String   @id @default("panel")
-  domain      String?
-  domainEmail String?
-  sslEnabled  Boolean  @default(false)
-  sslStatus   String   @default("none")
-  lastError   String?
-  updatedAt   DateTime @updatedAt
+  id                          String   @id @default("panel")
+  domain                      String?
+  domainEmail                 String?
+  sslEnabled                  Boolean  @default(false)
+  sslStatus                   String   @default("none")
+  lastError                   String?
+  terminalIdleTimeoutSeconds  Int?
+  updatedAt                   DateTime @updatedAt
 }
 
 // GitHub Entegrasyonu ve Hesap Bağlantısı

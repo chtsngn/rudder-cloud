@@ -49,6 +49,14 @@ const SESSION_COOKIE_NAME = "panel_session" // bkz. src/lib/session.ts
 const DEV_ONLY_FALLBACK_SECRET = "panel-dev-only-insecure-secret-change-me"
 const MAX_WS_PAYLOAD_BYTES = 1024 * 1024 // 1 MB — büyük bir yapıştırma için bile fazlasıyla yeterli
 
+// Nginx'in websocket tüneli için varsayılan ~60sn'lik boşta-kalma zaman
+// aşımından KISA (bkz. install.sh → proxy_read_timeout/proxy_send_timeout):
+// terminal hiç kullanılmasa bile bu aralıkla ping/pong trafiği akar, Nginx
+// bağlantıyı ölü sanıp kapatmaz. Bu, PanelSettings.terminalIdleTimeoutSeconds
+// ayarından TAMAMEN BAĞIMSIZ — o yalnızca gerçek kullanıcı girdisine dayalı,
+// isteğe bağlı bir güvenlik zaman aşımı (bkz. aşağıdaki heartbeatInterval).
+const HEARTBEAT_INTERVAL_MS = 20_000
+
 // `src/lib/prisma.ts`'teki dev-mode hot-reload singleton'ı bu dosyaya
 // uygulanmıyor (server.mjs zaten yalnızca process başlangıcında BİR KEZ
 // çalışıyor, HMR'a tabi değil) — bu yüzden burada ayrı, basit bir örnek
@@ -135,6 +143,26 @@ function resolveTerminalCommand() {
   return { command: "sudo", args: ["-n", resolveShell()] }
 }
 
+/**
+ * Ayarlar ekranındaki (Aşama: terminal boşta-kalma zaman aşımı) değeri her
+ * kontrolde TAZE okur — sabit önbellek yok, çünkü değer değiştirildiğinde
+ * ZATEN AÇIK olan terminal oturumlarına da anında yansımalı (`src/lib/permissions.ts`'in
+ * rolü her istekte taze okuması disipliniyle aynı, bkz. docs/ARCHITECTURE.md
+ * Aşama G). DB'ye erişilemezse (best-effort) NULL (sınırsız) döner — geçici
+ * bir DB hıçkırığı asla açık bir terminali beklenmedik şekilde kapatmamalı.
+ */
+async function getTerminalIdleTimeoutSeconds() {
+  try {
+    const settings = await prisma.panelSettings.findUnique({
+      where: { id: "panel" },
+      select: { terminalIdleTimeoutSeconds: true },
+    })
+    return settings?.terminalIdleTimeoutSeconds ?? null
+  } catch {
+    return null
+  }
+}
+
 const httpServer = createServer()
 const app = next({ dev, httpServer, port })
 const handle = app.getRequestHandler()
@@ -171,6 +199,12 @@ httpServer.on("upgrade", (req, socket, head) => {
 })
 
 wss.on("connection", (ws) => {
+  ws.isAlive = true
+  ws.lastActivityAt = Date.now()
+  ws.on("pong", () => {
+    ws.isAlive = true
+  })
+
   let ptyProcess
   try {
     const { command, args } = resolveTerminalCommand()
@@ -227,6 +261,7 @@ wss.on("connection", (ws) => {
       return
     }
     if (msg && msg.type === "input" && typeof msg.data === "string") {
+      ws.lastActivityAt = Date.now()
       ptyProcess.write(msg.data)
     } else if (
       msg &&
@@ -250,7 +285,51 @@ wss.on("connection", (ws) => {
   ws.on("error", cleanup)
 })
 
+/**
+ * Tek bir interval iki ayrı görevi yürütür: (1) her açık bağlantıya ping
+ * göndererek Nginx'in websocket tünelini "boşta" sanıp kapatmasını engeller
+ * (bkz. HEARTBEAT_INTERVAL_MS notu) — bir önceki ping'e pong dönmemiş
+ * (muhtemelen kopmuş) bağlantılar burada temizlenir; (2) yapılandırılmışsa
+ * (bkz. getTerminalIdleTimeoutSeconds) kullanıcı girdisi olmadan geçen süre
+ * eşiği aştıysa oturumu AÇIKÇA bir mesajla kapatır.
+ */
+const heartbeatInterval = setInterval(async () => {
+  if (wss.clients.size === 0) return
+
+  const idleTimeoutSeconds = await getTerminalIdleTimeoutSeconds()
+  const now = Date.now()
+
+  for (const ws of wss.clients) {
+    if (ws.isAlive === false) {
+      ws.terminate()
+      continue
+    }
+
+    if (idleTimeoutSeconds && now - ws.lastActivityAt >= idleTimeoutSeconds * 1000) {
+      const durationLabel =
+        idleTimeoutSeconds % 60 === 0
+          ? `${idleTimeoutSeconds / 60} dakika`
+          : `${idleTimeoutSeconds} saniye`
+      if (ws.readyState === ws.OPEN) {
+        ws.send(
+          JSON.stringify({
+            type: "exit",
+            code: null,
+            message: `Oturum ${durationLabel} hareketsizlik nedeniyle otomatik kapatıldı (Ayarlar → Terminal).`,
+          })
+        )
+      }
+      ws.close()
+      continue
+    }
+
+    ws.isAlive = false
+    ws.ping()
+  }
+}, HEARTBEAT_INTERVAL_MS)
+
 function shutdown() {
+  clearInterval(heartbeatInterval)
   for (const p of livePtys) {
     try {
       p.kill()

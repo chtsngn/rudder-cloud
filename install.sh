@@ -189,6 +189,13 @@ server {
 
     proxy_set_header Upgrade \$http_upgrade;
     proxy_set_header Connection "upgrade";
+
+    # Nginx varsayilani (60s) web terminalinin (bkz. server.mjs) websocket
+    # tunelini bosta sanip erken kapatirdi; server.mjs zaten 20sn'de bir
+    # ping/pong heartbeat'i akitiyor ama bu deger yine de ek bir guvence
+    # olarak comert tutuluyor.
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
   }
 }
 EOF
