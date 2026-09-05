@@ -18,6 +18,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { promisify } from "node:util"
 
+import { getInstallationAccessToken } from "@/lib/github-app"
 import { resolveSiteWorkdir, type SiteLike } from "@/lib/site-paths"
 
 const execFileAsync = promisify(execFile)
@@ -75,13 +76,33 @@ async function currentCommit(workdir: string): Promise<string | null> {
 }
 
 /**
+ * Site bir GitHub App kurulumuna bağlıysa (`githubInstallationId`), SSH
+ * deploy key YERİNE bu kurulumun kısa ömürlü installation token'ını HTTPS
+ * kimlik doğrulaması olarak enjekte eden `git -c http.extraHeader=...`
+ * argümanlarını döner — GitHub'ın kendi `actions/checkout`'ta kullandığı
+ * biçim (`x-access-token:<token>` Basic Auth olarak base64), git'in smart-
+ * HTTP protokolü Bearer şemasını değil bunu bekliyor. Token hiçbir zaman
+ * diske (`.git/config`, remote URL içine) YAZILMAZ — yalnızca bu tek
+ * `execFile` çağrısının argümanlarında, bellekte yaşar; her çağrıda TAZE
+ * mintlendiği için (bkz. getInstallationAccessToken önbelleği) sonraki
+ * `git fetch`'ler eski/süresi dolmuş bir token'a asla bağlı kalmaz. Kurulum
+ * bağlı değilse boş dizi döner (mevcut repoUrl/SSH akışı değişmeden çalışır).
+ */
+async function githubAppAuthArgs(githubInstallationId: string | null | undefined): Promise<string[]> {
+  if (!githubInstallationId) return []
+  const token = await getInstallationAccessToken(githubInstallationId)
+  const basicCredential = Buffer.from(`x-access-token:${token}`).toString("base64")
+  return ["-c", `http.extraHeader=AUTHORIZATION: basic ${basicCredential}`]
+}
+
+/**
  * `.git` yoksa temiz bir geçici dizine klonlayıp içeriğini hedefe rsync
  * eder (var olan dosyaları SİLMEDEN — WordPress-tarzı "bazı dosyalar repo
  * dışında da olabilir" senaryosuna daha güvenli); `.git` varsa doğrudan
  * `git pull` çalıştırır.
  */
 export async function gitPullOrClone(
-  site: SiteLike & { repoUrl: string; gitBranch: string }
+  site: SiteLike & { repoUrl: string; gitBranch: string; githubInstallationId?: string | null }
 ): Promise<GitPullResult> {
   if (!isGitPullSupported(site.type)) {
     throw new GitError(
@@ -104,10 +125,13 @@ export async function gitPullOrClone(
   const before = hasGit ? await currentCommit(workdir) : null
 
   try {
+    const authArgs = await githubAppAuthArgs(site.githubInstallationId)
     if (hasGit) {
-      await execFileAsync("git", ["-C", workdir, "fetch", "origin", site.gitBranch], {
-        timeout: GIT_TIMEOUT_MS,
-      })
+      await execFileAsync(
+        "git",
+        ["-C", workdir, ...authArgs, "fetch", "origin", site.gitBranch],
+        { timeout: GIT_TIMEOUT_MS }
+      )
       await execFileAsync(
         "git",
         ["-C", workdir, "reset", "--hard", `origin/${site.gitBranch}`],
@@ -118,7 +142,7 @@ export async function gitPullOrClone(
       try {
         await execFileAsync(
           "git",
-          ["clone", "--branch", site.gitBranch, "--single-branch", site.repoUrl, tmp],
+          [...authArgs, "clone", "--branch", site.gitBranch, "--single-branch", site.repoUrl, tmp],
           { timeout: GIT_TIMEOUT_MS }
         )
         await execFileAsync("mkdir", ["-p", workdir])

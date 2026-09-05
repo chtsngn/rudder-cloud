@@ -1,17 +1,14 @@
 /**
- * GitHub REST API İstemcisi ve Entegrasyon Katmanı.
+ * GitHub REST API İstemcisi — Deploy Key yönetimi.
  *
- * Kullanıcının GitHub Personal Access Token'ı (PAT) üzerinden:
- * - Kullanıcı kimlik doğrulama & profil sorgulama
- * - Depoları (repositories) listeleme
- * - Depoya doğrudan Deploy Key ekleme/listeleme/silme işlemlerini yürütür.
+ * Repoya SSH Deploy Key ekleme/listeleme/silme (`/repos/{owner}/{repo}/keys`)
+ * — bir bearer token alır, token'ın kaynağı (Aşama H'den beri) GitHub App
+ * installation token'ı (bkz. src/lib/github-app.ts), eskiden olduğu gibi bir
+ * kullanıcı PAT'ı DEĞİL.
  */
-import { decryptSecret } from "@/lib/crypto"
-import { prisma } from "@/lib/prisma"
-
-const GITHUB_API_BASE = "https://api.github.com"
-const GITHUB_API_VERSION = "2022-11-28"
-const USER_AGENT = "Rudder-Cloud-Panel/1.1.0"
+export const GITHUB_API_BASE = "https://api.github.com"
+export const GITHUB_API_VERSION = "2022-11-28"
+export const USER_AGENT = "Rudder-Cloud-Panel/1.2.4"
 
 export class GitHubApiError extends Error {
   status: number
@@ -23,23 +20,6 @@ export class GitHubApiError extends Error {
     this.status = status
     this.detail = detail
   }
-}
-
-export interface GitHubUserProfile {
-  id: number
-  login: string
-  name: string | null
-  avatarUrl: string
-  htmlUrl: string
-  publicRepos: number
-  totalPrivateRepos: number
-}
-
-export interface GitHubTokenVerification {
-  valid: boolean
-  user: GitHubUserProfile
-  scopes: string[]
-  hasDeployKeyScope: boolean
 }
 
 export interface GitHubRepoItem {
@@ -62,138 +42,6 @@ export interface GitHubDeployKeyResponse {
   verified: boolean
   createdAt: string
   readOnly: boolean
-}
-
-function parseScopes(scopeHeader: string | null): string[] {
-  if (!scopeHeader) return []
-  return scopeHeader
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-}
-
-/**
- * Verilen Personal Access Token'ı GitHub API üzerinden doğrular ve kullanıcı profilini çeker.
- */
-export async function verifyGitHubToken(token: string): Promise<GitHubTokenVerification> {
-  const cleanToken = token.trim()
-  if (!cleanToken) {
-    throw new GitHubApiError("GitHub token boş olamaz.", 400)
-  }
-
-  const res = await fetch(`${GITHUB_API_BASE}/user`, {
-    headers: {
-      Authorization: `Bearer ${cleanToken}`,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": GITHUB_API_VERSION,
-      "User-Agent": USER_AGENT,
-    },
-    cache: "no-store",
-  })
-
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { message?: string }
-    if (res.status === 401) {
-      throw new GitHubApiError("Geçersiz GitHub token veya yetkilendirme reddedildi.", 401)
-    }
-    throw new GitHubApiError(
-      body.message || `GitHub API isteği başarısız oldu (${res.status}).`,
-      res.status
-    )
-  }
-
-  const rawUser = (await res.json()) as {
-    id: number
-    login: string
-    name: string | null
-    avatar_url: string
-    html_url: string
-    public_repos?: number
-    total_private_repos?: number
-  }
-
-  const scopes = parseScopes(res.headers.get("x-oauth-scopes"))
-  const hasDeployKeyScope = scopes.some((s) =>
-    ["repo", "public_repo", "admin:public_key"].includes(s)
-  )
-
-  return {
-    valid: true,
-    user: {
-      id: rawUser.id,
-      login: rawUser.login,
-      name: rawUser.name,
-      avatarUrl: rawUser.avatar_url,
-      htmlUrl: rawUser.html_url,
-      publicRepos: rawUser.public_repos ?? 0,
-      totalPrivateRepos: rawUser.total_private_repos ?? 0,
-    },
-    scopes,
-    hasDeployKeyScope,
-  }
-}
-
-/**
- * Kullanıcının veritabanındaki kayıtlı token'ını güvenle çözer ve döndürür.
- */
-export async function getDecryptedTokenForUser(userId: string): Promise<string> {
-  const account = await prisma.gitHubAccount.findUnique({
-    where: { userId },
-  })
-  if (!account) {
-    throw new GitHubApiError("Kullanıcıya ait bağlı GitHub hesabı bulunamadı.", 404)
-  }
-  return decryptSecret(account.tokenEnc)
-}
-
-/**
- * Bağlı GitHub kullanıcısının erişebildiği depoları listeler.
- */
-export async function listGitHubUserRepos(token: string): Promise<GitHubRepoItem[]> {
-  const res = await fetch(
-    `${GITHUB_API_BASE}/user/repos?per_page=100&sort=updated&affiliation=owner,collaborator,organization_member`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": GITHUB_API_VERSION,
-        "User-Agent": USER_AGENT,
-      },
-      cache: "no-store",
-    }
-  )
-
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { message?: string }
-    throw new GitHubApiError(
-      body.message || `Depolar listelenemedi (${res.status}).`,
-      res.status
-    )
-  }
-
-  const rawRepos = (await res.json()) as Array<{
-    id: number
-    name: string
-    full_name: string
-    owner: { login: string }
-    private: boolean
-    html_url: string
-    ssh_url: string
-    default_branch: string
-    description: string | null
-  }>
-
-  return rawRepos.map((r) => ({
-    id: r.id,
-    name: r.name,
-    fullName: r.full_name,
-    owner: r.owner?.login ?? "",
-    private: r.private,
-    htmlUrl: r.html_url,
-    sshUrl: r.ssh_url,
-    defaultBranch: r.default_branch,
-    description: r.description,
-  }))
 }
 
 /**

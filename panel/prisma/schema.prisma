@@ -71,9 +71,6 @@ model User {
   // Kullanıcı silinse bile denetim kaydı KALIR (bkz. AuditLog.userId
   // onDelete: SetNull + denormalize edilmiş `username` alanı).
   auditLogs  AuditLog[]
-
-  // GitHub entegrasyonu — kullanıcının bağlı GitHub hesabı
-  githubAccount GitHubAccount?
 }
 
 model Site {
@@ -135,6 +132,17 @@ model Site {
   actionsKeyPublicKey    String?
   actionsKeyFingerprint  String?
   actionsKeyCreatedAt    DateTime?
+
+  // GitHub App entegrasyonu (Aşama H — PAT tabanlı "tüm depolara erişim"
+  // modelinin yerini alır, bkz. GitHubAppConfig/GitHubInstallation notu).
+  // Bir site GERÇEK bir App kurulumundaki (installation) belirli bir depoya
+  // bağlanabilir; bağlandığında git clone/pull SSH deploy key YERİNE bu
+  // kurulumun kısa ömürlü "installation token"ıyla HTTPS üzerinden yapılır
+  // (bkz. src/lib/github-app.ts, src/lib/git.ts). NULL ise site eskisi gibi
+  // elle girilen `repoUrl` (SSH/HTTPS) ile çalışmaya devam eder.
+  githubInstallationId String?
+  githubInstallation   GitHubInstallation? @relation(fields: [githubInstallationId], references: [id], onDelete: SetNull)
+  githubRepoFullName   String? // "owner/repo" — installation token'ın hangi depoya ait olduğunu bilmek için
 
   // Kullanıcı/rol/izin yönetimi (Aşama G) — bu siteye erişimi olan MEMBER'lar.
   userAccess UserSiteAccess[]
@@ -223,23 +231,60 @@ model PanelSettings {
   updatedAt                   DateTime @updatedAt
 }
 
-// GitHub Entegrasyonu ve Hesap Bağlantısı
-// Kullanıcının GitHub Personal Access Token'ı (PAT) AES-256-GCM ile şifrelenerek
-// `tokenEnc` alanında saklanır. İstemciye asla token döndürülmez.
-model GitHubAccount {
-  id                String   @id @default(cuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  githubUserId      String?
-  username          String
-  name              String?
-  avatarUrl         String?
-  htmlUrl           String?
-  tokenEnc          String   // AES-256-GCM şifrelenmiş token (crypto.ts)
-  scopes            String[] @default([])
-  publicRepos       Int      @default(0)
-  totalPrivateRepos Int      @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+// GitHub App Entegrasyonu (Aşama H, PAT akışının yerini alır)
+//
+// Eskiden ("Aşama E") kullanıcı bir Personal Access Token yapıştırıyordu —
+// bu token'ın kapsamı ne ise (genelde tüm repo'lar) panel de onu görüyordu.
+// Artık gerçek bir GitHub App: panel GitHub'ın "manifest flow"uyla
+// (bkz. src/lib/github-app.ts, https://docs.github.com/apps/creating-github-apps/registering-a-github-app/creating-a-github-app-from-a-manifest)
+// kendi App'ini OTOMATİK oluşturur — App ID/private key elle kopyalanmaz,
+// GitHub bunları `POST /app-manifests/{code}/conversions` ile tek seferde
+// döner. Panel genelinde TEK bir App kimliği vardır (S3Config/PanelSettings
+// gibi panel-wide, tek bir dashboard kullanıcısına özel DEĞİL) — `id` her
+// zaman sabit "panel". Sırlar (`clientSecretEnc`/`webhookSecretEnc`/
+// `privateKeyEnc`) AES-256-GCM ile şifreli (crypto.ts), istemciye ASLA
+// döndürülmez.
+model GitHubAppConfig {
+  id               String   @id @default("panel")
+  appId            String
+  slug             String
+  name             String
+  clientId         String
+  clientSecretEnc  String
+  webhookSecretEnc String
+  privateKeyEnc    String
+  htmlUrl          String
+  ownerLogin       String
+  ownerAvatarUrl   String?
+  createdByUserId  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  installations GitHubInstallation[]
+}
+
+// Bir "kurulum" (installation) = App'in belirli bir GitHub kullanıcı/
+// organizasyon hesabına, GitHub'ın KENDİ ekranından seçilen depolarla (veya
+// "tüm depolar" ile) kurulması — "kullanıcının izin verdiği repolar" tam
+// olarak burada GitHub tarafından uygulanıyor. Panel kendi tarafında ayrıca
+// bir izin listesi TUTMAZ; hangi depolara erişebileceğini her seferinde
+// `GET /installation/repositories` ile TAZE sorgular (bkz. github-app.ts) —
+// kullanıcı GitHub'da izinleri değiştirdiğinde (repo ekle/çıkar, App'i
+// kaldır) panel de bir sonraki istekte anında yansıtır, ayrı bir senkron
+// mekanizması gerekmez.
+model GitHubInstallation {
+  id                  String          @id @default(cuid())
+  installationId      String          @unique
+  appConfigId         String          @default("panel")
+  appConfig           GitHubAppConfig @relation(fields: [appConfigId], references: [id], onDelete: Cascade)
+  accountLogin        String
+  accountAvatarUrl    String?
+  accountType         String // "User" | "Organization"
+  repositorySelection String // "all" | "selected"
+  installedByUserId   String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  sites Site[]
 }
 

@@ -71,50 +71,28 @@ interface TerminalSettingsView {
   idleTimeoutSeconds: number | null
 }
 
-interface GitHubAccountView {
-  id: string
-  username: string
-  name: string | null
-  avatarUrl: string
-  htmlUrl: string
-  scopes: string[]
-  publicRepos: number
-  totalPrivateRepos: number
-  createdAt: string
-  updatedAt: string
-}
-
-interface GitHubRepoOption {
-  id: number
+interface GitHubAppInfo {
+  slug: string
   name: string
-  fullName: string
-  owner: string
-  private: boolean
   htmlUrl: string
-  sshUrl: string
-  defaultBranch: string
-  description: string | null
+  ownerLogin: string
+  ownerAvatarUrl: string | null
 }
 
-interface SiteOption {
+interface GitHubInstallationView {
   id: string
-  domain: string
-  repoUrl: string | null
+  installationId: string
+  accountLogin: string
+  accountAvatarUrl: string | null
+  accountType: string
+  repositorySelection: "all" | "selected" | string
+  createdAt: string
 }
 
-interface CreatedDeployKeyInfo {
-  keyName: string
-  hostAlias: string
-  publicKey: string
-  fingerprint: string
-  createdAt: string
-  suggestedSshUrl: string
-  githubKey?: {
-    id: number
-    title: string
-    verified: boolean
-    readOnly: boolean
-  }
+interface GitHubAppStatus {
+  configured: boolean
+  app: GitHubAppInfo | null
+  installations: GitHubInstallationView[]
 }
 
 const SSL_STATUS_CONFIG: Record<
@@ -383,23 +361,22 @@ export default function SettingsPage() {
     }
   }
 
-  // ═══ GITHUB ENTEGRASYONU STATE'LERİ ═══
-  const [githubAccount, setGithubAccount] = useState<GitHubAccountView | null>(null)
+  // ═══ GITHUB APP ENTEGRASYONU STATE'LERİ ═══
+  const [githubStatus, setGithubStatus] = useState<GitHubAppStatus | null>(null)
   const [githubLoading, setGithubLoading] = useState(true)
-  const [githubTokenInput, setGithubTokenInput] = useState("")
-  const [githubConnecting, setGithubConnecting] = useState(false)
+  const [githubCreatingApp, setGithubCreatingApp] = useState(false)
+  const [githubInstalling, setGithubInstalling] = useState(false)
   const [githubDisconnecting, setGithubDisconnecting] = useState(false)
+  const [removingInstallationId, setRemovingInstallationId] = useState<string | null>(null)
   const [githubError, setGithubError] = useState<string | null>(null)
   const [githubSuccess, setGithubSuccess] = useState<string | null>(null)
 
-  // Deploy key oluşturma state'leri
-  const loadGitHubAccount = useCallback(async () => {
+  const loadGithubStatus = useCallback(async () => {
     setGithubLoading(true)
     try {
-      const res = await fetch("/api/settings/github", { cache: "no-store" })
+      const res = await fetch("/api/settings/github/app", { cache: "no-store" })
       if (res.ok) {
-        const data = (await res.json()) as { connected: boolean; account: GitHubAccountView | null }
-        setGithubAccount(data.account)
+        setGithubStatus((await res.json()) as GitHubAppStatus)
       }
     } catch {
       // sessizce geç
@@ -409,55 +386,106 @@ export default function SettingsPage() {
   }, [])
 
   useEffect(() => {
-    loadGitHubAccount()
-  }, [loadGitHubAccount])
+    loadGithubStatus()
+  }, [loadGithubStatus])
 
-  const handleConnectGitHub = async () => {
-    if (!githubTokenInput.trim()) return
-    setGithubConnecting(true)
+  function submitManifestForm(state: string, manifest: Record<string, unknown>) {
+    const form = document.createElement("form")
+    form.method = "POST"
+    form.action = `https://github.com/settings/apps/new?state=${encodeURIComponent(state)}`
+    form.style.display = "none"
+    const input = document.createElement("input")
+    input.type = "hidden"
+    input.name = "manifest"
+    input.value = JSON.stringify(manifest)
+    form.appendChild(input)
+    document.body.appendChild(form)
+    form.submit()
+  }
+
+  const handleCreateGithubApp = async () => {
+    setGithubCreatingApp(true)
     setGithubError(null)
     setGithubSuccess(null)
     try {
-      const res = await fetch("/api/settings/github", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: githubTokenInput.trim() }),
-      })
+      const res = await fetch("/api/settings/github/app/begin", { method: "POST" })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setGithubError(data?.error ?? (lang === "en" ? "GitHub account could not be verified." : "GitHub hesabı doğrulanamadı."))
+        setGithubError(data?.error ?? (lang === "en" ? "Could not start GitHub App creation." : "GitHub App oluşturma başlatılamadı."))
         return
       }
-      setGithubAccount(data.account)
-      setGithubTokenInput("")
-      setGithubSuccess(lang === "en" ? `GitHub account @${data.account.username} connected successfully!` : `GitHub hesabı @${data.account.username} başarıyla bağlandı!`)
+      submitManifestForm(data.state, data.manifest)
+      // Tarayıcı github.com'a yönlendiği için bundan sonrası önemsiz —
+      // `setGithubCreatingApp(false)` bilerek YOK, sayfa zaten terk ediliyor.
     } catch {
       setGithubError(lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı.")
-    } finally {
-      setGithubConnecting(false)
+      setGithubCreatingApp(false)
     }
   }
 
-  const handleDisconnectGitHub = async () => {
+  const handleInstallGithubApp = async () => {
+    setGithubInstalling(true)
+    setGithubError(null)
+    setGithubSuccess(null)
+    try {
+      const res = await fetch("/api/settings/github/app/install", { method: "POST" })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setGithubError(data?.error ?? (lang === "en" ? "Could not start installation." : "Kurulum başlatılamadı."))
+        setGithubInstalling(false)
+        return
+      }
+      window.location.href = data.installUrl
+    } catch {
+      setGithubError(lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı.")
+      setGithubInstalling(false)
+    }
+  }
+
+  const handleDisconnectGithubApp = async () => {
     const confirmMsg = lang === "en"
-      ? "Disconnect GitHub account? The saved token will be permanently deleted."
-      : "GitHub bağlantısı kaldırılsın mı? Kayıtlı token silinecektir."
+      ? "Remove the GitHub App connection from this panel? This only forgets it locally — the App itself and its installations stay on GitHub until you remove them there."
+      : "GitHub App bağlantısı panelden kaldırılsın mı? Bu yalnızca YEREL bağlantıyı kaldırır — App'in kendisi ve kurulumları siz GitHub'dan kaldırana kadar orada kalmaya devam eder."
     if (!window.confirm(confirmMsg)) return
     setGithubDisconnecting(true)
     setGithubError(null)
     setGithubSuccess(null)
     try {
-      const res = await fetch("/api/settings/github", { method: "DELETE" })
+      const res = await fetch("/api/settings/github/app", { method: "DELETE" })
       if (!res.ok) {
         setGithubError(lang === "en" ? "Failed to disconnect." : "Bağlantı kaldırılamadı.")
         return
       }
-      setGithubAccount(null)
-      setGithubSuccess(lang === "en" ? "GitHub account disconnected successfully." : "GitHub bağlantısı başarıyla kaldırıldı.")
+      setGithubStatus({ configured: false, app: null, installations: [] })
+      setGithubSuccess(lang === "en" ? "GitHub App connection removed." : "GitHub App bağlantısı kaldırıldı.")
     } catch {
       setGithubError(lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı.")
     } finally {
       setGithubDisconnecting(false)
+    }
+  }
+
+  const handleRemoveInstallation = async (installation: GitHubInstallationView) => {
+    const confirmMsg = lang === "en"
+      ? `Uninstall the GitHub App from @${installation.accountLogin}? Sites connected to repositories under this account will fall back to their plain repo URL (no more automatic install-token authentication).`
+      : `GitHub App @${installation.accountLogin} hesabından kaldırılsın mı? Bu hesap altındaki depolara bağlı siteler düz repo adresine döner (artık otomatik installation-token kimlik doğrulaması olmaz).`
+    if (!window.confirm(confirmMsg)) return
+    setRemovingInstallationId(installation.id)
+    setGithubError(null)
+    setGithubSuccess(null)
+    try {
+      const res = await fetch(`/api/settings/github/app/installations/${installation.id}`, { method: "DELETE" })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setGithubError(data?.error ?? (lang === "en" ? "Could not remove installation." : "Kurulum kaldırılamadı."))
+        return
+      }
+      await loadGithubStatus()
+      setGithubSuccess(lang === "en" ? "Installation removed." : "Kurulum kaldırıldı.")
+    } catch {
+      setGithubError(lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı.")
+    } finally {
+      setRemovingInstallationId(null)
     }
   }
 
@@ -495,6 +523,44 @@ export default function SettingsPage() {
   ) => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }))
   }
+
+  // GitHub'dan dönüşte (manifest/install akışı) query string'deki durumu bir
+  // kere okuyup banner olarak göster, sonra URL'i temizle (yenilemede tekrar
+  // çıkmasın) — bu sayfa zaten baştan sona "use client" olduğundan
+  // `useSearchParams` yerine doğrudan `window.location` kullanmak yeterli.
+  // Buradaki setState çağrıları KASITLI olarak effect içinde: `window.location`
+  // sunucu tarafında hiç yok, yalnızca mount sonrası tek seferlik bir URL
+  // okuması — react-hooks/set-state-in-effect burada yanlış pozitif üretiyor
+  // (dosyadaki mevcut `loadGithubStatus()` effect'i de aynı sebeple bastırılmamış
+  // durumda duruyor, bkz. üstteki effect).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const result = params.get("githubApp")
+    if (!result) return
+
+    /* eslint-disable react-hooks/set-state-in-effect -- tek seferlik, mount
+       sonrası URL okuması; yukarıdaki yorumda açıklandığı gibi kasıtlı. */
+    if (result === "created") {
+      setGithubSuccess(lang === "en" ? "GitHub App created successfully! You can now install it." : "GitHub App başarıyla oluşturuldu! Şimdi kurabilirsiniz.")
+    } else if (result === "installed") {
+      const account = params.get("account")
+      setGithubSuccess(
+        lang === "en"
+          ? `Installed successfully${account ? ` on @${account}` : ""}!`
+          : `Kurulum başarıyla tamamlandı${account ? ` (@${account})` : ""}!`
+      )
+    } else if (result === "pending") {
+      setGithubSuccess(params.get("message") || (lang === "en" ? "Installation is pending approval." : "Kurulum onay bekliyor."))
+    } else if (result === "error") {
+      setGithubError(params.get("message") || (lang === "en" ? "GitHub operation failed." : "GitHub işlemi başarısız oldu."))
+    }
+
+    window.history.replaceState({}, "", "/settings")
+    setOpenSections((prev) => ({ ...prev, github: true }))
+    /* eslint-enable react-hooks/set-state-in-effect */
+    loadGithubStatus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const canBindDomain = domainForm.domain.trim() && domainForm.email.trim() && !domainSaving
 
@@ -1263,7 +1329,7 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* ═══ 5. GITHUB ENTEGRASYONU VE DEPLOY KEY KARTI (AÇILIR SEKME) ═══ */}
+      {/* ═══ 5. GITHUB APP ENTEGRASYONU KARTI (AÇILIR SEKME) ═══ */}
       <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden transition-all">
         {/* Tıklanabilir Başlık Çubuğu */}
         <div
@@ -1281,16 +1347,20 @@ export default function SettingsPage() {
                 {t("settings.sections.github")}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
-                {t("settings.github.subtitle")}
+                {lang === "en"
+                  ? "Connect as a real GitHub App — only repositories you explicitly authorize are visible to the panel."
+                  : "Gerçek bir GitHub App olarak bağlanın — panel yalnızca izin verdiğiniz depoları görür."}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
-            {githubAccount ? (
+            {githubStatus?.installations.length ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-[#101c38] text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-[#1e3568]/50">
                 <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                @{githubAccount.username}
+                {lang === "en"
+                  ? `${githubStatus.installations.length} installation${githubStatus.installations.length > 1 ? "s" : ""}`
+                  : `${githubStatus.installations.length} kurulum`}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-[#101c38] text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-[#1e3568]/50">
@@ -1344,114 +1414,81 @@ export default function SettingsPage() {
               <div className="flex items-center justify-center py-8 text-slate-400">
                 <Loader2 className="size-6 animate-spin text-[#580619] dark:text-blue-300" />
               </div>
-            ) : !githubAccount ? (
-              /* --- DURUM 1: HENÜZ BAĞLI DEĞİL --- */
+            ) : !githubStatus?.configured ? (
+              /* --- DURUM 1: HENÜZ BİR GITHUB APP YOK --- */
               <div className="space-y-5 pt-4">
                 <div className="rounded-2xl border border-slate-200/80 dark:border-[#16223f] bg-slate-50/40 dark:bg-[#060a17] p-6 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div>
-                      <h3 className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
-                        {t("settings.github.notConnectedTitle")}
-                      </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        {t("settings.github.notConnectedDesc")}
-                      </p>
-                    </div>
-
-                    <a
-                      href="https://github.com/settings/tokens/new?scopes=repo,admin:public_key&description=Rudder+Cloud+Server+Panel"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#101c38] text-slate-700 dark:text-blue-200 border border-slate-200 dark:border-[#1e3568]/50 hover:border-[#c8a87c] dark:hover:border-[#2a4687] shadow-2xs hover:shadow-xs transition-all shrink-0 cursor-pointer"
-                    >
-                      <ExternalLink className="size-3.5 text-[#c8a87c] dark:text-blue-300" />
-                      {t("settings.github.createTokenBtn")}
-                    </a>
+                  <div>
+                    <h3 className="font-heading font-bold text-sm text-slate-900 dark:text-slate-100">
+                      {lang === "en" ? "No GitHub App connected yet" : "Henüz bağlı bir GitHub App yok"}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed max-w-xl">
+                      {lang === "en"
+                        ? "Clicking the button below opens GitHub with the App's settings pre-filled — you just review and click \"Create GitHub App\". No App ID or private key to copy by hand."
+                        : "Aşağıdaki butona tıklayınca GitHub, App ayarları önceden doldurulmuş şekilde açılır — siz yalnızca gözden geçirip \"Create GitHub App\"e tıklarsınız. Elle kopyalanacak bir App ID veya private key yoktur."}
+                    </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {t("settings.github.tokenLabel")}
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="password"
-                        value={githubTokenInput}
-                        onChange={(e) => setGithubTokenInput(e.target.value)}
-                        placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                        className="font-mono text-xs h-11 rounded-xl bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100 flex-1"
-                      />
-                      <Button
-                        disabled={!githubTokenInput.trim() || githubConnecting}
-                        onClick={handleConnectGitHub}
-                        className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 h-11 rounded-xl border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer shrink-0"
-                      >
-                        {githubConnecting ? (
-                          <Loader2 className="size-4 animate-spin text-inherit" />
-                        ) : (
-                          <CheckCircle2 className="size-4 text-inherit" />
-                        )}
-                        {t("settings.github.connectBtn")}
-                      </Button>
-                    </div>
-                  </div>
+                  <Button
+                    disabled={githubCreatingApp}
+                    onClick={handleCreateGithubApp}
+                    className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 h-11 rounded-xl border border-[#c8a87c]/40 dark:border-[#2a4687]/60 cursor-pointer"
+                  >
+                    {githubCreatingApp ? (
+                      <Loader2 className="size-4 animate-spin text-inherit mr-1.5" />
+                    ) : (
+                      <ExternalLink className="size-4 text-inherit mr-1.5" />
+                    )}
+                    {lang === "en" ? "Create GitHub App" : "GitHub App Oluştur"}
+                  </Button>
 
                   <div className="rounded-xl border border-slate-200/60 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-3 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
                     <p className="font-semibold text-slate-700 dark:text-slate-300">
-                      {t("settings.github.requiredScopes")}
+                      {lang === "en" ? "How this differs from the old token-paste flow" : "Eski token yapıştırma akışından farkı"}
                     </p>
                     <p className="text-slate-600 dark:text-slate-400">
-                      {t("settings.github.requiredScopesDesc")}
-                    </p>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-1">
-                      {t("settings.github.securityNote")}
+                      {lang === "en"
+                        ? "After creating the App, you'll install it on your account or organization — GitHub's own screen lets you pick exactly which repositories the panel can see. Nothing else is ever visible."
+                        : "App oluşturulduktan sonra hesabınıza/organizasyonunuza kurarsınız — GitHub'ın kendi ekranından panelin görebileceği depoları tek tek seçersiniz. Başka hiçbir depo asla görünmez."}
                     </p>
                   </div>
                 </div>
               </div>
             ) : (
-              /* --- DURUM 2: GITHUB BAĞLI --- */
+              /* --- DURUM 2: GITHUB APP BAĞLI (kurulumlu ya da değil) --- */
               <div className="space-y-6 pt-4">
-                {/* 1. Profil Bilgi Kartı */}
+                {/* 1. App Bilgi Kartı */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17]">
                   <div className="flex items-center gap-4">
-                    {githubAccount.avatarUrl ? (
+                    {githubStatus.app?.ownerAvatarUrl ? (
                       <img
-                        src={githubAccount.avatarUrl}
-                        alt={githubAccount.username}
+                        src={githubStatus.app.ownerAvatarUrl}
+                        alt={githubStatus.app.ownerLogin}
                         className="size-14 rounded-2xl border-2 border-slate-200 dark:border-[#2a4687] shadow-sm object-cover"
                       />
                     ) : (
                       <div className="size-14 rounded-2xl bg-slate-200 dark:bg-[#101c38] flex items-center justify-center text-slate-500 font-bold text-lg">
-                        {githubAccount.username.slice(0, 2).toUpperCase()}
+                        {githubStatus.app?.ownerLogin.slice(0, 2).toUpperCase()}
                       </div>
                     )}
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
-                          {githubAccount.name || githubAccount.username}
+                          {githubStatus.app?.name}
                         </h3>
                         <a
-                          href={githubAccount.htmlUrl}
+                          href={githubStatus.app?.htmlUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-slate-400 hover:text-slate-600 dark:hover:text-blue-300 transition-colors"
-                          title="GitHub Profilini Aç"
+                          title="GitHub App Ayarlarını Aç"
                         >
                           <ExternalLink className="size-3.5" />
                         </a>
                       </div>
                       <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                        @{githubAccount.username}
+                        @{githubStatus.app?.ownerLogin}
                       </p>
-                      <div className="flex flex-wrap items-center gap-2 mt-2">
-                        <span className="text-[11px] font-mono bg-white dark:bg-[#101c38] px-2.5 py-0.5 rounded-lg border border-slate-200 dark:border-[#1e3568]/50 text-slate-700 dark:text-blue-300">
-                          {t("settings.github.reposCount", { count: githubAccount.publicRepos + githubAccount.totalPrivateRepos, privateCount: githubAccount.totalPrivateRepos })}
-                        </span>
-                        <span className="text-[11px] font-mono bg-emerald-50 dark:bg-[#101c38] px-2.5 py-0.5 rounded-lg border border-emerald-200/80 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-400">
-                          {t("settings.github.connectedAs")}
-                        </span>
-                      </div>
                     </div>
                   </div>
 
@@ -1459,18 +1496,24 @@ export default function SettingsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => loadGitHubAccount()}
-                      disabled={githubLoading}
+                      onClick={handleInstallGithubApp}
+                      disabled={githubInstalling}
                       className="h-9 px-3 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300 dark:hover:bg-[#111f40]"
                     >
-                      <RefreshCw className={cn("size-3.5 mr-1 text-[#c8a87c] dark:text-blue-300", githubLoading && "animate-spin")} />
-                      {t("settings.github.refreshBtn")}
+                      {githubInstalling ? (
+                        <Loader2 className="size-3.5 animate-spin mr-1" />
+                      ) : (
+                        <ExternalLink className="size-3.5 mr-1 text-[#c8a87c] dark:text-blue-300" />
+                      )}
+                      {githubStatus.installations.length
+                        ? (lang === "en" ? "Install on Another Account" : "Başka Bir Hesaba Kur")
+                        : (lang === "en" ? "Install App" : "App'i Kur")}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       disabled={githubDisconnecting}
-                      onClick={handleDisconnectGitHub}
+                      onClick={handleDisconnectGithubApp}
                       className="h-9 px-3 rounded-xl text-xs font-semibold border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
                     >
                       {githubDisconnecting ? (
@@ -1483,7 +1526,68 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* 2. Bilgilendirme ve Site Yönetimine Yönlendirme Kartı */}
+                {/* 2. Kurulumlar Listesi */}
+                {githubStatus.installations.length === 0 ? (
+                  <div className="rounded-xl border border-amber-200/80 dark:border-[#16223f] bg-amber-50/50 dark:bg-[#060a17] p-3.5 text-xs text-amber-900 dark:text-slate-300 flex items-start gap-2.5">
+                    <ShieldAlert className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <span>
+                      {lang === "en"
+                        ? "App created but not installed anywhere yet — click \"Install App\" above and choose which repositories to allow."
+                        : "App oluşturuldu ama henüz hiçbir yere kurulmadı — yukarıdaki \"App'i Kur\" ile hangi depolara izin vereceğinizi seçin."}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                      {lang === "en" ? "Installations" : "Kurulumlar"}
+                    </h4>
+                    {githubStatus.installations.map((inst) => (
+                      <div
+                        key={inst.id}
+                        className="flex items-center justify-between gap-3 p-3.5 rounded-xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#060a17]"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {inst.accountAvatarUrl ? (
+                            <img
+                              src={inst.accountAvatarUrl}
+                              alt={inst.accountLogin}
+                              className="size-9 rounded-xl border border-slate-200 dark:border-[#1e3568] shrink-0"
+                            />
+                          ) : (
+                            <div className="size-9 rounded-xl bg-slate-200 dark:bg-[#101c38] shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                              @{inst.accountLogin}
+                            </p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              {inst.accountType === "Organization" ? "Organizasyon" : "Kullanıcı"} ·{" "}
+                              {inst.repositorySelection === "all"
+                                ? (lang === "en" ? "All repositories" : "Tüm depolar")
+                                : (lang === "en" ? "Selected repositories" : "Seçili depolar")}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={removingInstallationId === inst.id}
+                          onClick={() => handleRemoveInstallation(inst)}
+                          className="h-8 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 shrink-0"
+                        >
+                          {removingInstallationId === inst.id ? (
+                            <Loader2 className="size-3.5 animate-spin mr-1" />
+                          ) : (
+                            <Trash2 className="size-3.5 mr-1" />
+                          )}
+                          {lang === "en" ? "Remove" : "Kaldır"}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 3. Bilgilendirme ve Site Yönetimine Yönlendirme Kartı */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17]">
                   <div className="flex items-start gap-3">
                     <div className="size-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
@@ -1491,12 +1595,12 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                        {lang === "en" ? "GitHub Integration Active" : "GitHub Entegrasyonu Aktif"}
+                        {lang === "en" ? "GitHub App Connected" : "GitHub App Bağlı"}
                       </h4>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl leading-relaxed">
                         {lang === "en"
-                          ? "You can now assign GitHub repositories and manage Deploy Keys directly from each site's 'Git & Deployment' tab. Deploy keys are generated on the server and automatically pushed to your repository."
-                          : "Artık doğrudan sitelerinizin 'Git & Dağıtım' sekmesinden GitHub depolarınızı seçebilir, deploy key oluşturabilir ve depoya tek tıkla gönderebilirsiniz."}
+                          ? "Go to a Node.js/Python/Reverse Proxy site's \"Git & Deployment\" tab to pick one of the authorized repositories and connect it — the panel clones it straight into that site's root folder and keeps it updated, no SSH deploy key needed."
+                          : "Bir Node.js/Python/Ters Proxy sitesinin \"Git & Dağıtım\" sekmesinden izin verilen depolardan birini seçip bağlayın — panel onu doğrudan o sitenin kök klasörüne klonlar ve günceller, SSH deploy key gerekmez."}
                       </p>
                     </div>
                   </div>

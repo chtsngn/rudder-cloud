@@ -80,6 +80,15 @@ const STATUS_CONFIG: Record<
 type ServiceAction = "start" | "stop" | "restart"
 type ActiveTab = "overview" | "git" | "backups" | "access" | "logs"
 
+/** `GET /api/settings/github/repos` — GitHub App kurulumlarının izin verdiği depolar. */
+interface InstalledRepoOption {
+  fullName: string
+  private: boolean
+  defaultBranch: string
+  accountLogin: string
+  installationId: string
+}
+
 function getTypeIcon(type: SiteType) {
   switch (type) {
     case "wordpress":
@@ -149,6 +158,17 @@ export default function SiteDetailPage() {
   const [gitPullError, setGitPullError] = useState<string | null>(null)
   const [gitPullMessage, setGitPullMessage] = useState<string | null>(null)
 
+  // GitHub App'e bağlı depo seçimi (bkz. /api/sites/[id]/github-connect) —
+  // seçilince yalnızca `repoUrl`/`gitBranch`'i doldurmakla kalmaz, sitenin
+  // kök dizinine İLK KURULUMU (git clone) da tetikler.
+  const [githubRepoFullName, setGithubRepoFullName] = useState<string | null>(null)
+  const [installedRepos, setInstalledRepos] = useState<InstalledRepoOption[]>([])
+  const [installedReposLoaded, setInstalledReposLoaded] = useState(false)
+  const [selectedRepoFullName, setSelectedRepoFullName] = useState("")
+  const [connectingRepo, setConnectingRepo] = useState(false)
+  const [disconnectingRepo, setDisconnectingRepo] = useState(false)
+  const [connectRepoError, setConnectRepoError] = useState<string | null>(null)
+
   const [upstreamUrl, setUpstreamUrl] = useState("")
   const [upstreamSaving, setUpstreamSaving] = useState(false)
   const [upstreamSaveError, setUpstreamSaveError] = useState<string | null>(null)
@@ -188,6 +208,7 @@ export default function SiteDetailPage() {
             customRestartCommand: data.customRestartCommand ?? "",
           })
           setGitLastPull({ at: data.lastPullAt, ok: data.lastPullOk, error: data.lastPullError })
+          setGithubRepoFullName(data.githubRepoFullName ?? null)
           setUpstreamUrl(
             data.config && typeof (data.config as Record<string, unknown>).upstreamUrl === "string"
               ? ((data.config as Record<string, unknown>).upstreamUrl as string)
@@ -350,6 +371,96 @@ export default function SiteDetailPage() {
       setGitPullError("Sunucuya bağlanılamadı.")
     } finally {
       setGitPulling(false)
+    }
+  }
+
+  // GitHub'a bağlı depoları yalnızca Git sekmesi ilk açıldığında, tek sefer
+  // getir (her sekme geçişinde değil) — `installedReposLoaded` bunu sağlıyor.
+  // setTimeout ile bir sonraki makrotaşka erteleniyor: aynı `loadLogs`
+  // effect'indeki disiplin (yukarıda) — efekt gövdesinin senkron kısmından
+  // setState'i çıkarmak react-hooks/set-state-in-effect'i tetiklememek için.
+  useEffect(() => {
+    if (activeTab !== "git" || installedReposLoaded) return
+    const timer = setTimeout(() => {
+      setInstalledReposLoaded(true)
+      fetch("/api/settings/github/repos", { cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data: { repos?: InstalledRepoOption[] } | null) => {
+          if (data?.repos) setInstalledRepos(data.repos)
+        })
+        .catch(() => {})
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [activeTab, installedReposLoaded])
+
+  async function handleConnectRepo() {
+    if (!site || !selectedRepoFullName) return
+    const repo = installedRepos.find((r) => r.fullName === selectedRepoFullName)
+    if (!repo) return
+
+    setConnectingRepo(true)
+    setConnectRepoError(null)
+    setGitPullMessage(null)
+    setGitPullError(null)
+    try {
+      const res = await fetch(`/api/sites/${site.id}/github-connect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          installationId: repo.installationId,
+          repoFullName: repo.fullName,
+          branch: repo.defaultBranch,
+        }),
+      })
+      const data = (await res.json().catch(() => null)) as
+        | (Partial<ApiSite> & { pullChanged?: boolean; restartError?: string | null; error?: string; site?: Partial<ApiSite> })
+        | null
+      if (!data) {
+        setConnectRepoError("Sunucuya bağlanılamadı.")
+        return
+      }
+      const statusSource = res.ok ? data : (data.site ?? data)
+      setGitLastPull({
+        at: statusSource.lastPullAt ?? null,
+        ok: statusSource.lastPullOk ?? false,
+        error: statusSource.lastPullError ?? (res.ok ? null : (data.error ?? null)),
+      })
+      if (!res.ok) {
+        setConnectRepoError(data.error ?? "Depo bağlanamadı.")
+        return
+      }
+      setGithubRepoFullName(repo.fullName)
+      setGitForm((f) => ({ ...f, repoUrl: `https://github.com/${repo.fullName}.git`, gitBranch: repo.defaultBranch }))
+      setGitPullMessage(
+        data.restartError
+          ? `Depo bağlandı ama yeniden başlatma başarısız: ${data.restartError}`
+          : (data.pullChanged ? "Depo bağlandı ve kök dizine kuruldu." : "Depo bağlandı (zaten güncel).")
+      )
+    } catch {
+      setConnectRepoError("Sunucuya bağlanılamadı.")
+    } finally {
+      setConnectingRepo(false)
+    }
+  }
+
+  async function handleDisconnectRepo() {
+    if (!site) return
+    if (!window.confirm(lang === "en" ? "Disconnect this repository? The already-cloned files stay in place." : "Bu depo bağlantısı kaldırılsın mı? Zaten klonlanmış dosyalar yerinde kalır.")) return
+    setDisconnectingRepo(true)
+    setConnectRepoError(null)
+    try {
+      const res = await fetch(`/api/sites/${site.id}/github-connect`, { method: "DELETE" })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setConnectRepoError(data?.error ?? "Bağlantı kaldırılamadı.")
+        return
+      }
+      setGithubRepoFullName(null)
+      setSelectedRepoFullName("")
+    } catch {
+      setConnectRepoError("Sunucuya bağlanılamadı.")
+    } finally {
+      setDisconnectingRepo(false)
     }
   }
 
@@ -850,6 +961,74 @@ export default function SiteDetailPage() {
             </div>
 
             <div className="space-y-5">
+              {/* GitHub App'e bağlı depo seçimi — seçilince repoUrl/branch
+                  otomatik doldurulur VE kök dizine ilk kurulum tetiklenir
+                  (bkz. handleConnectRepo, /api/sites/[id]/github-connect). */}
+              {githubRepoFullName ? (
+                <div className="flex items-center justify-between gap-3 p-4 rounded-xl border border-emerald-200/80 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <GitBranch className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-emerald-900 dark:text-emerald-300 truncate">
+                        {lang === "en" ? "Connected via GitHub App" : "GitHub App ile bağlı"}: @{githubRepoFullName}
+                      </p>
+                      <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">
+                        {lang === "en" ? "Pulls authenticate with a short-lived installation token — no SSH key needed." : "Pull'lar kısa ömürlü installation token ile doğrulanır — SSH anahtarı gerekmez."}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={disconnectingRepo}
+                    onClick={handleDisconnectRepo}
+                    className="h-8 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 shrink-0"
+                  >
+                    {disconnectingRepo ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Trash2 className="size-3.5 mr-1" />}
+                    {lang === "en" ? "Disconnect" : "Bağlantıyı Kaldır"}
+                  </Button>
+                </div>
+              ) : installedRepos.length > 0 ? (
+                <div className="space-y-2 p-4 rounded-xl border border-border bg-muted/30">
+                  <Label className="text-xs font-bold text-foreground/90">
+                    {lang === "en" ? "Connect a GitHub App repository" : "Bir GitHub App deposu bağla"}
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    {lang === "en"
+                      ? "Only repositories your GitHub App installation is authorized for are listed. Connecting clones it straight into this site's root folder."
+                      : "Yalnızca GitHub App kurulumunuzun izin verdiği depolar listelenir. Bağlayınca bu sitenin kök klasörüne doğrudan klonlanır."}
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                    <CustomSelect
+                      value={selectedRepoFullName}
+                      onChange={(val) => setSelectedRepoFullName(val)}
+                      options={installedRepos.map((r) => ({
+                        value: r.fullName,
+                        label: `${r.private ? "🔒" : "🌐"} ${r.fullName} (${r.defaultBranch})`,
+                      }))}
+                      className="w-full sm:flex-1"
+                    />
+                    <Button
+                      onClick={handleConnectRepo}
+                      disabled={!selectedRepoFullName || connectingRepo}
+                      className="h-10 px-5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-semibold cursor-pointer shrink-0"
+                    >
+                      {connectingRepo && <Loader2 className="size-3.5 animate-spin mr-1" />}
+                      {lang === "en" ? "Connect & Install" : "Bağla ve Kur"}
+                    </Button>
+                  </div>
+                  {connectRepoError && <p className="text-xs text-destructive">{connectRepoError}</p>}
+                </div>
+              ) : installedReposLoaded ? (
+                <div className="p-3.5 rounded-xl border border-border bg-muted/30 text-[11px] text-muted-foreground">
+                  {lang === "en" ? "No GitHub App installed yet — " : "Henüz kurulu bir GitHub App yok — "}
+                  <Link href="/settings" className="text-primary font-semibold hover:underline">
+                    {lang === "en" ? "connect one in Settings" : "Ayarlar'dan bağlayın"}
+                  </Link>
+                  {lang === "en" ? " to pick a repository here, or enter a repo URL manually below." : ", ya da aşağıya elle bir repo adresi girin."}
+                </div>
+              ) : null}
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="repoUrl" className="text-xs font-bold text-foreground/90">
@@ -858,7 +1037,8 @@ export default function SiteDetailPage() {
                   <Input
                     id="repoUrl"
                     placeholder="git@github.com:owner/repo.git"
-                    className="font-mono text-xs h-10 rounded-xl bg-card border border-border text-foreground"
+                    disabled={!!githubRepoFullName}
+                    className="font-mono text-xs h-10 rounded-xl bg-card border border-border text-foreground disabled:opacity-60"
                     value={gitForm.repoUrl}
                     onChange={(e) => setGitForm((f) => ({ ...f, repoUrl: e.target.value }))}
                   />
@@ -870,7 +1050,8 @@ export default function SiteDetailPage() {
                   <Input
                     id="gitBranch"
                     placeholder="main"
-                    className="font-mono text-xs h-10 rounded-xl bg-card border border-border text-foreground"
+                    disabled={!!githubRepoFullName}
+                    className="font-mono text-xs h-10 rounded-xl bg-card border border-border text-foreground disabled:opacity-60"
                     value={gitForm.gitBranch}
                     onChange={(e) => setGitForm((f) => ({ ...f, gitBranch: e.target.value }))}
                   />

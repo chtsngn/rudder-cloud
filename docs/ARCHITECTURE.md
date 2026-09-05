@@ -577,6 +577,136 @@ targetType/Id, detail) tabloları eklendi.
   delegate'leri, bileşik anahtar desteği dahil) genişletildi ve hem tip hem
   runtime seviyesinde (`node -e` ile CRUD + cascade/SetNull) elle doğrulandı.
 
+### 2026-09-05 güncellemesi: Web terminali boşta-kalma bug'ı düzeltildi + isteğe bağlı zaman aşımı ayarı
+
+Kullanıcı raporu: terminal 1-2 dakika hareketsiz kalınca kendiliğinden
+"offline" oluyordu. Kök neden bir ayar DEĞİLDİ — Nginx'in websocket proxy'si
+için varsayılan ~60sn'lik `proxy_read_timeout`/`proxy_send_timeout`'u:
+terminal boşta kalınca ne istemciden ne sunucudan hiç trafik gitmiyordu,
+`server.mjs`'te de bir heartbeat/ping mekanizması yoktu, Nginx da bağlantıyı
+ölü sanıp sessizce kapatıyordu. Gerçek bir Nginx + Postgres ortamı kurup
+önce/sonra karşılaştırıldı: eski kod tam 60.1sn'de kopuyor, düzeltilmiş kod
+75sn+ boşta kalmasına rağmen heartbeat ping'leriyle (20sn'de bir) canlı
+kalıyor.
+
+Düzeltme: `server.mjs`'e her 20sn'de bir ws ping/pong heartbeat'i eklendi
+(pong dönmeyen ölü bağlantılar da bu döngüde temizleniyor) — Nginx varsayılan
+ayarlarıyla bile artık çalışıyor. Ayrıca `install.sh`'ın ürettiği vhost'a ek
+güvence olarak cömert bir `proxy_read_timeout`/`proxy_send_timeout` (3600s)
+eklendi. Bundan TAMAMEN AYRI olarak: kullanıcının "eğer böyle bir ayar varsa
+yapılandırılabilir olsun, varsayılan sınırsız olsun" isteği üzerine Ayarlar →
+Terminal'e gerçek, isteğe bağlı bir güvenlik zaman aşımı eklendi
+(`PanelSettings.terminalIdleTimeoutSeconds`, NULL/0 = sınırsız varsayılan) —
+kullanıcı girdisine dayalı, denetimsiz bırakılan bir root kabuğunu otomatik
+kapatmak için. Yeni migration: `20260905000000_terminal_idle_timeout`.
+Gerçek Postgres 16 + Nginx container'larıyla uçtan uca doğrulandı (migration,
+API validasyonu, gerçek bir PTY üzerinden hem zaman aşımı ayarının doğru
+mesajla kapanması hem sınırsız ayarda 75sn+ hayatta kalma).
+
+### 2026-09-05 güncellemesi: Aşama H — GitHub bağlantısı gerçek bir GitHub App'e dönüştürüldü
+
+Kullanıcı isteği: "hesaba bağlayınca otomatik bütün repoları çeker" davranışı
+GitHub App gibi çalışmalı — yalnızca kullanıcının izin verdiği depolar
+görülebilmeli; bir depo bir domaine bağlanabilmeli ve bağlandığında o
+domainin kök klasörüne otomatik kurulum yapılabilmeli. Eskiden (Aşama E)
+kullanıcı bir Personal Access Token yapıştırıyordu — token'ın GitHub
+tarafındaki kapsamı ne ise (genelde `repo` scope'lu bir PAT tüm depolara
+erişir) panel de onu görüyordu; bu GERÇEK bir "yalnızca izin verilenler"
+modeli değildi.
+
+**Yeni akış — GitHub'ın "manifest flow"u ile gerçek bir App:**
+`src/lib/github-app.ts` GitHub'ın manifest flow'unu uyguluyor: Ayarlar'daki
+"GitHub App Oluştur" butonu bir `POST /api/settings/github/app/begin`
+çağırıp bir CSRF `state` nonce'u (httpOnly çerezde) + manifest JSON'ı alır,
+istemci bunu gizli bir `<form>` ile `https://github.com/settings/apps/new`'a
+POST eder — GitHub App'i App ID/private key elle kopyalanmadan otomatik
+oluşturur. GitHub admin'i `redirect_url`'e (`/api/settings/github/app/callback`)
+`?code=...` ile geri yönlendirir; bu SUNUCUDAN SUNUCUYA bir webhook DEĞİL,
+admin'in kendi TARAYICISI üzerinden bir yönlendirme olduğu için `redirect_url`
+dışarıdan erişilebilir bir alan adı GEREKTİRMEZ — panelin IP:24428 varsayılan
+erişimi bile yeterli. Callback, `code`'u `POST /app-manifests/{code}/conversions`
+ile gerçek App kimlik bilgilerine (App ID, private key, client/webhook secret)
+çevirip yeni `GitHubAppConfig` singleton'ına (S3Config/PanelSettings gibi
+panel-wide, sırlar `crypto.ts` ile AES-256-GCM şifreli) kaydeder.
+
+"App'i Kur" butonu benzer bir `state` nonce akışıyla admin'i
+`https://github.com/apps/<slug>/installations/new`'a yönlendirir — GitHub'ın
+KENDİ ekranında hangi repolara izin verildiği (tümü veya seçili depolar)
+kullanıcı tarafından seçilir, panel bu seçime hiç karışmaz. GitHub kurulum
+sonrası App'in "Setup URL"ine (`/api/settings/github/app/setup`)
+`?installation_id=...` ile yönlendirir; bu ID App'in kendi JWT'siyle
+(`GET /app/installations/{id}`, panel JWT'yi RS256 ile `jose`'nin
+`importPKCS8`/`SignJWT`'iyle kendi private key'inden imzalıyor) doğrulanıp
+yeni bir `GitHubInstallation` satırına kaydedilir — sahte bir installation_id
+verilse bile GitHub 404 döner, yani `state` doğrulaması olmasa bile bu uç
+nokta kendi kendine güvenli.
+
+**Repo erişimi her zaman TAZE:** panel kendi tarafında bir izin listesi
+TUTMAZ — `listInstallationRepositories`/`listAllInstalledRepositories`
+(`GET /installation/repositories`, bir installation token'la) her çağrıda
+GitHub'a sorar. Kullanıcı GitHub'da izinleri değiştirdiğinde (repo ekle/çıkar,
+App'i kaldır) panel bir sonraki istekte anında yansıtır.
+
+**Git clone/pull artık SSH deploy key gerektirmiyor:** installation token'lar
+(`getInstallationAccessToken`, bellekte önbelleklenir — DB'ye ASLA yazılmaz,
+1 saat geçerli) `git.ts`'te `-c http.extraHeader="AUTHORIZATION: basic
+<base64(x-access-token:token)>"` olarak enjekte ediliyor (GitHub'ın
+`actions/checkout`'ta kullandığı biçimin aynısı) — HER ÇAĞRIDA taze mint
+edildiği için `.git/config`'e hiç yazılmıyor, sonraki `git fetch`'ler asla
+süresi dolmuş bir token'a bağlı kalmıyor. `Site`'a eklenen
+`githubInstallationId`/`githubRepoFullName` alanları hangi kurulum/depoya
+bağlı olduğunu tutuyor; bağlı DEĞİLSE site eskisi gibi elle girilen
+`repoUrl` (SSH/HTTPS) ile çalışmaya devam ediyor — SSH deploy key özelliği
+(Aşama E) bu eski/manuel yol için AYNEN duruyor, yalnızca "otomatik GitHub'a
+ekle" kolaylığı artık PAT yerine (bağlıysa) installation token kullanıyor.
+
+**"Depoyu domaine bağla + kök klasöre kur" akışı:** yeni
+`POST /api/sites/[id]/github-connect` TEK istekte hem `repoUrl`/`gitBranch`/
+`githubInstallationId`/`githubRepoFullName`'i kaydediyor HEM DE
+`gitPullOrClone`'u (zaten var olan "`.git` yoksa klonla" mantığı, bkz. Aşama
+B) tetikleyerek sitenin kök dizinine (`resolveSiteWorkdir`) ilk kurulumu
+yapıyor — eskiden bu iki adım TAMAMEN KOPUKTU: site detay sayfasındaki
+"GitHub Erişim Anahtarları" kartındaki repo seçici yalnızca yerel bir state
+güncelliyordu, `Site.repoUrl`'e hiç yazmıyordu; kullanıcı SSH URL'ini elle
+ayrı bir "Git & Dağıtım" alanına kopyalamak ve "Şimdi Pull Et"e ayrıca
+tıklamak ZORUNDAYDI. Site detay sayfasının Git & Dağıtım kartına artık bir
+depo seçici (yalnızca kurulumun izin verdiği depolar, `isGitPullSupported`
+kısıtına göre yalnızca NODEJS/PYTHON/REVERSE_PROXY için görünür) eklendi;
+bağlandığında `repoUrl`/`gitBranch` alanları salt-okunur hale gelip bağlı
+depoyu gösteriyor, "Bağlantıyı Kaldır" `DELETE .../github-connect` ile yalnızca
+`githubInstallationId`/`githubRepoFullName`'i temizliyor (`repoUrl`'e
+KASITLI dokunmuyor — zaten klonlanmış kod ve auto-pull ayarı olduğu gibi
+kalıyor).
+
+**Kaldırılanlar:** `GitHubAccount` modeli (PAT + şifreli token) tamamen
+kaldırıldı (migration `20260905010000_github_app` tabloyu drop ediyor),
+`src/app/api/settings/github/route.ts` (PAT connect POST) ve kullanılmayan
+`src/app/api/settings/github/deploy-key/route.ts` silindi,
+`src/lib/github-api.ts`'ten PAT'a özgü `verifyGitHubToken`/
+`getDecryptedTokenForUser`/`listGitHubUserRepos` kaldırıldı (deploy-key
+ekleme/listeleme/silme fonksiyonları — artık bir installation token alıyorlar
+— AYNEN kaldı).
+
+**Doğrulama:** RS256 JWT imzalama/doğrulama gerçek bir RSA anahtar çiftiyle
+elle test edildi; gerçek Postgres 16 üzerinde migration (incl. `GitHubAccount`
+drop + FK cascade/SetNull — bir `GitHubAppConfig` silindiğinde bağlı
+`GitHubInstallation` satırlarının gerçekten gittiği, bir `GitHubInstallation`
+silindiğinde bağlı `Site.githubInstallationId`'nin gerçekten NULL'a düştüğü
+elle doğrulandı) sorunsuz uygulandı; sahte bir App ID + gerçek bir RSA
+anahtarıyla `github-connect` uçtan uca denendi — JWT gerçekten GitHub'ın API
+sunucusuna gönderildi ve GitHub'ın kendi ("JSON web token could not be
+decoded") hatası doğru şekilde `lastPullError`'a yansıdı (sahte App ID için
+beklenen, doğru davranış). Manifest formu tarayıcıda gerçekten
+`github.com/settings/apps/new`'e POST edildi (oturumsuz olduğu için GitHub'ın
+giriş sayfasına düştü — beklenen). Site detay sayfasındaki yeni depo seçici +
+bağlan/kaldır akışı gerçek bir tarayıcıda uçtan uca doğrulandı. `next
+typegen`/`tsc --noEmit`/`eslint`/`npm run build` — yeni kodda ek hata yok
+(dosyalardaki birkaç ESLint hatası bu değişiklikten ÖNCE de vardı, bu
+oturumda dokunulmayan satırlarda). **Doğrulanamayan tek şey:** gerçek bir
+GitHub hesabıyla App oluşturma/kurma akışının tam GitHub arayüzü — bu,
+tanım gereği admin'in kendi GitHub hesabıyla, gerçek bir tarayıcı oturumunda
+yapması gereken bir adım.
+
 ## Klasör Yapısı (bu repo)
 
 ```

@@ -26,7 +26,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
   }
 
   const { id } = await params
-  const site = await prisma.site.findUnique({ where: { id } })
+  const site = await prisma.site.findUnique({ where: { id }, include: { githubInstallation: true } })
   if (!site) {
     return NextResponse.json({ error: "Site bulunamadı." }, { status: 404 })
   }
@@ -47,7 +47,11 @@ export async function POST(_request: Request, { params }: RouteParams) {
   }
 
   try {
-    const result = await gitPullOrClone({ ...site, repoUrl: site.repoUrl })
+    const result = await gitPullOrClone({
+      ...site,
+      repoUrl: site.repoUrl,
+      githubInstallationId: site.githubInstallation?.installationId ?? null,
+    })
     const updated = await prisma.site.update({
       where: { id },
       data: { lastPullAt: new Date(), lastPullOk: true, lastPullError: null },

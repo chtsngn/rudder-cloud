@@ -28,6 +28,7 @@ async function tick(): Promise<void> {
   try {
     sites = await prisma.site.findMany({
       where: { autoPullEnabled: true, repoUrl: { not: null } },
+      include: { githubInstallation: true },
     })
   } catch (error) {
     console.error("[auto-pull-scheduler] site listesi okunamadı:", error)
@@ -63,11 +64,16 @@ async function runPull(site: {
   gitBranch: string
   processManager: string
   customRestartCommand: string | null
+  githubInstallation: { installationId: string } | null
 }): Promise<void> {
   if (!site.repoUrl) return
 
   try {
-    const result = await gitPullOrClone({ ...site, repoUrl: site.repoUrl })
+    const result = await gitPullOrClone({
+      ...site,
+      repoUrl: site.repoUrl,
+      githubInstallationId: site.githubInstallation?.installationId ?? null,
+    })
     const updated = await prisma.site.update({
       where: { id: site.id },
       data: { lastPullAt: new Date(), lastPullOk: true, lastPullError: null },

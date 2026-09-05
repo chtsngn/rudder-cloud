@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 
 import { logAudit } from "@/lib/audit"
 import { getSession } from "@/lib/auth"
+import { getInstallationAccessToken } from "@/lib/github-app"
 import {
   GithubKeyError,
   deployHostAlias,
@@ -13,6 +14,28 @@ import { prisma } from "@/lib/prisma"
 
 interface RouteParams {
   params: Promise<{ id: string }>
+}
+
+/**
+ * Bu sitenin bağlı olduğu GitHub App kurulumu için (varsa) bir installation
+ * token döner — eskiden kullanıcının PAT'ından gelen `getDecryptedTokenForUser`
+ * yerine (bkz. docs/ARCHITECTURE.md Aşama H). Site bir kuruluma bağlı
+ * DEĞİLSE `null` döner; çağıranlar bunu "GitHub senkronizasyonu atlanıyor"
+ * olarak ele alır — deploy key'in kendisi (sunucudaki SSH anahtar çifti)
+ * bundan etkilenmez, yalnızca "GitHub'a otomatik ekle/kontrol et" kolaylığı
+ * kullanılamaz.
+ */
+async function getBearerTokenForSite(site: { githubInstallationId: string | null }): Promise<string | null> {
+  if (!site.githubInstallationId) return null
+  const installation = await prisma.gitHubInstallation.findUnique({
+    where: { id: site.githubInstallationId },
+  })
+  if (!installation) return null
+  try {
+    return await getInstallationAccessToken(installation.installationId)
+  } catch {
+    return null
+  }
 }
 
 function parseOwnerRepo(urlOrSlug: string): { owner: string; repo: string } | null {
@@ -70,7 +93,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   const siteConfig = (site.config && typeof site.config === "object" ? site.config : {}) as Record<string, unknown>
   const configRepoStr = typeof siteConfig.deployKeyRepo === "string" ? siteConfig.deployKeyRepo : null
 
-  let repoInfo = (reqOwner && reqRepo)
+  const repoInfo = (reqOwner && reqRepo)
     ? { owner: reqOwner, repo: reqRepo }
     : (configRepoStr ? parseOwnerRepo(configRepoStr) : parseOwnerRepo(site.repoUrl ?? ""))
 
@@ -78,12 +101,12 @@ export async function GET(request: Request, { params }: RouteParams) {
   let githubKeyId: number | null = null
 
   try {
-    const {
-      getDecryptedTokenForUser,
-      listDeployKeysFromGitHubRepo,
-      listGitHubUserRepos,
-    } = await import("@/lib/github-api")
-    const token = await getDecryptedTokenForUser(session.userId).catch(() => null)
+    const { listDeployKeysFromGitHubRepo } = await import("@/lib/github-api")
+    const { listInstallationRepositories } = await import("@/lib/github-app")
+    const installation = site.githubInstallationId
+      ? await prisma.gitHubInstallation.findUnique({ where: { id: site.githubInstallationId } })
+      : null
+    const token = await getBearerTokenForSite(site)
 
     if (token) {
       const localNorm = normalizeKey(site.deployKeyPublicKey)
@@ -131,11 +154,14 @@ export async function GET(request: Request, { params }: RouteParams) {
             message: "Deploy key GitHub deposundan silindiği için buradan da kaldırıldı.",
           })
         }
-      } else {
-        // Repo henüz atanmamışsa kullanıcının son güncellenen depolarını tara
-        const userRepos = await listGitHubUserRepos(token).catch(() => [])
+      } else if (installation) {
+        // Repo henüz atanmamışsa bu sitenin bağlı olduğu kurulumun depolarını tara
+        const installedRepos = await listInstallationRepositories(
+          installation.installationId,
+          installation.accountLogin
+        ).catch(() => [])
         let foundRepo: { owner: string; repo: string } | null = null
-        const reposToCheck = userRepos.slice(0, 15)
+        const reposToCheck = installedRepos.slice(0, 15)
 
         for (const r of reposToCheck) {
           try {
@@ -266,8 +292,13 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (autoAddToGithub && owner && repo) {
       try {
-        const { getDecryptedTokenForUser, addDeployKeyToGitHubRepo } = await import("@/lib/github-api")
-        const token = await getDecryptedTokenForUser(session.userId)
+        const { addDeployKeyToGitHubRepo } = await import("@/lib/github-api")
+        const token = await getBearerTokenForSite(site)
+        if (!token) {
+          throw new Error(
+            "Bu site bir GitHub App kurulumuna bağlı değil — Deploy Key otomatik eklenemedi (elle GitHub'a ekleyebilirsiniz)."
+          )
+        }
         const keyTitle = customTitle || `Rudder Cloud Deploy Key (${site.domain})`
         
         githubKey = await addDeployKeyToGitHubRepo(
@@ -368,12 +399,13 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
   if (repoInfo && site.deployKeyPublicKey) {
     try {
-      const {
-        getDecryptedTokenForUser,
-        listDeployKeysFromGitHubRepo,
-        deleteDeployKeyFromGitHubRepo,
-      } = await import("@/lib/github-api")
-      const token = await getDecryptedTokenForUser(session.userId)
+      const { listDeployKeysFromGitHubRepo, deleteDeployKeyFromGitHubRepo } = await import(
+        "@/lib/github-api"
+      )
+      const token = await getBearerTokenForSite(site)
+      if (!token) {
+        throw new Error("Bu site bir GitHub App kurulumuna bağlı değil.")
+      }
       const remoteKeys = await listDeployKeysFromGitHubRepo(token, repoInfo.owner, repoInfo.repo)
       const localNorm = normalizeKey(site.deployKeyPublicKey)
       const matchingKey = remoteKeys.find((rk) => normalizeKey(rk.key) === localNorm)

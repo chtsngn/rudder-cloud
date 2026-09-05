@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server"
 
 import { getSession } from "@/lib/auth"
-import {
-  GitHubApiError,
-  getDecryptedTokenForUser,
-  listGitHubUserRepos,
-} from "@/lib/github-api"
+import { GitHubAppError, listAllInstalledRepositories } from "@/lib/github-app"
 
 /**
- * `GET /api/settings/github/repos` — Bağlı GitHub kullanıcısının depolarını döner.
+ * `GET /api/settings/github/repos` — panele bağlı TÜM GitHub App
+ * kurulumları (installations) üzerinden erişilebilen depoları döner —
+ * "kullanıcının izin verdiği repolar" tam olarak bunlar, her seferinde
+ * GitHub'dan TAZE sorgulanır (bkz. src/lib/github-app.ts).
  */
 export async function GET() {
   const session = await getSession()
@@ -17,11 +16,10 @@ export async function GET() {
   }
 
   try {
-    const token = await getDecryptedTokenForUser(session.userId)
-    const repos = await listGitHubUserRepos(token)
+    const repos = await listAllInstalledRepositories()
     return NextResponse.json({ repos })
   } catch (error) {
-    if (error instanceof GitHubApiError) {
+    if (error instanceof GitHubAppError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }
     console.error("GitHub depoları listelenemedi:", error)

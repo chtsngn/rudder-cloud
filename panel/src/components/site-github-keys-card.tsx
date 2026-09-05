@@ -110,7 +110,7 @@ export function SiteGithubKeysCard({
       const [deployRes, actionsRes, ghRes] = await Promise.all([
         fetch(`/api/sites/${siteId}/deploy-key${q}`, { cache: "no-store" }),
         fetch(`/api/sites/${siteId}/actions-key`, { cache: "no-store" }),
-        fetch(`/api/settings/github`, { cache: "no-store" }).catch(() => null),
+        fetch(`/api/settings/github/app`, { cache: "no-store" }).catch(() => null),
       ])
       if (!deployRes.ok) {
         setLoadError(await parseError(deployRes))
@@ -145,15 +145,15 @@ export function SiteGithubKeysCard({
 
       if (ghRes && ghRes.ok) {
         const ghData = (await ghRes.json().catch(() => null)) as {
-          connected?: boolean
-          account?: { username: string; avatarUrl?: string }
+          configured?: boolean
+          installations?: Array<{ accountLogin: string; accountAvatarUrl: string | null }>
         } | null
-        if (ghData?.connected && ghData.account) {
+        if (ghData?.configured && ghData.installations && ghData.installations.length > 0) {
           setGhAccount({
-            username: ghData.account.username,
-            avatarUrl: ghData.account.avatarUrl,
+            username: ghData.installations.map((i) => i.accountLogin).join(", "),
+            avatarUrl: ghData.installations[0].accountAvatarUrl ?? undefined,
           })
-          // Kullanıcının depolarını da getir
+          // Kurulumların izin verdiği depoları da getir
           fetch(`/api/settings/github/repos`, { cache: "no-store" })
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {

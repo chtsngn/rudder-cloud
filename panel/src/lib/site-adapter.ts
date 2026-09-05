@@ -90,6 +90,7 @@ export interface ApiSite {
   config: Record<string, unknown> | null
   repoUrl: string | null
   gitBranch: string
+  githubRepoFullName: string | null
   autoPullEnabled: boolean
   autoPullIntervalSeconds: number
   lastPullAt: string | null
