@@ -114,7 +114,11 @@ interface ManifestConversionResponse {
   name: string
   client_id: string
   client_secret: string
-  webhook_secret: string
+  // GitHub'ın kendi şeması bunu nullable işaretliyor — manifest'te
+  // `hook_attributes` (webhook URL'i) belirtilmediği için (bkz. buildManifest,
+  // bu App webhook DEĞİL doğrudan REST/git akışı kullanıyor) GitHub bu App'ler
+  // için `null` döndürüyor. Alan zaten hiç okunmuyor (bkz. not aşağıda).
+  webhook_secret: string | null
   pem: string
   html_url: string
   owner: { login: string; avatar_url: string; type: string }
@@ -151,7 +155,7 @@ export async function exchangeManifestCode(
       name: data.name,
       clientId: data.client_id,
       clientSecretEnc: encryptSecret(data.client_secret),
-      webhookSecretEnc: encryptSecret(data.webhook_secret),
+      webhookSecretEnc: encryptSecret(data.webhook_secret ?? ""),
       privateKeyEnc: encryptSecret(data.pem),
       htmlUrl: data.html_url,
       ownerLogin: data.owner.login,
@@ -164,7 +168,7 @@ export async function exchangeManifestCode(
       name: data.name,
       clientId: data.client_id,
       clientSecretEnc: encryptSecret(data.client_secret),
-      webhookSecretEnc: encryptSecret(data.webhook_secret),
+      webhookSecretEnc: encryptSecret(data.webhook_secret ?? ""),
       privateKeyEnc: encryptSecret(data.pem),
       htmlUrl: data.html_url,
       ownerLogin: data.owner.login,
