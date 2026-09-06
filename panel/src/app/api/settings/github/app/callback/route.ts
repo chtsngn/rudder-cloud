@@ -53,7 +53,11 @@ export async function GET(request: Request) {
     })
     return redirectToSettings(request, { githubApp: "created" })
   } catch (error) {
-    const message = error instanceof GitHubAppError ? error.message : "GitHub App oluşturulamadı."
+    console.error("[github-app/callback] manifest kod dönüşümü başarısız:", error)
+    const message =
+      error instanceof GitHubAppError
+        ? error.message
+        : `GitHub App oluşturulamadı: ${error instanceof Error ? error.message : String(error)}`
     return redirectToSettings(request, { githubApp: "error", message })
   }
 }

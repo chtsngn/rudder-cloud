@@ -22,12 +22,19 @@ export async function POST() {
   }
 
   const hdrs = await headers()
-  const host = hdrs.get("host")
+  // Bazı ters proxy'ler (ör. Cloudflare Tunnel) orijinal alan adını `Host`
+  // yerine `X-Forwarded-Host`'ta taşıyıp `Host`'u kendi iç adresine (ör.
+  // `localhost:3000`) çevirebiliyor — bu yüzden varsa ÖNCE o okunuyor.
+  const forwardedHost = hdrs.get("x-forwarded-host")
+  const host = (forwardedHost ? forwardedHost.split(",")[0]?.trim() : null) || hdrs.get("host")
   if (!host) {
     return NextResponse.json({ error: "Sunucu adresi belirlenemedi." }, { status: 500 })
   }
-  const proto = hdrs.get("x-forwarded-proto") || "http"
+  const proto = (hdrs.get("x-forwarded-proto")?.split(",")[0]?.trim()) || "http"
   const origin = `${proto}://${host}`
+  console.log(
+    `[github-app/begin] host=${hdrs.get("host")} x-forwarded-host=${forwardedHost} x-forwarded-proto=${hdrs.get("x-forwarded-proto")} -> origin=${origin}`
+  )
 
   const state = randomBytes(24).toString("hex")
   const manifest = buildManifest(origin)
