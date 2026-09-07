@@ -1,31 +1,31 @@
 /**
- * GitHub deploy key ve GitHub Actions SSH key yönetimi (Aşama E).
+ * GitHub Actions SSH key yönetimi (Aşama E).
  *
- * Mevcut `scripts/github-deploy-key.sh` / `scripts/github-actions-key.sh`
- * interaktif (okuma/yazma promptları) olduğu için panelden DOĞRUDAN
- * çalıştırılamıyor — mantıkları burada API olarak yeniden yazıldı:
+ * Mevcut `scripts/github-actions-key.sh` interaktif (okuma/yazma promptları)
+ * olduğu için panelden DOĞRUDAN çalıştırılamıyor — mantığı burada API olarak
+ * yeniden yazıldı: ayrı bir ed25519 anahtar üretilir, public key `panel`
+ * kullanıcısının KENDİ `~/.ssh/authorized_keys` dosyasına eklenir (GitHub
+ * Actions bu anahtarla sunucuya `panel` kullanıcısı olarak SSH ile
+ * bağlanabilsin diye — script'in "PUBLIC key -> authorized_keys" adımı).
  *
- *   - Deploy key: `panel` kullanıcısının kendi `~/.ssh` dizininde ed25519
- *     anahtar üretilir (`site_<slug>_deploy`), `~/.ssh/config`'e idempotent
- *     bir `Host github.com-site_<slug>_deploy` alias'ı eklenir (script'teki
- *     "Host alias" adımının birebir aynısı). Public key GitHub repo'nun
- *     Deploy Keys ayarına ELLE eklensin diye döndürülür.
- *   - Actions key: ayrı bir ed25519 anahtar üretilir, public key `panel`
- *     kullanıcısının KENDİ `~/.ssh/authorized_keys` dosyasına eklenir
- *     (GitHub Actions bu anahtarla sunucuya `panel` kullanıcısı olarak SSH
- *     ile bağlanabilsin diye — script'in "PUBLIC key -> authorized_keys"
- *     adımı).
+ * (Eskiden burada bir de "Deploy key" (git clone/pull için, panelin KENDİ
+ * pull mekanizmasının repo'ya SSH ile erişmesi) yönetimi vardı — GitHub App
+ * entegrasyonu (bkz. github-app.ts) bunu tamamen yerine aldı: pull'lar artık
+ * kısa ömürlü installation token ile kimlik doğruluyor, ayrı bir SSH
+ * anahtarına hiç gerek kalmadı. Bu yüzden 2026-09-07'de kaldırıldı — Actions
+ * key (bu dosyanın geri kalanı) tamamen AYRI bir amaca hizmet ediyor: GitHub
+ * Actions'ın KENDİ CI/CD akışının bu sunucuya SSH ile bağlanabilmesi, GitHub
+ * App'in yerine geçtiği "panel repo'yu çeksin" akışıyla ilgisi yok.)
  *
  * GÜVENLİK: PRIVATE KEY hiçbir zaman veritabanına yazılmaz. Diskte yalnızca
- * `panel` kullanıcısının kendi ev dizininde 0600 izinle durur. Actions key
- * için private key, GitHub Actions secret'ına yapıştırılabilsin diye
- * yalnızca ÜRETİM ANINDAKİ API yanıtında bir kez döner — sonradan hiçbir
- * route bunu tekrar okuyup dönmez (bkz. actions-key/route.ts GET, yalnızca
- * public alanları döner).
+ * `panel` kullanıcısının kendi ev dizininde 0600 izinle durur. Private key,
+ * GitHub Actions secret'ına yapıştırılabilsin diye yalnızca ÜRETİM ANINDAKİ
+ * API yanıtında bir kez döner — sonradan hiçbir route bunu tekrar okuyup
+ * dönmez (bkz. actions-key/route.ts GET, yalnızca public alanları döner).
  *
- * Hiçbiri yeni bir sudo izni gerektirmiyor: ikisi de yalnızca `panel`
- * kullanıcısının zaten sahip olduğu kendi ev dizini (`~/.ssh`) içinde
- * çalışır — provizyon script'lerine veya sudoers'a hiçbir dokunuş yok.
+ * Yeni bir sudo izni gerektirmiyor: yalnızca `panel` kullanıcısının zaten
+ * sahip olduğu kendi ev dizini (`~/.ssh`) içinde çalışır — provizyon
+ * script'lerine veya sudoers'a hiçbir dokunuş yok.
  */
 import { execFile } from "node:child_process"
 import { access, chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises"
@@ -37,9 +37,7 @@ import { promisify } from "node:util"
 const execFileAsync = promisify(execFile)
 
 const SSH_DIR = join(homedir(), ".ssh")
-const SSH_CONFIG = join(SSH_DIR, "config")
 const AUTHORIZED_KEYS = join(SSH_DIR, "authorized_keys")
-const KNOWN_HOSTS = join(SSH_DIR, "known_hosts")
 
 export class GithubKeyError extends Error {
   status: number
@@ -48,10 +46,6 @@ export class GithubKeyError extends Error {
     this.name = "GithubKeyError"
     this.status = status
   }
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
 function detailFromError(error: unknown, fallback: string): string {
@@ -92,16 +86,8 @@ export function slugifyDomain(domain: string): string {
   return slug || "site"
 }
 
-export function deployKeyNameFor(domain: string): string {
-  return `site_${slugifyDomain(domain)}_deploy`
-}
-
 export function actionsKeyNameFor(domain: string): string {
   return `site_${slugifyDomain(domain)}_actions`
-}
-
-export function deployHostAlias(keyName: string): string {
-  return `github.com-${keyName}`
 }
 
 async function generateEd25519KeyPair(keyFile: string, comment: string): Promise<void> {
@@ -122,138 +108,6 @@ async function generateEd25519KeyPair(keyFile: string, comment: string): Promise
   }
   await chmod(keyFile, 0o600)
   await chmod(`${keyFile}.pub`, 0o644)
-}
-
-// ---------------------------------------------------------------------------
-// Deploy key (git clone/pull için) — SSH config'e Host alias ekler.
-// ---------------------------------------------------------------------------
-
-export interface DeployKeyInfo {
-  keyName: string
-  hostAlias: string
-  publicKey: string
-  fingerprint: string
-  createdAt: string
-}
-
-async function ensureHostAlias(hostAlias: string, keyFile: string): Promise<void> {
-  await writeFile(SSH_CONFIG, "", { flag: "a" })
-  await chmod(SSH_CONFIG, 0o600)
-  const existing = await readFile(SSH_CONFIG, "utf8").catch(() => "")
-
-  const hostLineRe = new RegExp(`^[ \\t]*Host[ \\t]+${escapeRegExp(hostAlias)}[ \\t]*$`, "m")
-  if (hostLineRe.test(existing)) return // script'teki "zaten tanımlı, atlanıyor" davranışı
-
-  const block = `Host ${hostAlias}\n    HostName github.com\n    User git\n    IdentityFile ${keyFile}\n    IdentitiesOnly yes\n`
-  const needsLeadingNewline = existing.length > 0 && !existing.endsWith("\n")
-  await writeFile(SSH_CONFIG, (needsLeadingNewline ? "\n" : "") + block, { flag: "a" })
-  await chmod(SSH_CONFIG, 0o600)
-}
-
-async function removeHostAlias(hostAlias: string): Promise<void> {
-  const existing = await readFile(SSH_CONFIG, "utf8").catch(() => "")
-  if (!existing) return
-  // Yazdığımız bloğu birebir tanıyoruz: "Host <alias>" satırı + onu izleyen
-  // girintili satırlar (config gövdesi). Yalnızca kendi ürettiğimiz bloğu
-  // kaldırıyoruz, kullanıcının elle eklediği başka Host bloklarına dokunmuyoruz.
-  const blockRe = new RegExp(
-    `(^|\\n)[ \\t]*Host[ \\t]+${escapeRegExp(hostAlias)}[ \\t]*\\n(?:[ \\t]+[^\\n]*\\n?)*`,
-    "m"
-  )
-  const updated = existing.replace(blockRe, (_match, lead: string) => (lead ? "\n" : ""))
-  if (updated !== existing) {
-    await writeFile(SSH_CONFIG, updated)
-    await chmod(SSH_CONFIG, 0o600)
-  }
-}
-
-export async function generateDeployKey(
-  domain: string,
-  overwrite = true
-): Promise<DeployKeyInfo> {
-  await ensureSshDir()
-  const keyName = deployKeyNameFor(domain)
-  const keyFile = join(SSH_DIR, keyName)
-  const pubFile = `${keyFile}.pub`
-  const hostAlias = deployHostAlias(keyName)
-
-  if (await pathExists(keyFile)) {
-    if (!overwrite) {
-      throw new GithubKeyError(
-        "Bu site için deploy key zaten mevcut. Önce mevcut anahtarı silin.",
-        409
-      )
-    }
-    await removeDeployKey(domain)
-  }
-
-  await generateEd25519KeyPair(keyFile, keyName)
-  await ensureHostAlias(hostAlias, keyFile)
-
-  const publicKey = (await readFile(pubFile, "utf8")).trim()
-  const fingerprint = await fingerprintOf(pubFile)
-
-  return { keyName, hostAlias, publicKey, fingerprint, createdAt: new Date().toISOString() }
-}
-
-export async function removeDeployKey(domain: string): Promise<void> {
-  const keyName = deployKeyNameFor(domain)
-  const keyFile = join(SSH_DIR, keyName)
-  const hostAlias = deployHostAlias(keyName)
-
-  await removeHostAlias(hostAlias)
-  await rm(keyFile, { force: true })
-  await rm(`${keyFile}.pub`, { force: true })
-}
-
-async function ensureGithubKnownHost(): Promise<void> {
-  await writeFile(KNOWN_HOSTS, "", { flag: "a" })
-  await chmod(KNOWN_HOSTS, 0o644)
-  const existing = await readFile(KNOWN_HOSTS, "utf8").catch(() => "")
-  if (existing.includes("github.com")) return
-  try {
-    const { stdout } = await execFileAsync("ssh-keyscan", ["-t", "ed25519", "github.com"], {
-      timeout: 10_000,
-    })
-    if (stdout.trim()) {
-      await writeFile(KNOWN_HOSTS, stdout, { flag: "a" })
-    }
-  } catch {
-    // best-effort — known_hosts olmadan da bağlantı denemesi devam edebilir,
-    // yalnızca ilk seferde host authenticity uyarısı çıkabilir.
-  }
-}
-
-export interface DeployKeyTestResult {
-  ok: boolean
-  output: string
-}
-
-/** script'in 7. adımının karşılığı: `ssh -T git@<alias>`. GitHub başarılı
- * kimlik doğrulamada bile exit 1 döner (shell erişimi vermez) — bu yüzden
- * başarı, çıktıdaki "successfully authenticated" ifadesiyle belirlenir. */
-export async function testDeployKeyConnection(domain: string): Promise<DeployKeyTestResult> {
-  const keyName = deployKeyNameFor(domain)
-  const hostAlias = deployHostAlias(keyName)
-  if (!(await pathExists(join(SSH_DIR, keyName)))) {
-    throw new GithubKeyError("Bu site için deploy key bulunamadı.", 404)
-  }
-
-  await ensureGithubKnownHost()
-
-  try {
-    const { stdout, stderr } = await execFileAsync(
-      "ssh",
-      ["-T", "-o", "ConnectTimeout=10", "-o", "BatchMode=yes", `git@${hostAlias}`],
-      { timeout: 15_000 }
-    )
-    const output = `${stdout}${stderr}`.trim()
-    return { ok: /successfully authenticated/i.test(output), output }
-  } catch (error) {
-    const err = error as NodeJS.ErrnoException & { stdout?: string; stderr?: string }
-    const output = `${err.stdout ?? ""}${err.stderr ?? ""}`.trim()
-    return { ok: /successfully authenticated/i.test(output), output: output || err.message }
-  }
 }
 
 // ---------------------------------------------------------------------------

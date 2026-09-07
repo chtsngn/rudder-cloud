@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { createPortal } from "react-dom"
 import { Loader2, Search, Terminal as CommandIcon, X, CheckCircle2, ArrowRight, ExternalLink } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -134,7 +135,13 @@ export function QuickCommandsDialog({ open, onOpenChange }: { open: boolean; onO
 
   if (!open) return null
 
-  return (
+  // `AppSidebar` (bu bileşenin göründüğü yer) mobilde kaydırma animasyonu
+  // için `translate-x` transform'u taşıyan bir `<aside>` içinde render
+  // ediliyor — CSS'te bir ata `transform` taşırsa `position: fixed` artık
+  // viewport'a değil O ATAYA göre konumlanır. `document.body`'ye portal
+  // ile çıkmak, sidebar'ın neresinden açılırsa açılsın gerçek tam ekran
+  // overlay olmasını garantiliyor.
+  return createPortal(
     <div
       onClick={(e) => {
         if (e.target === e.currentTarget) close()
@@ -277,6 +284,7 @@ export function QuickCommandsDialog({ open, onOpenChange }: { open: boolean; onO
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

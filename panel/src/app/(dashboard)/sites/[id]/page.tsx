@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowUpRight,
   Check,
@@ -39,7 +40,7 @@ import { Switch } from "@/components/ui/switch"
 import { BusyPortsHint } from "@/components/busy-ports-hint"
 import { SiteAccessCard } from "@/components/site-access-card"
 import { SiteBackupCard } from "@/components/site-backup-card"
-import { SiteGithubKeysCard } from "@/components/site-github-keys-card"
+import { SiteGithubActionsKeyCard } from "@/components/site-github-actions-key-card"
 import { StatMeter } from "@/components/stat-meter"
 import { SITE_TYPES, type Site, type SiteType } from "@/lib/mock-data"
 import { apiSiteToUiSite, type ApiSite } from "@/lib/site-adapter"
@@ -394,10 +395,34 @@ export default function SiteDetailPage() {
     return () => clearTimeout(timer)
   }, [activeTab, installedReposLoaded])
 
+  // Depo listesi yüklendiğinde, seçiciyi hâlihazırda bağlı olan depoya
+  // (varsa) ön-seçili getirir — kullanıcı "değiştirmek" için doğrudan farklı
+  // bir seçenek işaretleyebilsin diye (bkz. handleConnectRepo'daki uyarı).
+  useEffect(() => {
+    if (!installedReposLoaded || !githubRepoFullName || selectedRepoFullName) return
+    // Bir sonraki makrotaska ertelenir — aynı dosyadaki `loadLogs`/repo-yükleme
+    // effect'leriyle aynı disiplin (react-hooks/set-state-in-effect'i
+    // tetiklememek için).
+    const timer = setTimeout(() => setSelectedRepoFullName(githubRepoFullName), 0)
+    return () => clearTimeout(timer)
+  }, [installedReposLoaded, githubRepoFullName, selectedRepoFullName])
+
   async function handleConnectRepo() {
     if (!site || !selectedRepoFullName) return
     const repo = installedRepos.find((r) => r.fullName === selectedRepoFullName)
     if (!repo) return
+
+    // Zaten bağlı bir depodan FARKLI birine geçiliyorsa: gitPullOrClone
+    // (bkz. git.ts) bu durumda çalışma dizinini `rsync --delete` ile yeni
+    // reponun içeriğiyle birebir eşitliyor — yani eski repodan kalan HER ŞEY
+    // silinir. Kullanıcı bunu bilerek onaylamalı.
+    if (githubRepoFullName && repo.fullName !== githubRepoFullName) {
+      const msg =
+        lang === "en"
+          ? `Switch from @${githubRepoFullName} to @${repo.fullName}? The site's current files will be DELETED and replaced with a fresh clone of the new repository.`
+          : `@${githubRepoFullName} yerine @${repo.fullName} bağlansın mı? Sitenin mevcut dosyaları SİLİNİP yeni reponun taze bir klonuyla değiştirilecek.`
+      if (!window.confirm(msg)) return
+    }
 
     setConnectingRepo(true)
     setConnectRepoError(null)
@@ -675,19 +700,17 @@ export default function SiteDetailPage() {
               </a>
             </Button>
 
-            {site.type !== "proxy" && (
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className="h-9 px-3 rounded-xl border border-border bg-card text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#580619] dark:hover:text-[#38bdf8] hover:border-[#c8a87c] dark:hover:border-[#38bdf8]/50 shadow-2xs"
-              >
-                <Link href={`/sites/${site.id}/files`} className="flex items-center gap-1.5">
-                  <FolderOpen className="size-3.5 text-[#580619] dark:text-[#38bdf8]" />
-                  {t("sites.filesBtn")}
-                </Link>
-              </Button>
-            )}
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="h-9 px-3 rounded-xl border border-border bg-card text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#580619] dark:hover:text-[#38bdf8] hover:border-[#c8a87c] dark:hover:border-[#38bdf8]/50 shadow-2xs"
+            >
+              <Link href={`/sites/${site.id}/files`} className="flex items-center gap-1.5">
+                <FolderOpen className="size-3.5 text-[#580619] dark:text-[#38bdf8]" />
+                {t("sites.filesBtn")}
+              </Link>
+            </Button>
 
             {isManaged && (
               <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#070c1a] p-1 rounded-xl border border-slate-200/80 dark:border-[#16223f]">
@@ -964,42 +987,27 @@ export default function SiteDetailPage() {
             </div>
 
             <div className="space-y-5">
-              {/* GitHub App'e bağlı depo seçimi — seçilince repoUrl/branch
-                  otomatik doldurulur VE kök dizine ilk kurulum tetiklenir
-                  (bkz. handleConnectRepo, /api/sites/[id]/github-connect). */}
-              {githubRepoFullName ? (
-                <div className="flex items-center justify-between gap-3 p-4 rounded-xl border border-emerald-200/80 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <GitBranch className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-emerald-900 dark:text-emerald-300 truncate">
-                        {lang === "en" ? "Connected via GitHub App" : "GitHub App ile bağlı"}: @{githubRepoFullName}
-                      </p>
-                      <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">
-                        {lang === "en" ? "Pulls authenticate with a short-lived installation token — no SSH key needed." : "Pull'lar kısa ömürlü installation token ile doğrulanır — SSH anahtarı gerekmez."}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={disconnectingRepo}
-                    onClick={handleDisconnectRepo}
-                    className="h-8 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 shrink-0"
-                  >
-                    {disconnectingRepo ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Trash2 className="size-3.5 mr-1" />}
-                    {lang === "en" ? "Disconnect" : "Bağlantıyı Kaldır"}
-                  </Button>
+              {/* Repo seçimi — SADECE GitHub App üzerinden (bkz. docs/ARCHITECTURE.md
+                  2026-09-07 güncellemesi: manuel repo URL / deploy key akışı
+                  kaldırıldı, GitHub App tek yol). Seçim değiştirilince
+                  handleConnectRepo hem repoUrl/branch'i günceller hem kök
+                  dizine (yeniden) kurulumu tetikler — bkz. git.ts'teki
+                  `repoChanged` mantığı: farklı bir depoya geçilirse ESKİ
+                  dosyalar silinip yeni depo taze klonlanır. */}
+              {!installedReposLoaded ? (
+                <div className="flex items-center gap-2 p-4 rounded-xl border border-border bg-muted/30 text-xs text-muted-foreground">
+                  <Loader2 className="size-3.5 animate-spin" />
+                  {lang === "en" ? "Loading GitHub App repositories…" : "GitHub App depoları yükleniyor…"}
                 </div>
               ) : installedRepos.length > 0 ? (
                 <div className="space-y-2 p-4 rounded-xl border border-border bg-muted/30">
                   <Label className="text-xs font-bold text-foreground/90">
-                    {lang === "en" ? "Connect a GitHub App repository" : "Bir GitHub App deposu bağla"}
+                    {lang === "en" ? "GitHub repository" : "GitHub deposu"}
                   </Label>
                   <p className="text-[11px] text-muted-foreground">
                     {lang === "en"
-                      ? "Only repositories your GitHub App installation is authorized for are listed. Connecting clones it straight into this site's root folder."
-                      : "Yalnızca GitHub App kurulumunuzun izin verdiği depolar listelenir. Bağlayınca bu sitenin kök klasörüne doğrudan klonlanır."}
+                      ? "Only repositories your GitHub App installation is authorized for are listed."
+                      : "Yalnızca GitHub App kurulumunuzun izin verdiği depolar listelenir."}
                   </p>
                   <div className="flex flex-col sm:flex-row gap-2 pt-1">
                     <CustomSelect
@@ -1013,53 +1021,53 @@ export default function SiteDetailPage() {
                     />
                     <Button
                       onClick={handleConnectRepo}
-                      disabled={!selectedRepoFullName || connectingRepo}
+                      disabled={!selectedRepoFullName || connectingRepo || selectedRepoFullName === githubRepoFullName}
                       className="h-10 px-5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-semibold cursor-pointer shrink-0"
                     >
                       {connectingRepo && <Loader2 className="size-3.5 animate-spin mr-1" />}
-                      {lang === "en" ? "Connect & Install" : "Bağla ve Kur"}
+                      {githubRepoFullName
+                        ? (lang === "en" ? "Switch Repository" : "Depoyu Değiştir")
+                        : (lang === "en" ? "Connect & Install" : "Bağla ve Kur")}
                     </Button>
                   </div>
+
+                  {githubRepoFullName && (
+                    <div className="flex items-center justify-between gap-3 pt-1">
+                      <p className="text-[11px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                        <GitBranch className="size-3.5 shrink-0" />
+                        {lang === "en" ? "Connected" : "Bağlı"}: @{githubRepoFullName} ({gitForm.gitBranch})
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={disconnectingRepo}
+                        onClick={handleDisconnectRepo}
+                        className="h-7 text-[11px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 shrink-0"
+                      >
+                        {disconnectingRepo ? <Loader2 className="size-3 animate-spin mr-1" /> : <Trash2 className="size-3 mr-1" />}
+                        {lang === "en" ? "Disconnect" : "Bağlantıyı Kaldır"}
+                      </Button>
+                    </div>
+                  )}
+
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-start gap-1.5 pt-1">
+                    <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
+                    {lang === "en"
+                      ? "Switching repositories deletes the site's current files and clones the new repository fresh."
+                      : "Depoyu değiştirmek, sitenin mevcut dosyalarını siler ve yeni depoyu sıfırdan klonlar."}
+                  </p>
+
                   {connectRepoError && <p className="text-xs text-destructive">{connectRepoError}</p>}
                 </div>
-              ) : installedReposLoaded ? (
+              ) : (
                 <div className="p-3.5 rounded-xl border border-border bg-muted/30 text-[11px] text-muted-foreground">
                   {lang === "en" ? "No GitHub App installed yet — " : "Henüz kurulu bir GitHub App yok — "}
                   <Link href="/settings" className="text-primary font-semibold hover:underline">
                     {lang === "en" ? "connect one in Settings" : "Ayarlar'dan bağlayın"}
                   </Link>
-                  {lang === "en" ? " to pick a repository here, or enter a repo URL manually below." : ", ya da aşağıya elle bir repo adresi girin."}
+                  {lang === "en" ? " to pick a repository here." : "."}
                 </div>
-              ) : null}
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="repoUrl" className="text-xs font-bold text-foreground/90">
-                    {t("sites.detail.repoAddressLabel")}
-                  </Label>
-                  <Input
-                    id="repoUrl"
-                    placeholder="git@github.com:owner/repo.git"
-                    disabled={!!githubRepoFullName}
-                    className="font-mono text-xs h-10 rounded-xl bg-card border border-border text-foreground disabled:opacity-60"
-                    value={gitForm.repoUrl}
-                    onChange={(e) => setGitForm((f) => ({ ...f, repoUrl: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="gitBranch" className="text-xs font-bold text-foreground/90">
-                    {t("sites.detail.branchNameLabel")}
-                  </Label>
-                  <Input
-                    id="gitBranch"
-                    placeholder="main"
-                    disabled={!!githubRepoFullName}
-                    className="font-mono text-xs h-10 rounded-xl bg-card border border-border text-foreground disabled:opacity-60"
-                    value={gitForm.gitBranch}
-                    onChange={(e) => setGitForm((f) => ({ ...f, gitBranch: e.target.value }))}
-                  />
-                </div>
-              </div>
+              )}
 
               {/* Otomatik Pull Switch */}
               <div className="flex items-center justify-between rounded-xl border border-border p-4 bg-muted/30">
@@ -1156,7 +1164,7 @@ export default function SiteDetailPage() {
                 <Button
                   variant="outline"
                   onClick={handleGitPull}
-                  disabled={gitPulling || !gitForm.repoUrl.trim()}
+                  disabled={gitPulling || !githubRepoFullName}
                   className="h-10 px-5 rounded-xl border border-border bg-card text-foreground/90 hover:text-[#580619] dark:hover:text-[#38bdf8] hover:border-[#c8a87c] dark:hover:border-[#38bdf8]/50 text-xs font-semibold cursor-pointer"
                 >
                   {gitPulling ? (
@@ -1191,7 +1199,7 @@ export default function SiteDetailPage() {
           </div>
 
           {/* GitHub Keys Bileşeni */}
-          <SiteGithubKeysCard siteId={site.id} initialRepoUrl={gitForm.repoUrl} />
+          <SiteGithubActionsKeyCard siteId={site.id} repoSlug={githubRepoFullName ?? undefined} />
         </div>
       )}
 

@@ -75,6 +75,15 @@ async function currentCommit(workdir: string): Promise<string | null> {
   }
 }
 
+async function currentRemoteUrl(workdir: string): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync("git", ["-C", workdir, "remote", "get-url", "origin"])
+    return stdout.trim()
+  } catch {
+    return null
+  }
+}
+
 /**
  * Site bir GitHub App kurulumuna bağlıysa (`githubInstallationId`), SSH
  * deploy key YERİNE bu kurulumun kısa ömürlü installation token'ını HTTPS
@@ -96,10 +105,14 @@ async function githubAppAuthArgs(githubInstallationId: string | null | undefined
 }
 
 /**
- * `.git` yoksa temiz bir geçici dizine klonlayıp içeriğini hedefe rsync
- * eder (var olan dosyaları SİLMEDEN — WordPress-tarzı "bazı dosyalar repo
- * dışında da olabilir" senaryosuna daha güvenli); `.git` varsa doğrudan
- * `git pull` çalıştırır.
+ * `.git` yoksa (veya varsa ama farklı bir depoya bağlıysa — bkz. aşağıda
+ * `repoChanged`) temiz bir geçici dizine klonlayıp içeriğini `rsync -a
+ * --delete` ile hedefe yansıtır — `--delete` KASITLI: repo değiştiğinde
+ * eski repodan kalan dosyaların silinip hedefin yeni repoyla BİREBİR eşit
+ * hale gelmesini garantiler (bkz. site-github-keys-card kaldırılırken
+ * eklenen kullanıcı uyarısı: "repo değiştirilirse eski dosyalar silinir").
+ * `.git` varsa VE aynı depoya bağlıysa doğrudan `git fetch` + `reset --hard`
+ * ile hızlı, aşamalı bir pull yapılır.
  */
 export async function gitPullOrClone(
   site: SiteLike & { repoUrl: string; gitBranch: string; githubInstallationId?: string | null }
@@ -122,11 +135,14 @@ export async function gitPullOrClone(
   }
 
   const hasGit = await pathExists(join(workdir, ".git"))
-  const before = hasGit ? await currentCommit(workdir) : null
+  const existingOrigin = hasGit ? await currentRemoteUrl(workdir) : null
+  const repoChanged = hasGit && existingOrigin !== null && existingOrigin !== site.repoUrl
+  const reuseExisting = hasGit && !repoChanged
+  const before = reuseExisting ? await currentCommit(workdir) : null
 
   try {
     const authArgs = await githubAppAuthArgs(site.githubInstallationId)
-    if (hasGit) {
+    if (reuseExisting) {
       await execFileAsync(
         "git",
         ["-C", workdir, ...authArgs, "fetch", "origin", site.gitBranch],
@@ -146,7 +162,13 @@ export async function gitPullOrClone(
           { timeout: GIT_TIMEOUT_MS }
         )
         await execFileAsync("mkdir", ["-p", workdir])
-        await execFileAsync("rsync", ["-a", `${tmp}/`, `${workdir}/`], { timeout: GIT_TIMEOUT_MS })
+        // `--delete` SADECE repo gerçekten değiştiyse (repoChanged) eklenir —
+        // gerçek ilk klonlamada üstteki dosya-fonksiyonu-dışı dosyaları
+        // SİLMEME garantisi (WordPress-tarzı senaryo, bkz. fonksiyon başlığı)
+        // korunuyor; yalnızca "eski repo -> yeni repo" geçişinde eski
+        // içerik bilinçli olarak temizleniyor.
+        const rsyncArgs = repoChanged ? ["-a", "--delete", `${tmp}/`, `${workdir}/`] : ["-a", `${tmp}/`, `${workdir}/`]
+        await execFileAsync("rsync", rsyncArgs, { timeout: GIT_TIMEOUT_MS })
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
