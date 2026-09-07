@@ -3,11 +3,17 @@ import { NextResponse } from "next/server"
 
 import { logAudit } from "@/lib/audit"
 import { getSession } from "@/lib/auth"
-import { GH_APP_STATE_COOKIE, fetchInstallationDetails, upsertInstallation } from "@/lib/github-app"
+import {
+  GH_APP_STATE_COOKIE,
+  fetchInstallationDetails,
+  resolveRequestOrigin,
+  upsertInstallation,
+} from "@/lib/github-app"
 import { isSuperAdmin } from "@/lib/permissions"
 
 function redirectToSettings(request: Request, params: Record<string, string>) {
-  const url = new URL("/settings", request.url)
+  const origin = resolveRequestOrigin(request.headers) ?? new URL(request.url).origin
+  const url = new URL("/settings", origin)
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value)
   return NextResponse.redirect(url)
 }
@@ -66,6 +72,7 @@ export async function GET(request: Request) {
     })
     return redirectToSettings(request, { githubApp: "installed", account: details.accountLogin })
   } catch (error) {
+    console.error("[github-app/setup] installation detayları alınamadı:", error)
     const message = error instanceof Error ? error.message : "Kurulum tamamlanamadı."
     return redirectToSettings(request, { githubApp: "error", message })
   }

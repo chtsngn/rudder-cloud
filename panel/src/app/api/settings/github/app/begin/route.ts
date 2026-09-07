@@ -4,7 +4,12 @@ import { headers } from "next/headers"
 import { NextResponse } from "next/server"
 
 import { getSession } from "@/lib/auth"
-import { GH_APP_STATE_COOKIE, GH_APP_STATE_TTL_SECONDS, buildManifest } from "@/lib/github-app"
+import {
+  GH_APP_STATE_COOKIE,
+  GH_APP_STATE_TTL_SECONDS,
+  buildManifest,
+  resolveRequestOrigin,
+} from "@/lib/github-app"
 import { isSuperAdmin } from "@/lib/permissions"
 
 /**
@@ -22,18 +27,13 @@ export async function POST() {
   }
 
   const hdrs = await headers()
-  // Bazı ters proxy'ler (ör. Cloudflare Tunnel) orijinal alan adını `Host`
-  // yerine `X-Forwarded-Host`'ta taşıyıp `Host`'u kendi iç adresine (ör.
-  // `localhost:3000`) çevirebiliyor — bu yüzden varsa ÖNCE o okunuyor.
-  const forwardedHost = hdrs.get("x-forwarded-host")
-  const host = (forwardedHost ? forwardedHost.split(",")[0]?.trim() : null) || hdrs.get("host")
-  if (!host) {
+  const origin = resolveRequestOrigin(hdrs)
+  if (!origin) {
     return NextResponse.json({ error: "Sunucu adresi belirlenemedi." }, { status: 500 })
   }
-  const proto = (hdrs.get("x-forwarded-proto")?.split(",")[0]?.trim()) || "http"
-  const origin = `${proto}://${host}`
+  const proto = origin.startsWith("https://") ? "https" : "http"
   console.log(
-    `[github-app/begin] host=${hdrs.get("host")} x-forwarded-host=${forwardedHost} x-forwarded-proto=${hdrs.get("x-forwarded-proto")} -> origin=${origin}`
+    `[github-app/begin] host=${hdrs.get("host")} x-forwarded-host=${hdrs.get("x-forwarded-host")} x-forwarded-proto=${hdrs.get("x-forwarded-proto")} -> origin=${origin}`
   )
 
   const state = randomBytes(24).toString("hex")

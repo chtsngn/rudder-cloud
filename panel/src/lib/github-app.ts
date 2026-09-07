@@ -24,7 +24,9 @@
  *    Token'lar veritabanına ASLA yazılmaz, yalnızca bellekte (bu modülün
  *    kapsamında) kısa süreliğine önbelleklenir.
  */
-import { SignJWT, importPKCS8 } from "jose"
+import { createPrivateKey } from "node:crypto"
+
+import { SignJWT } from "jose"
 
 import { decryptSecret, encryptSecret } from "@/lib/crypto"
 import { GITHUB_API_BASE, GITHUB_API_VERSION, USER_AGENT } from "@/lib/github-api"
@@ -41,6 +43,20 @@ const INSTALLATION_TOKEN_REFRESH_MARGIN_MS = 5 * 60 * 1000 // sona ermeden 5dk �
  */
 export const GH_APP_STATE_COOKIE = "gh_app_state"
 export const GH_APP_STATE_TTL_SECONDS = 600 // 10dk — formu doldurup göndermeye fazlasıyla yeterli
+
+/**
+ * İstemcinin panele hangi adresten eriştiğini header'lardan çözer —
+ * begin/callback/setup route'larının ÜÇÜ de bunu kullanıyor. Bazı ters
+ * proxy'ler orijinal alan adını `Host` yerine `X-Forwarded-Host`'ta taşıyıp
+ * `Host`'u kendi iç adresine çevirebiliyor, bu yüzden varsa ÖNCE o okunuyor.
+ */
+export function resolveRequestOrigin(hdrs: { get(name: string): string | null }): string | null {
+  const forwardedHost = hdrs.get("x-forwarded-host")
+  const host = (forwardedHost ? forwardedHost.split(",")[0]?.trim() : null) || hdrs.get("host")
+  if (!host) return null
+  const proto = hdrs.get("x-forwarded-proto")?.split(",")[0]?.trim() || "http"
+  return `${proto}://${host}`
+}
 
 export class GitHubAppError extends Error {
   status: number
@@ -201,9 +217,20 @@ async function getAppConfigOrThrow() {
   return config
 }
 
-/** `iss: <appId>` ile imzalanmış, GitHub'ın App-seviyesi uçlarında (installation token üretimi vb.) kabul ettiği kısa ömürlü RS256 JWT. */
+/**
+ * `iss: <appId>` ile imzalanmış, GitHub'ın App-seviyesi uçlarında (installation
+ * token üretimi vb.) kabul ettiği kısa ömürlü RS256 JWT.
+ *
+ * `jose`'nin `importPKCS8()`'i KASITLI kullanılmıyor — GitHub, manifest
+ * dönüşümünde private key'i `-----BEGIN RSA PRIVATE KEY-----` (PKCS#1)
+ * biçiminde döndürüyor, `importPKCS8` ise YALNIZCA `-----BEGIN PRIVATE
+ * KEY-----` (PKCS#8) kabul ediyor ve PKCS#1 verilince atıyor. Node'un kendi
+ * `createPrivateKey`'i PEM biçimini (PKCS#1/PKCS#8/EC...) otomatik algılıyor
+ * ve döndürdüğü `KeyObject`'i jose doğrudan imzalama anahtarı olarak kabul
+ * ediyor — format tespiti hiç gerekmiyor.
+ */
 async function signAppJwt(appId: string, privateKeyPem: string): Promise<string> {
-  const key = await importPKCS8(privateKeyPem, "RS256")
+  const key = createPrivateKey(privateKeyPem)
   const now = Math.floor(Date.now() / 1000)
   return new SignJWT({})
     .setProtectedHeader({ alg: "RS256" })
