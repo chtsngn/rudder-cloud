@@ -100,10 +100,36 @@ function parseCookie(header, name) {
  * bunlarda çağrılıyor, dolayısıyla site-scoped terminal de yalnızca bunlarla
  * sınırlı.
  */
+/**
+ * `src/lib/site-paths.ts`'teki `resolveSiteWorkdir`'in düz-JS eşdeğeri (bu
+ * dosya TS derleme zincirinden geçmiyor, bkz. dosya başlığı notu — TEKRAR
+ * gerekiyor). BUG (2026-09-08, gerçek sunucuda bulundu): önceden TÜM
+ * tipler için koşulsuz `${siteRoot}/public` döndürüyordu — bu yalnızca
+ * STATIC/PHP/WORDPRESS'in kuralı; Node.js/Python/Ters Proxy/Docker'ın
+ * gerçek çalışma dizininde `/public` alt klasörü HİÇ YOK (provision-site.sh
+ * bunları doğrudan `/var/www/<domain>`'e kuruyor) — bu yüzden bu tiplerde
+ * terminal `chdir(2) failed: No such file or directory` ile patlıyordu
+ * (Aşama I'in Node/Python/Proxy/Docker'a genişletilmesiyle ortaya çıktı,
+ * çünkü o ana kadar terminal izni verilebilen TEK tipler zaten
+ * STATIC/PHP/WORDPRESS'ti).
+ */
 function resolveMemberSiteWorkdir(site) {
   const cfg = site.config && typeof site.config === "object" ? site.config : {}
-  const siteRoot = typeof cfg.siteRoot === "string" && cfg.siteRoot ? cfg.siteRoot : `/var/www/${site.domain}`
-  return `${siteRoot}/public`
+  switch (site.type) {
+    case "STATIC":
+    case "PHP":
+    case "WORDPRESS": {
+      const siteRoot = typeof cfg.siteRoot === "string" && cfg.siteRoot ? cfg.siteRoot : `/var/www/${site.domain}`
+      return `${siteRoot}/public`
+    }
+    case "NODEJS":
+    case "PYTHON":
+    case "REVERSE_PROXY":
+    case "DOCKER":
+      return typeof cfg.workingDir === "string" && cfg.workingDir ? cfg.workingDir : `/var/www/${site.domain}`
+    default:
+      return `/var/www/${site.domain}`
+  }
 }
 
 /**
