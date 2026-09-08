@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth"
 import { isSuperAdmin } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import {
+  autoLinuxUserFor,
   createService,
   createVhost,
   createWpDb,
@@ -81,9 +82,9 @@ type ProvisionPlan =
       dbUser: string
       dbPassword: string
     }
-  | { type: "NODEJS" | "PYTHON"; port: number; startCommand: string; workingDir: string }
-  | { type: "REVERSE_PROXY"; upstreamUrl: string }
-  | { type: "DOCKER"; port: number; workingDir: string; composeService: string }
+  | { type: "NODEJS" | "PYTHON"; port: number; startCommand: string; workingDir: string; linuxUser: string }
+  | { type: "REVERSE_PROXY"; upstreamUrl: string; linuxUser: string }
+  | { type: "DOCKER"; port: number; workingDir: string; composeService: string; linuxUser: string }
 
 function buildPlan(
   type: string,
@@ -138,7 +139,7 @@ function buildPlan(
       if (!startCommand || !isValidStartCommand(startCommand)) {
         return { error: "Geçerli bir başlatma komutu gereklidir (örn. npm run start)." }
       }
-      return { plan: { type, port, startCommand, workingDir } }
+      return { plan: { type, port, startCommand, workingDir, linuxUser: autoLinuxUserFor(domain) } }
     }
     case "REVERSE_PROXY": {
       const upstreamUrl = toStr(cfg.upstreamUrl)
@@ -148,7 +149,7 @@ function buildPlan(
             "Geçerli bir hedef adres gereklidir (http:// veya https:// ile başlamalı, örn. http://127.0.0.1:4000).",
         }
       }
-      return { plan: { type: "REVERSE_PROXY", upstreamUrl } }
+      return { plan: { type: "REVERSE_PROXY", upstreamUrl, linuxUser: autoLinuxUserFor(domain) } }
     }
     case "DOCKER": {
       const port = toPort(cfg.port)
@@ -158,7 +159,7 @@ function buildPlan(
       if (!isValidAbsolutePath(workingDir)) {
         return { error: "Geçerli bir çalışma dizini gereklidir (/var/www/... altında)." }
       }
-      return { plan: { type: "DOCKER", port, workingDir, composeService } }
+      return { plan: { type: "DOCKER", port, workingDir, composeService, linuxUser: autoLinuxUserFor(domain) } }
     }
     default:
       return { error: "Geçerli bir site türü gereklidir." }
@@ -218,10 +219,17 @@ async function runProvisioning(domain: string, www: boolean, plan: ProvisionPlan
         workingDir: plan.workingDir,
         startCommand: plan.startCommand,
         port: plan.port,
+        linuxUser: plan.linuxUser,
       })
       break
     case "REVERSE_PROXY":
-      await createVhost({ domain, type: "REVERSE_PROXY", www, upstreamUrl: plan.upstreamUrl })
+      await createVhost({
+        domain,
+        type: "REVERSE_PROXY",
+        www,
+        upstreamUrl: plan.upstreamUrl,
+        linuxUser: plan.linuxUser,
+      })
       break
     case "DOCKER":
       await createVhost({
@@ -231,6 +239,7 @@ async function runProvisioning(domain: string, www: boolean, plan: ProvisionPlan
         port: plan.port,
         workingDir: plan.workingDir,
         composeService: plan.composeService || undefined,
+        linuxUser: plan.linuxUser,
       })
       break
   }
@@ -300,6 +309,13 @@ export async function POST(request: Request) {
   // olarak geçiyor zaten.
   const initialConfig: Record<string, unknown> = { ...cfg }
   delete initialConfig.dbPassword
+  // NODEJS/PYTHON/REVERSE_PROXY/DOCKER'da sihirbazda elle bir linux kullanıcı
+  // adı girme alanı YOK (STATIC/PHP/WORDPRESS'in aksine) — terminal
+  // izolasyonunun her zaman kurulu olması için otomatik üretilen kullanıcı
+  // adı burada config'e yazılıyor (bkz. buildPlan -> autoLinuxUserFor).
+  if (plan.type === "NODEJS" || plan.type === "PYTHON" || plan.type === "REVERSE_PROXY" || plan.type === "DOCKER") {
+    initialConfig.linuxUser = plan.linuxUser
+  }
 
   let site
   try {

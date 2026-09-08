@@ -10,6 +10,7 @@ import {
   Home,
   LogOut,
   Network,
+  Palette,
   Settings,
   Sparkles,
   Terminal,
@@ -99,6 +100,7 @@ export function AppSidebar() {
     // fetch'i burada YAPMIYORUZ) — hiç erişilebilir sitesi olmayan bir MEMBER
     // sayfanın kendisinde net bir açıklama görür.
     { href: "/terminal", label: t("nav.terminal"), icon: Terminal },
+    { href: "/preferences", label: t("nav.preferences"), icon: Palette },
     ...(user?.role === "SUPER_ADMIN"
       ? [
           { href: "/users", label: t("nav.users"), icon: Users },

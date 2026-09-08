@@ -46,6 +46,8 @@ import { SITE_TYPES, type Site, type SiteType } from "@/lib/mock-data"
 import { apiSiteToUiSite, type ApiSite } from "@/lib/site-adapter"
 import { CustomSelect } from "@/components/ui/custom-select"
 import { useTranslation } from "@/components/language-provider"
+import { useTerminalDock } from "@/components/terminal-dock-context"
+import { useCurrentUser } from "@/hooks/use-current-user"
 import { cn } from "@/lib/utils"
 
 const STATUS_CONFIG: Record<
@@ -111,6 +113,8 @@ export default function SiteDetailPage() {
   const { t, lang } = useTranslation()
   const params = useParams<{ id: string }>()
   const router = useRouter()
+  const { openDock } = useTerminalDock()
+  const { user: me } = useCurrentUser()
 
   const [site, setSite] = useState<Site | null>(null)
   const [config, setConfig] = useState<Record<string, unknown>>({})
@@ -700,18 +704,6 @@ export default function SiteDetailPage() {
               </a>
             </Button>
 
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              className="h-9 px-3 rounded-xl border border-border bg-card text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-[#580619] dark:hover:text-[#38bdf8] hover:border-[#c8a87c] dark:hover:border-[#38bdf8]/50 shadow-2xs"
-            >
-              <Link href={`/sites/${site.id}/files`} className="flex items-center gap-1.5">
-                <FolderOpen className="size-3.5 text-[#580619] dark:text-[#38bdf8]" />
-                {t("sites.filesBtn")}
-              </Link>
-            </Button>
-
             {isManaged && (
               <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#070c1a] p-1 rounded-xl border border-slate-200/80 dark:border-[#16223f]">
                 <Button
@@ -845,6 +837,28 @@ export default function SiteDetailPage() {
             {t("sites.tabs.git")}
           </button>
         )}
+
+        <Link
+          href={`/sites/${site.id}/files`}
+          className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 shrink-0 whitespace-nowrap"
+        >
+          <FolderOpen className="size-4 text-slate-400 dark:text-slate-500" />
+          {t("sites.filesBtn")}
+        </Link>
+
+        <button
+          type="button"
+          onClick={() =>
+            openDock({
+              id: site.id,
+              promptUser: me?.role === "SUPER_ADMIN" ? "root" : (typeof config.linuxUser === "string" ? config.linuxUser : "root"),
+            })
+          }
+          className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-all border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 cursor-pointer shrink-0 whitespace-nowrap"
+        >
+          <Terminal className="size-4 text-slate-400 dark:text-slate-500" />
+          {lang === "en" ? "Terminal" : "Terminal"}
+        </button>
 
         <button
           type="button"
@@ -1216,6 +1230,7 @@ export default function SiteDetailPage() {
           <SiteAccessCard
             siteId={site.id}
             hasLinuxUser={typeof config.linuxUser === "string" && config.linuxUser.trim().length > 0}
+            canProvisionTerminalUser={["nodejs", "python", "proxy", "docker"].includes(site.type)}
           />
         </div>
       )}

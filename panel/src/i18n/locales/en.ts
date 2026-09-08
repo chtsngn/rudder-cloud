@@ -46,6 +46,7 @@ export const en: TranslationDict = {
     home: "Home",
     sites: "Sites",
     terminal: "Terminal",
+    preferences: "My Preferences",
     settings: "Settings",
     users: "Users",
     audit: "Audit Log",

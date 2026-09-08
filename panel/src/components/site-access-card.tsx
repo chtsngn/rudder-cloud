@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Loader2, ShieldCheck } from "lucide-react"
+import { Loader2, ShieldCheck, UserPlus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,13 +36,31 @@ async function parseError(res: Response): Promise<string> {
  * ayrıca `isSuperAdmin()` kontrolü yapıyor). Sistemde MEMBER rolünde
  * kullanıcı yoksa boş bir durum mesajı gösterir.
  */
-export function SiteAccessCard({ siteId, hasLinuxUser = false }: { siteId: string; hasLinuxUser?: boolean }) {
+export function SiteAccessCard({
+  siteId,
+  hasLinuxUser = false,
+  canProvisionTerminalUser = false,
+}: {
+  siteId: string
+  hasLinuxUser?: boolean
+  /** Node.js/Python/Ters Proxy/Docker — bu tiplerde sihirbaz hiç manuel bir
+   * linux-kullanıcı alanı sormuyor, dedicated kullanıcı OTOMATİK kuruluyor
+   * (bkz. autoLinuxUserFor). Bu değişiklikten ÖNCE oluşturulmuş bir site bu
+   * yüzden `hasLinuxUser=false` olabilir — bu bayrak true ise aşağıdaki
+   * "Kur" butonu geriye dönük kurulumu tetikleyebilir. */
+  canProvisionTerminalUser?: boolean
+}) {
   // TERMINAL izni yalnızca dedicated bir linux kullanıcısı olan sitelerde
-  // (STATIC/PHP/WORDPRESS) ANLAMLI — server.mjs bunu vermeden hiçbir zaman
-  // gerçek bir terminal açmıyor (bkz. docs/ARCHITECTURE.md Aşama I). Diğer
-  // tiplerde bu izni GÖSTERMEK, verilse bile hiçbir şey yapmayacak sahte bir
-  // seçenek sunmak olurdu — o yüzden listeye hiç eklenmiyor.
-  const allPermissions: SitePermission[] = hasLinuxUser ? [...BASE_PERMISSIONS, "TERMINAL"] : BASE_PERMISSIONS
+  // ANLAMLI — server.mjs bunu vermeden hiçbir zaman gerçek bir terminal
+  // açmıyor (bkz. docs/ARCHITECTURE.md Aşama I). Dedicated kullanıcısı
+  // olmayan bir sitede bu izni GÖSTERMEK, verilse bile hiçbir şey
+  // yapmayacak sahte bir seçenek sunmak olurdu — o yüzden listeye hiç
+  // eklenmiyor (provisionedLocally: "Kur" butonuyla az önce kuruldu).
+  const [provisionedLocally, setProvisionedLocally] = useState(false)
+  const effectiveHasLinuxUser = hasLinuxUser || provisionedLocally
+  const allPermissions: SitePermission[] = effectiveHasLinuxUser
+    ? [...BASE_PERMISSIONS, "TERMINAL"]
+    : BASE_PERMISSIONS
   const { t, lang } = useTranslation()
   const { user: me, loading: meLoading } = useCurrentUser()
 
@@ -52,6 +70,8 @@ export function SiteAccessCard({ siteId, hasLinuxUser = false }: { siteId: strin
   const [loadError, setLoadError] = useState<string | null>(null)
   const [savingFor, setSavingFor] = useState<string | null>(null)
   const [rowError, setRowError] = useState<Record<string, string>>({})
+  const [provisioningUser, setProvisioningUser] = useState(false)
+  const [provisionUserError, setProvisionUserError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -113,6 +133,23 @@ export function SiteAccessCard({ siteId, hasLinuxUser = false }: { siteId: strin
     }
   }
 
+  async function handleProvisionUser() {
+    setProvisioningUser(true)
+    setProvisionUserError(null)
+    try {
+      const res = await fetch(`/api/sites/${siteId}/ensure-terminal-user`, { method: "POST" })
+      if (!res.ok) {
+        setProvisionUserError(await parseError(res))
+        return
+      }
+      setProvisionedLocally(true)
+    } catch {
+      setProvisionUserError(lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı.")
+    } finally {
+      setProvisioningUser(false)
+    }
+  }
+
   if (meLoading || me?.role !== "SUPER_ADMIN") return null
 
   const PERMISSION_LABELS: Record<SitePermission, string> = {
@@ -139,6 +176,27 @@ export function SiteAccessCard({ siteId, hasLinuxUser = false }: { siteId: strin
             ? "Define what actions users with the MEMBER role are permitted to perform on this site. Super admins always have full access and are not listed here."
             : "Üye (MEMBER) rolündeki kullanıcılara bu sitede hangi işlemlerin izin verildiğini belirleyin. Süper adminler her zaman tam erişime sahiptir, burada listelenmezler."}
         </p>
+
+        {!effectiveHasLinuxUser && canProvisionTerminalUser && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-md border border-amber-300/70 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-950/20 p-3">
+            <p className="text-xs text-amber-900 dark:text-amber-300">
+              {lang === "en"
+                ? "This site doesn't have a dedicated Linux user yet — Terminal access can't be granted until one is set up."
+                : "Bu sitenin henüz dedicated bir Linux kullanıcısı yok — kurulmadan Terminal izni verilemez."}
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={provisioningUser}
+              onClick={handleProvisionUser}
+              className="shrink-0"
+            >
+              {provisioningUser ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
+              {lang === "en" ? "Set Up Dedicated User" : "Dedicated Kullanıcı Kur"}
+            </Button>
+          </div>
+        )}
+        {provisionUserError && <p className="text-sm text-destructive">{provisionUserError}</p>}
 
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

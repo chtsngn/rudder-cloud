@@ -169,6 +169,7 @@ export interface CreateVhostReverseProxyParams {
   type: "REVERSE_PROXY"
   www: boolean
   upstreamUrl: string
+  linuxUser?: string
 }
 
 export interface CreateVhostDockerParams {
@@ -178,6 +179,7 @@ export interface CreateVhostDockerParams {
   port: number
   workingDir: string
   composeService?: string
+  linuxUser?: string
 }
 
 export type CreateVhostParams =
@@ -289,18 +291,25 @@ export async function createVhost(params: CreateVhostParams): Promise<void> {
       if (!isValidUpstreamUrl(params.upstreamUrl)) {
         throw new ProvisionError(`Geçersiz upstream adresi: ${params.upstreamUrl}`)
       }
+      if (params.linuxUser && !isValidLinuxUsername(params.linuxUser)) {
+        throw new ProvisionError(`Geçersiz linux kullanıcı adı: ${params.linuxUser}`)
+      }
       await runProvisionScript([
         "create-vhost",
         params.domain,
         "REVERSE_PROXY",
         www,
         params.upstreamUrl,
+        params.linuxUser ?? "",
       ])
       return
     }
     case "DOCKER": {
       if (!isValidPort(params.port)) {
         throw new ProvisionError(`Geçersiz port: ${params.port}`)
+      }
+      if (params.linuxUser && !isValidLinuxUsername(params.linuxUser)) {
+        throw new ProvisionError(`Geçersiz linux kullanıcı adı: ${params.linuxUser}`)
       }
       if (!isValidAbsolutePath(params.workingDir)) {
         throw new ProvisionError(`Geçersiz çalışma dizini: ${params.workingDir}`)
@@ -313,6 +322,7 @@ export async function createVhost(params: CreateVhostParams): Promise<void> {
         String(params.port),
         params.workingDir,
         params.composeService ?? "",
+        params.linuxUser ?? "",
       ])
       return
     }
@@ -379,6 +389,7 @@ export async function createService(params: {
   workingDir: string
   startCommand: string
   port: number
+  linuxUser?: string
 }): Promise<void> {
   requireDomain(params.domain)
   if (!isValidAbsolutePath(params.workingDir)) {
@@ -390,13 +401,48 @@ export async function createService(params: {
   if (!isValidPort(params.port)) {
     throw new ProvisionError(`Geçersiz port: ${params.port}`)
   }
+  if (params.linuxUser && !isValidLinuxUsername(params.linuxUser)) {
+    throw new ProvisionError(`Geçersiz linux kullanıcı adı: ${params.linuxUser}`)
+  }
   await runProvisionScript([
     "create-service",
     params.domain,
     params.workingDir,
     params.startCommand,
     String(params.port),
+    params.linuxUser ?? "",
   ])
+}
+
+// ------------------------------------------------------------
+// Paylaşımlı-süreç tiplerinde (Node.js/Python/Ters Proxy/Docker) sonradan
+// terminal izolasyonu kurmak için — yeni site oluşturmadaki OTOMATİK
+// çağrının aynısı, ama var olan (bu değişiklikten ÖNCE oluşturulmuş) bir
+// site için elle/geriye dönük tetiklenebilir (bkz. /api/sites/[id]/ensure-terminal-user).
+// ------------------------------------------------------------
+export async function ensureSiteUser(
+  domain: string,
+  workdir: string,
+  linuxUser: string
+): Promise<void> {
+  requireDomain(domain)
+  if (!isValidAbsolutePath(workdir)) {
+    throw new ProvisionError(`Geçersiz çalışma dizini: ${workdir}`)
+  }
+  if (!isValidLinuxUsername(linuxUser)) {
+    throw new ProvisionError(`Geçersiz linux kullanıcı adı: ${linuxUser}`)
+  }
+  await runProvisionScript(["ensure-site-user", domain, workdir, linuxUser])
+}
+
+/** `site_<slug>` — Node.js/Python/Ters Proxy/Docker siteleri için otomatik
+ * üretilen dedicated kullanıcı adı (STATIC/PHP/WORDPRESS'in aksine bu
+ * tiplerde sihirbazda elle bir kullanıcı adı girme alanı YOK — terminal
+ * izolasyonunun her zaman kurulu olması için otomatik üretiliyor).
+ * `USERNAME_RE` ile uyumlu: küçük harfle başlar, azami 32 karakter. */
+export function autoLinuxUserFor(domain: string): string {
+  const slug = domain.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "site"
+  return `site_${slug}`.slice(0, 32)
 }
 
 export async function removeService(domain: string): Promise<void> {

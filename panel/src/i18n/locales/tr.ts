@@ -44,6 +44,7 @@ export const tr = {
     home: "Anasayfa",
     sites: "Siteler",
     terminal: "Terminal",
+    preferences: "Tercihlerim",
     settings: "Ayarlar",
     users: "Kullanıcılar",
     audit: "Denetim Kaydı",

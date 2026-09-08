@@ -2,11 +2,19 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react"
 
+interface DockSite {
+  id: string
+  promptUser: string
+}
+
 interface TerminalDockContextType {
   isOpen: boolean
   setIsOpen: (open: boolean) => void
   toggleDock: () => void
-  openDock: () => void
+  /** `site` verilmezse (ör. genel kısayol/yüzen buton) dock EN SON hangi
+   * bağlamda açıldıysa onu (kök terminal veya bir sitenin terminali) TEKRAR
+   * açar — bkz. dockSite ve aşağıdaki localStorage kalıcılığı. */
+  openDock: (site?: DockSite | null) => void
   closeDock: () => void
   width: number
   setWidth: (width: number) => void
@@ -14,18 +22,22 @@ interface TerminalDockContextType {
   setIsMinimized: (minimized: boolean) => void
   isDragging: boolean
   setIsDragging: (dragging: boolean) => void
+  /** Dock şu an (veya en son) hangi sitenin terminaline bağlı — `null` ise kök terminal. */
+  dockSite: DockSite | null
 }
 
 const TerminalDockContext = createContext<TerminalDockContextType | null>(null)
 
 const DOCK_STORAGE_KEY = "rudder:terminal:dock-open"
 const DOCK_WIDTH_KEY = "rudder:terminal:dock-width"
+const DOCK_SITE_KEY = "rudder:terminal:dock-site"
 
 export function TerminalDockProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpenState] = useState(false)
   const [width, setWidthState] = useState(520)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [dockSite, setDockSite] = useState<DockSite | null>(null)
 
   useEffect(() => {
     try {
@@ -38,6 +50,13 @@ export function TerminalDockProvider({ children }: { children: React.ReactNode }
         const parsed = parseInt(savedWidth, 10)
         if (!isNaN(parsed) && parsed >= 360 && parsed <= 1200) {
           setWidthState(parsed)
+        }
+      }
+      const savedSite = localStorage.getItem(DOCK_SITE_KEY)
+      if (savedSite) {
+        const parsed = JSON.parse(savedSite) as DockSite
+        if (parsed && typeof parsed.id === "string" && typeof parsed.promptUser === "string") {
+          setDockSite(parsed)
         }
       }
     } catch {}
@@ -62,10 +81,20 @@ export function TerminalDockProvider({ children }: { children: React.ReactNode }
     })
   }, [])
 
-  const openDock = useCallback(() => {
-    setIsOpen(true)
-    setIsMinimized(false)
-  }, [setIsOpen])
+  const openDock = useCallback(
+    (site?: DockSite | null) => {
+      if (site !== undefined) {
+        setDockSite(site)
+        try {
+          if (site) localStorage.setItem(DOCK_SITE_KEY, JSON.stringify(site))
+          else localStorage.removeItem(DOCK_SITE_KEY)
+        } catch {}
+      }
+      setIsOpen(true)
+      setIsMinimized(false)
+    },
+    [setIsOpen]
+  )
 
   const closeDock = useCallback(() => {
     setIsOpen(false)
@@ -104,6 +133,7 @@ export function TerminalDockProvider({ children }: { children: React.ReactNode }
         setIsMinimized,
         isDragging,
         setIsDragging,
+        dockSite,
       }}
     >
       {children}

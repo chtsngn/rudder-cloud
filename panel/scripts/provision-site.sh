@@ -163,6 +163,38 @@ ensure_linux_user() {
   usermod -aG siteusers "$user" 2>/dev/null || true
 }
 
+# `ensure_linux_user`'ın STATIC/PHP/WORDPRESS'te yaptığı TAM sahiplik
+# devrinden (`chown user:user`) BİLEREK FARKLI: NODEJS/PYTHON/REVERSE_PROXY/
+# DOCKER site klasörlerinin GERÇEK süreci hâlâ `panel` kullanıcısı olarak
+# çalışıyor (systemd `User=panel`, ya da REVERSE_PROXY/DOCKER'da hiç süreç
+# yok ama panelin KENDİSİ — Dosya Yöneticisi, git pull — bu klasörü `panel`
+# olarak okuyup yazıyor). Bu yüzden sahiplik `panel`'den ALINAMAZ; onun
+# yerine klasörün GRUBU dedicated kullanıcının kendi grubuna çevrilip grup
+# rwx + setgid (yeni dosyalar da aynı grubu miras alsın diye) veriliyor —
+# `panel` sahip olarak zaten tam erişimini korur, dedicated kullanıcı SADECE
+# bu klasörde (grup üzerinden) gerçek okuma/yazma kazanır, başka hiçbir
+# sitenin klasörüne grup üyeliği yoluyla bile erişemez (her site kendi
+# TEK KİŞİLİK grubunu kullanır — `adduser`'ın varsayılan davranışı).
+grant_shared_process_isolation() {
+  local linux_user="$1" workdir="$2"
+  [[ -z "$linux_user" ]] && return 0
+  chown -R "panel:${linux_user}" "$workdir"
+  chmod -R u+rwX,g+rwX "$workdir"
+  find "$workdir" -type d -exec chmod g+s {} +
+}
+
+cmd_ensure_site_user() {
+  require_args 3 "$#" "ensure-site-user <domain> <workdir> <linux_user>"
+  local domain="$1" workdir="$2" linux_user="$3"
+  validate_domain "$domain"
+  validate_abs_path "$workdir" "çalışma dizini"
+  [[ "$linux_user" =~ $USERNAME_RE ]] || die "Geçersiz linux kullanıcı adı: $linux_user"
+  mkdir -p "$workdir"
+  ensure_linux_user "$linux_user" "$workdir"
+  grant_shared_process_isolation "$linux_user" "$workdir"
+  msg "Site kullanıcısı hazır: ${linux_user} (${workdir})"
+}
+
 # ------------------------------------------------------------
 # create-vhost
 # ------------------------------------------------------------
@@ -334,10 +366,11 @@ NGINX
       ;;
 
     REVERSE_PROXY)
-      require_args 4 "$#" "create-vhost <domain> REVERSE_PROXY <www> <upstream_url>"
-      local upstream="$4"
+      require_args 4 "$#" "create-vhost <domain> REVERSE_PROXY <www> <upstream_url> [linux_user]"
+      local upstream="$4" linux_user="${5:-}"
       [[ "$upstream" =~ ^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~%/-]*)?$ ]] \
         || die "Geçersiz upstream adresi: $upstream"
+      [[ -n "$linux_user" ]] && [[ ! "$linux_user" =~ $USERNAME_RE ]] && die "Geçersiz linux kullanıcı adı: $linux_user"
 
       # REVERSE_PROXY tipi bir uygulama süreci ÇALIŞTIRMAZ (nginx yalnızca
       # harici bir URL'e proxy yapar) — bu yüzden diğer tiplerin aksine
@@ -350,6 +383,10 @@ NGINX
       local reverse_proxy_root="/var/www/${domain}"
       mkdir -p "$reverse_proxy_root"
       chown panel:panel "$reverse_proxy_root" 2>/dev/null || true
+      if [[ -n "$linux_user" ]]; then
+        ensure_linux_user "$linux_user" "$reverse_proxy_root"
+        grant_shared_process_isolation "$linux_user" "$reverse_proxy_root"
+      fi
 
       cat > "$conf" <<NGINX
 server {
@@ -378,14 +415,19 @@ NGINX
       ;;
 
     DOCKER)
-      require_args 5 "$#" "create-vhost <domain> DOCKER <www> <port> <working_dir> [compose_service]"
-      local port="$4" working_dir="$5" compose_service="${6:-}"
+      require_args 5 "$#" "create-vhost <domain> DOCKER <www> <port> <working_dir> [compose_service] [linux_user]"
+      local port="$4" working_dir="$5" compose_service="${6:-}" linux_user="${7:-}"
       validate_port "$port"
       validate_abs_path "$working_dir" "çalışma dizini"
+      [[ -n "$linux_user" ]] && [[ ! "$linux_user" =~ $USERNAME_RE ]] && die "Geçersiz linux kullanıcı adı: $linux_user"
 
       # Çalışma dizinini oluştur
       mkdir -p "$working_dir"
       chown panel:panel "$working_dir" 2>/dev/null || true
+      if [[ -n "$linux_user" ]]; then
+        ensure_linux_user "$linux_user" "$working_dir"
+        grant_shared_process_isolation "$linux_user" "$working_dir"
+      fi
 
       # docker compose yoksa örnek dosya oluştur
       if [[ ! -f "${working_dir}/docker-compose.yml" && ! -f "${working_dir}/compose.yml" ]]; then
@@ -515,12 +557,13 @@ cmd_request_ssl() {
 # create-service / remove-service / service-action / service-status / service-logs
 # ------------------------------------------------------------
 cmd_create_service() {
-  require_args 4 "$#" "create-service <domain> <working_dir> <start_command> <port>"
-  local domain="$1" working_dir="$2" start_command="$3" port="$4"
+  require_args 4 "$#" "create-service <domain> <working_dir> <start_command> <port> [linux_user]"
+  local domain="$1" working_dir="$2" start_command="$3" port="$4" linux_user="${5:-}"
   validate_domain "$domain"
   validate_abs_path "$working_dir" "çalışma dizini"
   validate_start_command "$start_command"
   validate_port "$port"
+  [[ -n "$linux_user" ]] && [[ ! "$linux_user" =~ $USERNAME_RE ]] && die "Geçersiz linux kullanıcı adı: $linux_user"
 
   local slug unit
   slug="$(domain_slug "$domain")"
@@ -529,6 +572,10 @@ cmd_create_service() {
 
   mkdir -p "$working_dir"
   chown panel:panel "$working_dir" 2>/dev/null || true
+  if [[ -n "$linux_user" ]]; then
+    ensure_linux_user "$linux_user" "$working_dir"
+    grant_shared_process_isolation "$linux_user" "$working_dir"
+  fi
 
   cat > "$unit" <<UNIT
 [Unit]
@@ -841,6 +888,9 @@ Alt komutlar:
   remove-panel-domain                             Panel alan adı bağlantısını kaldır
   docker-action <domain> <up|down|restart|pull> [service]  Docker Compose eylem çalıştır
   docker-logs <domain> <lines>                   Docker Compose loglarını yazdır
+  ensure-site-user <domain> <workdir> <user>     Paylaşımlı-süreç tiplerinde (Node.js/Python/
+                                                  Ters Proxy/Docker) terminal/dosya izolasyonu
+                                                  için dedicated bir Linux kullanıcısı kur
 USAGE
 }
 
@@ -864,6 +914,7 @@ case "$SUBCOMMAND" in
   configure-panel-domain) require_args 1 "$#" "configure-panel-domain <domain>"; cmd_configure_panel_domain "$@" ;;
   request-panel-ssl)      require_args 2 "$#" "request-panel-ssl <domain> <email>"; cmd_request_panel_ssl "$@" ;;
   remove-panel-domain)    cmd_remove_panel_domain "$@" ;;
+  ensure-site-user)       cmd_ensure_site_user "$@" ;;
   -h|--help|help)  usage ;;
   *) usage; die "Bilinmeyen alt komut: ${SUBCOMMAND}" ;;
 esac

@@ -861,6 +861,68 @@ site seçici doğru tek seçeneği gösterdi, seçilince başlıkta gerçekten
 `static_with_user@rudder-cloud:~` yazdığı (root DEĞİL) doğrulandı. `next
 typegen`/`tsc --noEmit`/`eslint`/`npm run build` — yeni kodda ek hata yok.
 
+### 2026-09-08 güncellemesi: Aşama I (devam) — terminal izolasyonu 4 paylaşımlı-süreç tipine yayıldı, Dosyalar/Terminal tab'ları, Tercihlerim sayfası
+
+**Neden:** MEMBER'lara Node.js/Python/Ters Proxy/Docker sitelerinde de Terminal
+izni verilmesi istendi. Bu tipler `panel` paylaşımlı sistem kullanıcısı
+altında çalıştığı için (o kullanıcı hem tüm sitelerin dosyalarını okuyor hem
+sudoers üzerinden root'a çıkabiliyor) "sadece cwd ile kısıtla" gerçek bir
+güvenlik sınırı DEĞİL — `cd ..` ile anında aşılır. Kullanıcıya bu netçe
+anlatılıp onay alındı (bkz. proje hafızası).
+
+**Ne yapıldı:**
+- `provision-site.sh`: yeni `grant_shared_process_isolation()` — STATIC/PHP/
+  WORDPRESS'in tam sahiplik devrinden (`chown user:user`) FARKLI: klasörün
+  SAHİBİ `panel` kalır (bu tiplerin gerçek süreci/panelin dosya yöneticisi
+  hâlâ `panel` olarak çalışıyor), yalnızca GRUBU dedicated kullanıcının kendi
+  (tek kişilik) grubuna çevrilip grup rwx + setgid veriliyor — `panel` erişimini
+  korur, dedicated kullanıcı YALNIZCA bu klasörde gerçek erişim kazanır, başka
+  hiçbir sitenin klasörüne grup üyeliğiyle bile erişemez. Yeni `ensure-site-user`
+  alt komutu hem yeni site oluşturmada hem geriye dönük retrofit'te kullanılıyor.
+- `src/lib/provision.ts`: `autoLinuxUserFor(domain)` — bu 4 tipte sihirbazda
+  manuel kullanıcı adı alanı YOK, `site_<slug>` otomatik üretiliyor;
+  `ensureSiteUser()` geriye dönük kurulum için.
+- `POST /api/sites`: NODEJS/PYTHON/REVERSE_PROXY/DOCKER için artık otomatik
+  `config.linuxUser` ile provision ediliyor.
+- Yeni `POST /api/sites/[id]/ensure-terminal-user` — bu değişiklikten ÖNCE
+  oluşturulmuş sitelerde geriye dönük kurulum (SUPER_ADMIN, sadece bu 4 tip).
+  `site-access-card.tsx`'te `hasLinuxUser=false` olan uygun bir sitede "Dedicated
+  Kullanıcı Kur" butonu bunu tetikliyor.
+- Site detay sayfası: "Dosyalar" butonu üst aksiyon satırından tab çubuğuna
+  taşındı (Git & Dağıtım'ın sağı); yeni "Terminal" tab'ı (sağdaki dock'u bu
+  sitenin bağlamıyla açıyor — içerik değiştirmiyor, `openDock({id, promptUser})`).
+- `terminal-dock-context.tsx`: dock artık HANGİ sitenin terminaline bağlı
+  olduğunu (`dockSite`) localStorage'da hatırlıyor — yüzen genel buton veya
+  Ctrl+` ile tekrar açıldığında en son bağlamı (kök ya da belirli bir site)
+  otomatik geri getiriyor.
+- Yeni `/preferences` ("Tercihlerim") sayfası — Ayarlar'ın aksine TÜM
+  kullanıcılara açık. Yalnızca GERÇEKTEN kişi bazlı (tarayıcı localStorage'ında
+  tutulan) tercihleri içeriyor: dil, tema, renk paleti, font. Terminal
+  boşta-kalma süresi KASITLI burada yok — o hâlâ tek global bir admin ayarı
+  (PanelSettings), kullanıcı bunu kişi bazlı yapmamayı özellikle onayladı.
+- `src/components/site-github-keys-card.tsx` → ikiye ayrıldı (ayrı bir
+  commit'te, aynı gün): "Deploy Key (git clone/pull)" bölümü tamamen kaldırıldı
+  (GitHub App zaten kimlik doğruluyor, ayrıca hiç çalışmıyordu — manifest
+  "administration" izni istemiyordu), "GitHub Actions Erişimi" (ilgisiz, ayrı
+  bir özellik — CI'ın sunucuya SSH ile bağlanması) `site-github-actions-key-card.tsx`
+  olarak korundu. Git & Dağıtım sekmesi artık SADECE GitHub App repo seçici +
+  otomatik pull — manuel repo URL/branch alanları kaldırıldı; repo
+  değiştirildiğinde `git.ts`'teki `gitPullOrClone` artık eski `origin` ile
+  yeni `repoUrl`'i karşılaştırıp farklıysa `rsync --delete` ile TEMİZ bir
+  şekilde yeniden klonluyor (önceden sessizce ESKİ repo'yu çekmeye çalışan
+  gizli bir hataydı).
+- `quick-commands-dialog.tsx`: `document.body`'ye portal edildi — önceden
+  `AppSidebar`'ın `translate-x` transform'lu `<aside>`'ı içinde render
+  olduğu için (bir ata elemanda transform varsa `position:fixed` artık
+  viewport'a değil o ataya göre konumlanır) sidebar'ın dar kutusuna
+  hapsoluyordu.
+
+**Doğrulama:** `next typegen`/`tsc --noEmit`/`eslint`/`npm run build` temiz.
+GitHub App/Quick Commands/Dosyalar fix'leri `rudder.cihatsengun.com` üzerinde
+tarayıcıyla canlı doğrulandı. Terminal izolasyonu genişletmesi (gerçek Linux
+kullanıcı/grup oluşturma) bu Mac'te test edilemiyor (gerçek sudoers/kullanıcı
+yönetimi yok) — sunucuda test edilecek.
+
 ## Klasör Yapısı (bu repo)
 
 ```
