@@ -391,6 +391,12 @@ NGINX
       local reverse_proxy_root="/var/www/${domain}"
       mkdir -p "$reverse_proxy_root"
       chown panel:panel "$reverse_proxy_root" 2>/dev/null || true
+      # `o-rwx` KOŞULSUZ — `linux_user` henüz atanmamış olsa BİLE, bu klasör
+      # nginx tarafından hiç DOĞRUDAN sunulmuyor (yalnızca proxy_pass), o
+      # yüzden dünyaya açık kalmasının hiçbir meşru sebebi yok. Bu olmadan,
+      # BAŞKA bir sitenin dedicated kullanıcısı (siteusers grubundaki HERKES)
+      # bu klasörü hâlâ okuyabilirdi — bkz. docs/ARCHITECTURE.md 2026-09-08.
+      chmod o-rwx "$reverse_proxy_root" 2>/dev/null || true
       if [[ -n "$linux_user" ]]; then
         ensure_linux_user "$linux_user" "$reverse_proxy_root"
         grant_shared_process_isolation "$linux_user" "$reverse_proxy_root"
@@ -432,6 +438,7 @@ NGINX
       # Çalışma dizinini oluştur
       mkdir -p "$working_dir"
       chown panel:panel "$working_dir" 2>/dev/null || true
+      chmod o-rwx "$working_dir" 2>/dev/null || true
       if [[ -n "$linux_user" ]]; then
         ensure_linux_user "$linux_user" "$working_dir"
         grant_shared_process_isolation "$linux_user" "$working_dir"
@@ -580,6 +587,7 @@ cmd_create_service() {
 
   mkdir -p "$working_dir"
   chown panel:panel "$working_dir" 2>/dev/null || true
+  chmod o-rwx "$working_dir" 2>/dev/null || true
   if [[ -n "$linux_user" ]]; then
     ensure_linux_user "$linux_user" "$working_dir"
     grant_shared_process_isolation "$linux_user" "$working_dir"
