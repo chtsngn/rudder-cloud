@@ -181,6 +181,14 @@ grant_shared_process_isolation() {
   chown -R "panel:${linux_user}" "$workdir"
   chmod -R u+rwX,g+rwX "$workdir"
   find "$workdir" -type d -exec chmod g+s {} +
+  # `o-rwx` AÇIKÇA — üst dizinin zaten "diğerleri" için erişimi kapalı olması
+  # (bu klasör her zaman `panel:panel` 0700-yakını bir üst dizin altında,
+  # /var/www/<domain> kendisi de mkdir'in varsayılan umask'ı ile genelde
+  # traversal'ı zaten engelliyor) TESADÜFE bırakılmıyor — `git clone`/`rsync`
+  # gibi işlemler alt dosya/dizinleri farklı bir umask ile (ör. dünyaya
+  # okunabilir 0755/0644) oluşturabiliyor; bu satır TÜM ağacı, üst dizinin
+  # davranışından bağımsız olarak, açıkça dünyaya kapatıyor.
+  chmod -R o-rwx "$workdir"
 }
 
 cmd_ensure_site_user() {
