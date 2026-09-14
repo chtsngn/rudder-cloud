@@ -249,6 +249,18 @@ server {
   error_log  /var/log/nginx/${domain}.error.log;
   client_max_body_size 50m;
 
+  location ~ /\.(?!well-known) {
+    deny all;
+    access_log off;
+    log_not_found off;
+  }
+
+  location ~* \.(env|ya?ml|ini|log|sql|sqlite3?|bak|swp|lock|conf)\$ {
+    deny all;
+    access_log off;
+    log_not_found off;
+  }
+
   location / { try_files \$uri \$uri/ =404; }
 }
 NGINX
@@ -328,6 +340,18 @@ server {
   access_log /var/log/nginx/${domain}.access.log;
   error_log  /var/log/nginx/${domain}.error.log;
   client_max_body_size 50m;
+
+  location ~ /\.(?!well-known) {
+    deny all;
+    access_log off;
+    log_not_found off;
+  }
+
+  location ~* \.(env|ya?ml|ini|log|sql|sqlite3?|bak|swp|lock|conf)\$ {
+    deny all;
+    access_log off;
+    log_not_found off;
+  }
 
   location / { try_files \$uri \$uri/ /index.php?\$args; }
   location ~ \.php\$ {

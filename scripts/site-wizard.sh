@@ -55,6 +55,18 @@ server {
 
   client_max_body_size 50m;
 
+  location ~ /\.(?!well-known) {
+    deny all;
+    access_log off;
+    log_not_found off;
+  }
+
+  location ~* \.(env|ya?ml|ini|log|sql|sqlite3?|bak|swp|lock|conf)\$ {
+    deny all;
+    access_log off;
+    log_not_found off;
+  }
+
   ${extra}
 }
 NGINX
