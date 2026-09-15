@@ -453,7 +453,15 @@ if command -v docker >/dev/null 2>&1; then
     echo "  Not: 'docker' grubu üyeliği fiilen root yetkisiyle eşdeğerdir (docker soketi üzerinden"
     echo "  konteyner içinden host'a erişilebilir). Yalnızca DOCKER_COMPOSE ile yönetilen"
     echo "  projelerde 'proje restart' özelliğini kullanmak istiyorsan gereklidir."
-    read -r -p "${PANEL_USER} kullanıcısı 'docker' grubuna eklensin mi? [e/H]: " ANS
+    # Etkileşimsiz çalıştırmada (stdin TTY değil — örn. panel içi güncelleme
+    # systemd-run altında) `read` EOF görür ve set -e betiği öldürürdü;
+    # soru atlanır, otomatik onaylanMAZ (yukarıdaki güvenlik notu geçerli).
+    ANS=""
+    if [[ -t 0 ]]; then
+      read -r -p "${PANEL_USER} kullanıcısı 'docker' grubuna eklensin mi? [e/H]: " ANS
+    else
+      warn "Etkileşimsiz çalıştırma — docker grubu sorusu atlandı. Gerekirse elle: usermod -aG docker ${PANEL_USER} && systemctl restart panel"
+    fi
     if [[ "${ANS}" =~ ^[Ee]$ ]]; then
       usermod -aG docker "${PANEL_USER}"
       msg "${PANEL_USER} 'docker' grubuna eklendi (etkili olması için panel.service yeniden başlatılmalı)."

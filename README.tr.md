@@ -102,6 +102,22 @@ paneli derler, veritabanı migration'larını çalıştırır, ilk süper admin 
 oluşturur, Nginx vhost'unu yazar ve `panel.service` systemd birimini başlatır.
 Bağımlılık kurulumlarını otomatik onaylamak için `--yes` bayrağını ekleyebilirsiniz.
 
+## Güncelleme
+
+Panel yeni bir GitHub sürümü gördüğünde Ayarlar sayfasından tek tıkla
+güncellenebilir: sunucuda kaynak klonda etiket alınır ve `install.sh --yes`
+arka planda (panel servisinden bağımsız bir systemd biriminde) yeniden
+çalıştırılır; ilerleme panelde canlı gösterilir. Aynı şeyi elle yapmak için:
+
+```bash
+cd /opt/sunucu-paneli-src        # ya da install.sh'ı çalıştırdığınız klon
+sudo git fetch --tags && sudo git checkout tags/vX.Y.Z
+sudo bash install.sh --yes
+```
+
+`install.sh` klonun yerini `PANEL_SRC_DIR` olarak panelin `.env` dosyasına
+yazar; panel içi güncelleme bunu kullanır. Günlük: `/var/log/panel-update/update.log`.
+
 ## İlk giriş
 
 Tarayıcıdan `http://<sunucu-ip>:24428` adresini açın. Süper admin kullanıcı adı ve

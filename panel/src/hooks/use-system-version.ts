@@ -10,7 +10,7 @@ export interface VersionData {
   releaseNotes: string
   publishedAt: string
   githubUrl: string
-  gitInfo?: { commit: string; branch: string }
+  gitInfo?: { commit: string; branch: string } | null
   checkedAt?: string
   error?: string
 }

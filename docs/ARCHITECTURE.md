@@ -923,6 +923,65 @@ tarayıcıyla canlı doğrulandı. Terminal izolasyonu genişletmesi (gerçek Li
 kullanıcı/grup oluşturma) bu Mac'te test edilemiyor (gerçek sudoers/kullanıcı
 yönetimi yok) — sunucuda test edilecek.
 
+### 2026-09-15 güncellemesi: Panel içi güncelleyici ("Şimdi Güncelle") düzeltildi — kaynak klon + bağımsız systemd unit
+
+**Hata:** Ayarlar → "Şimdi Güncelle ve Yeniden Başlat", sunucuda
+`Git fetch hatası: ... fatal: not a git repository` ile düşüyordu. Kök neden:
+`api/system/update` `git fetch`'i `process.cwd()` (= `PANEL_DIR`,
+`/opt/sunucu-paneli`) içinde çalıştırıyordu; oysa bu dizin `install.sh`'ın
+`rsync` ile kopyaladığı bir KOPYADIR ve `.git` içermez. Gerçek klon ("kaynak
+klon", bootstrap.sh varsayılanı `/opt/sunucu-paneli-src`) ayrı ve root'a ait.
+Eski rota ayrıca kendi "hafif" güncelleme yolunu (`npm install --omit=dev`,
+`prisma migrate`, `next build`, restart) uyduruyordu — resmi/idempotent yol
+`install.sh --yes`'i yeniden çalıştırmaktır (bkz. yukarıdaki install.sh
+notları) — ve `systemctl restart panel`'i kendi süreci içinden çağırdığı için
+en iyi ihtimalle yanıt dönemeden ölecekti.
+
+**Yeni tasarım:**
+
+- `panel/scripts/self-update.sh` (root, `sudo -n /bin/bash ...` ile — sudoers
+  adım 2'deki mevcut SUPER_ADMIN terminal izni yeterli, yeni sudoers satırı
+  YOK). `--start` modu argümanları bağımsız olarak doğrular (mutlak yol,
+  `.git`/`install.sh`/`panel/` varlığı, etiket regex'i), log/status'u sıfırlar
+  ve asıl işi `systemd-run --unit=panel-self-update --collect` ile
+  **panel.service'den bağımsız geçici bir unit'e** devredip hemen döner.
+  Bağımsız unit şart: install.sh sonunda `systemctl restart panel` yapar;
+  panelin çocuğu olan bir süreç cgroup'la birlikte tam o anda öldürülürdü.
+  `--run` modu: `git fetch --tags --force --prune`, `git checkout --force
+  --detach refs/tags/<etiket>` (dal/etiket ad çakışmasına karşı — v1.2.4'te
+  yaşandı — her zaman `refs/tags/`; detached, böylece kaynak klonun `main`'i
+  elle güncelleme alışkanlığı için bozulmaz), sonra aynen `bash install.sh
+  --yes </dev/null`. Her adımda `/var/log/panel-update/status.json`
+  (`running|success|failed`) güncellenir, tüm çıktı `update.log`'a akar.
+- `install.sh` adım 3, `PANEL_DIR/.env`'e `PANEL_SRC_DIR=<REPO_DIR>` yazar
+  (idempotent, her çalıştırmada tazelenir) — panel kaynak klonun yerini
+  buradan öğrenir (`lib/self-update.ts → resolveSourceDir()`; sırasıyla env,
+  `/opt/sunucu-paneli-src`, cwd'den yukarı `.git` araması).
+- `doctor.sh` docker-grubu sorusu: stdin TTY değilse (`[[ -t 0 ]]`) `read`
+  yapılmaz — aksi halde systemd-run altında EOF + `set -e` betiği öldürürdü.
+  Otomatik onay yine YOK (güvenlik notu geçerli), yalnızca atlanır.
+- `api/system/update`: `POST` başlatır ve hemen döner (`409 alreadyRunning`
+  ile süren güncellemeye bağlanılır); `GET` status.json + ANSI'den arındırılmış
+  log kuyruğunu döndürür. Arayüz (`system-update-modal.tsx`) 2,5 sn'de bir
+  sorgular, canlı log gösterir; panel yeniden başlarken başarısız sorguları
+  ~5 dk tolere eder, `success`'te sayfayı yeniler. Modal açıldığında süren bir
+  güncelleme varsa ona bağlanır.
+- `api/system/version` git bilgisini artık kaynak klondan (`git -c
+  safe.directory=<klon>`; klon root'a ait, aksi halde "dubious ownership")
+  okur, etiket checkout'unda etiketi gösterir; bulunamazsa `null` (eskiden
+  uydurma sabit bir commit döndürüyordu).
+
+**Sürüm notu:** `v1.2.5` etiketi `APP_VERSION` bump'ı olmadan atılmıştı
+(etikette de `v1.2.4` yazıyor) — o sürüme güncellenen bir panel sonsuza kadar
+"güncelleme var" gösterirdi. Bu iş `v1.2.6` olarak yayınlanmalı; `version.ts`
+buna göre `v1.2.6`.
+
+**Doğrulama:** `tsc --noEmit`/`eslint`/`npm run build` temiz; `bash -n` ile
+üç betik sözdizimi. Gerçek akış (sudoers + systemd-run + install.sh) bu Mac'te
+çalıştırılamıyor — sunucuda ilk kez **elle** `install.sh --yes` ile v1.2.6'ya
+geçildikten sonra (bu, `PANEL_SRC_DIR`'i .env'e yazar) bir sonraki sürümde
+panelden test edilecek.
+
 ## Klasör Yapısı (bu repo)
 
 ```

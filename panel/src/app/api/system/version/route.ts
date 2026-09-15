@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
-import { execSync } from "child_process"
+import { execFileSync } from "node:child_process"
 import { getSession } from "@/lib/auth"
 import { APP_VERSION } from "@/lib/version"
+import { resolveSourceDir } from "@/lib/self-update"
 
 export const CURRENT_VERSION = APP_VERSION
 export const GITHUB_REPO = "chtsngn/rudder-cloud"
@@ -16,8 +17,20 @@ interface GitHubRelease {
   draft: boolean
 }
 
+interface VersionResponse {
+  currentVersion: string
+  latestVersion: string
+  hasUpdate: boolean
+  releaseName: string
+  releaseNotes: string
+  publishedAt: string
+  githubUrl: string
+  gitInfo: { commit: string; branch: string } | null
+  checkedAt: string
+}
+
 let cachedRelease: {
-  data: any
+  data: VersionResponse
   timestamp: number
 } | null = null
 
@@ -36,17 +49,35 @@ function compareSemver(v1: string, v2: string): number {
   return pat1 - pat2
 }
 
-function getLocalGitInfo() {
+/**
+ * Kurulu kodun git bilgisi. Panel bir rsync kopyasında (.git YOK) çalıştığı
+ * için cwd'de değil, KAYNAK KLONDA sorgulanır (bkz. lib/self-update.ts).
+ * Kaynak klon root'a ait; git "dubious ownership" ile reddetmesin diye o
+ * çağrıya özel `safe.directory` verilir. Etiket checkout'unda (detached
+ * HEAD) dal adı yerine etiket gösterilir. Bulunamazsa null — arayüz "HEAD"
+ * yazar; uydurma bir commit gösterilmez.
+ */
+function getLocalGitInfo(): { commit: string; branch: string } | null {
+  const sourceDir = resolveSourceDir()
+  if (!sourceDir) return null
+  const git = (...args: string[]) =>
+    execFileSync("git", ["-c", `safe.directory=${sourceDir}`, "-C", sourceDir, ...args], {
+      timeout: 2000,
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim()
   try {
-    const commit = execSync("git rev-parse --short HEAD", { timeout: 2000 })
-      .toString()
-      .trim()
-    const branch = execSync("git rev-parse --abbrev-ref HEAD", { timeout: 2000 })
-      .toString()
-      .trim()
+    const commit = git("rev-parse", "--short", "HEAD")
+    let branch: string
+    try {
+      branch = git("describe", "--tags", "--exact-match")
+    } catch {
+      branch = git("rev-parse", "--abbrev-ref", "HEAD")
+    }
     return { commit, branch }
   } catch {
-    return { commit: "30b5841", branch: APP_VERSION }
+    return null
   }
 }
 
@@ -104,7 +135,7 @@ export async function GET(request: Request) {
     const latestVersion = release.tag_name || CURRENT_VERSION
     const hasUpdate = compareSemver(latestVersion, CURRENT_VERSION) > 0
 
-    const responseData = {
+    const responseData: VersionResponse = {
       currentVersion: CURRENT_VERSION,
       latestVersion,
       hasUpdate,
@@ -122,7 +153,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json(responseData)
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json({
       currentVersion: CURRENT_VERSION,
       latestVersion: CURRENT_VERSION,
@@ -133,7 +164,7 @@ export async function GET(request: Request) {
       githubUrl: `https://github.com/${GITHUB_REPO}`,
       gitInfo,
       checkedAt: new Date().toISOString(),
-      error: error?.message || "Bilinmeyen hata",
+      error: error instanceof Error ? error.message : "Bilinmeyen hata",
     })
   }
 }

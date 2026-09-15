@@ -115,6 +115,20 @@ EOF
   msg ".env oluşturuldu."
 fi
 
+# Panel içi güncelleme (panel/scripts/self-update.sh) git işlemlerini bu
+# KAYNAK KLONDA yapmak zorunda — PANEL_DIR bir rsync kopyasıdır, .git
+# içermez. Klonun yeri .env'e yazılır (systemd EnvironmentFile ile panel
+# sürecine geçer). Her çalıştırmada tazelenir: install.sh başka bir klondan
+# çalıştırılırsa panel de artık orayı kullanır.
+if grep -q '^PANEL_SRC_DIR=' "${PANEL_DIR}/.env"; then
+  sed -i "s|^PANEL_SRC_DIR=.*|PANEL_SRC_DIR=${REPO_DIR}|" "${PANEL_DIR}/.env"
+else
+  # Elle düzenlenmiş .env son satırında \n olmayabilir — önceki satıra yapışmasın.
+  [[ -z "$(tail -c 1 "${PANEL_DIR}/.env")" ]] || echo >> "${PANEL_DIR}/.env"
+  echo "PANEL_SRC_DIR=${REPO_DIR}" >> "${PANEL_DIR}/.env"
+fi
+msg "Kaynak klon yeri .env'e yazıldı: PANEL_SRC_DIR=${REPO_DIR}"
+
 # ------------------------------------------------------------
 # 4) Bağımlılıklar + build
 # ------------------------------------------------------------

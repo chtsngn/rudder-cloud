@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   Sparkles,
   ArrowUpCircle,
@@ -15,13 +15,34 @@ import {
 } from "lucide-react"
 import { useSystemVersion, VersionData } from "@/hooks/use-system-version"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 
 interface SystemUpdateModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   versionData?: VersionData | null
 }
+
+/** GET /api/system/update yanıtı (bkz. lib/self-update.ts → UpdateStatus). */
+interface UpdateStatus {
+  state: "idle" | "running" | "success" | "failed"
+  ref: string | null
+  message: string | null
+  startedAt: string | null
+  finishedAt: string | null
+  log: string
+}
+
+type Phase = "idle" | "starting" | "running" | "completed" | "failed"
+
+const POLL_INTERVAL_MS = 2500
+/**
+ * install.sh sonunda panel yeniden başlar; o sırada sorgular birkaç saniye
+ * (bazen bir dakika) başarısız olur — bu normaldir ve yutulur. Ancak panel
+ * hiç geri gelmezse (build kırıldı, servis kalkmadı) sonsuza kadar
+ * beklenmez: art arda bu kadar başarısız sorgudan sonra hata gösterilir.
+ */
+const MAX_CONSECUTIVE_POLL_FAILURES = 120 // ≈ 5 dakika
+const RELOAD_DELAY_MS = 2500
 
 export function SystemUpdateModal({
   open,
@@ -31,19 +52,106 @@ export function SystemUpdateModal({
   const { data: hookData } = useSystemVersion()
   const data = versionData || hookData
 
-  const [updating, setUpdating] = useState(false)
-  const [currentStep, setCurrentStep] = useState<string | null>(null)
+  const [phase, setPhase] = useState<Phase>("idle")
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [completed, setCompleted] = useState(false)
-  const [stepLogs, setStepLogs] = useState<Array<{ step: string; status: string; output: string }>>([])
+  const [log, setLog] = useState("")
+  const logRef = useRef<HTMLPreElement | null>(null)
+
+  // Sorgulama döngüsü: yalnızca "running" evresinde çalışır; evre değişince
+  // (tamamlandı/başarısız/kapandı) temizlenir.
+  useEffect(() => {
+    if (phase !== "running") return
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+    let consecutiveFailures = 0
+
+    const tick = async () => {
+      if (cancelled) return
+      try {
+        const res = await fetch("/api/system/update", { cache: "no-store" })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const status: UpdateStatus = await res.json()
+        if (cancelled) return
+        consecutiveFailures = 0
+        setLog(status.log || "")
+        if (status.message) setStatusMessage(status.message)
+
+        if (status.state === "success") {
+          setPhase("completed")
+          setTimeout(() => window.location.reload(), RELOAD_DELAY_MS)
+          return
+        }
+        if (status.state === "failed") {
+          setError(status.message || "Güncelleme başarısız oldu. Ayrıntılar için günlüğe bakın.")
+          setPhase("failed")
+          return
+        }
+        if (status.state === "idle") {
+          // Başlattık ama status dosyası hiç yazılmamış — betik hiç çalışmadı.
+          setError(
+            "Güncelleme süreci başlatılamadı (durum dosyası oluşmadı). Sunucuda: journalctl -u panel-self-update"
+          )
+          setPhase("failed")
+          return
+        }
+      } catch {
+        // Panel yeniden başlıyor olabilir — bir süre tolere et.
+        consecutiveFailures += 1
+        if (consecutiveFailures >= MAX_CONSECUTIVE_POLL_FAILURES) {
+          if (cancelled) return
+          setError(
+            "Panel uzun süredir yanıt vermiyor. Güncelleme arka planda sürüyor ya da servis kalkamadı — sunucuda 'journalctl -u panel -n 50' ve /var/log/panel-update/update.log dosyasına bakın, sonra sayfayı yenileyin."
+          )
+          setPhase("failed")
+          return
+        }
+      }
+      if (!cancelled) timer = setTimeout(tick, POLL_INTERVAL_MS)
+    }
+
+    timer = setTimeout(tick, 500)
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
+  }, [phase])
+
+  // Modal açıldığında zaten süren bir güncelleme varsa (başka sekmeden
+  // başlatılmış, ya da sayfa yenilendi) ona bağlan.
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch("/api/system/update", { cache: "no-store" })
+        if (!res.ok) return
+        const status: UpdateStatus = await res.json()
+        if (cancelled || status.state !== "running") return
+        setLog(status.log || "")
+        setStatusMessage(status.message)
+        setPhase((current) => (current === "idle" ? "running" : current))
+      } catch {}
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [open])
+
+  // Log kutusunu her güncellemede en alta kaydır.
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
+  }, [log])
 
   if (!open || !data) return null
 
+  const busy = phase === "starting" || phase === "running"
+
   const handleStartUpdate = async () => {
-    setUpdating(true)
+    setPhase("starting")
     setError(null)
-    setCurrentStep("git_pull")
-    setStepLogs([])
+    setLog("")
+    setStatusMessage("Güncelleme başlatılıyor...")
 
     try {
       const res = await fetch("/api/system/update", {
@@ -51,24 +159,20 @@ export function SystemUpdateModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ targetVersion: data.latestVersion }),
       })
+      const result = await res.json().catch(() => ({}))
 
-      const result = await res.json()
-
-      if (!res.ok || !result.ok) {
-        throw new Error(result.error || "Güncelleme tamamlanamadı.")
+      if (res.status === 409 && result?.alreadyRunning) {
+        setStatusMessage("Zaten süren bir güncellemeye bağlanıldı.")
+        setPhase("running")
+        return
       }
-
-      setStepLogs(result.steps || [])
-      setCompleted(true)
-
-      // 3 saniye sonra sayfayı otomatik yenile
-      setTimeout(() => {
-        window.location.reload()
-      }, 2500)
-    } catch (err: any) {
-      setError(err?.message || "Güncelleme sırasında beklenmeyen bir hata oluştu.")
-    } finally {
-      setUpdating(false)
+      if (!res.ok || !result?.ok) {
+        throw new Error(result?.error || "Güncelleme başlatılamadı.")
+      }
+      setPhase("running")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Güncelleme sırasında beklenmeyen bir hata oluştu.")
+      setPhase("failed")
     }
   }
 
@@ -91,7 +195,7 @@ export function SystemUpdateModal({
             </div>
           </div>
 
-          {!updating && (
+          {!busy && (
             <button
               type="button"
               onClick={() => onOpenChange(false)}
@@ -126,66 +230,77 @@ export function SystemUpdateModal({
           </div>
 
           {/* Sürüm Notları (Changelog) */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <GitBranch className="size-3.5 text-sky-400" />
-                Sürüm Başlığı: {data.releaseName}
-              </span>
-              <a
-                href={data.githubUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[11px] font-mono text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
-              >
-                GitHub'da Gör
-                <ExternalLink className="size-3" />
-              </a>
-            </div>
-
-            <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-[#16223f] bg-slate-50/70 dark:bg-[#060a17] text-xs text-slate-700 dark:text-slate-300 font-sans whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed">
-              {data.releaseNotes || "Bu sürüm için detaylı sürüm notu girilmemiş."}
-            </div>
-          </div>
-
-          {/* Güncelleme Çalışırken Canlı Durum */}
-          {updating && (
-            <div className="p-4 rounded-2xl border border-sky-500/30 bg-sky-500/10 space-y-3 animate-pulse">
-              <div className="flex items-center gap-2.5 text-xs font-bold text-sky-600 dark:text-sky-300">
-                <Loader2 className="size-4 animate-spin text-sky-500" />
-                <span>Güncelleme adımları yürütülüyor, lütfen bekleyin...</span>
+          {phase === "idle" && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <GitBranch className="size-3.5 text-sky-400" />
+                  Sürüm Başlığı: {data.releaseName}
+                </span>
+                <a
+                  href={data.githubUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[11px] font-mono text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
+                >
+                  GitHub&apos;da Gör
+                  <ExternalLink className="size-3" />
+                </a>
               </div>
-              <ul className="text-[11px] font-mono text-slate-600 dark:text-slate-400 space-y-1 pl-6 list-disc">
-                <li>GitHub'dan güncel kodlar çekiliyor (`git pull`)</li>
-                <li>Gerekli paketler ve şemalar eşitleniyor</li>
-                <li>Uygulama yeniden derleniyor (`next build`)</li>
-              </ul>
+
+              <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-[#16223f] bg-slate-50/70 dark:bg-[#060a17] text-xs text-slate-700 dark:text-slate-300 font-sans whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed">
+                {data.releaseNotes || "Bu sürüm için detaylı sürüm notu girilmemiş."}
+              </div>
+
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                Güncelleme sunucuda arka planda çalışır: kaynak klonda etiket alınır, ardından resmi kurulum
+                betiği (<span className="font-mono">install.sh</span>) bağımlılıkları kurar, paneli derler,
+                veritabanı migration&apos;larını uygular ve servisi yeniden başlatır. Bu birkaç dakika sürebilir;
+                panel kısa süreliğine erişilemez olur.
+              </p>
+            </div>
+          )}
+
+          {/* Güncelleme Çalışırken Canlı Durum + Log */}
+          {busy && (
+            <div className="space-y-3">
+              <div className="p-4 rounded-2xl border border-sky-500/30 bg-sky-500/10 flex items-center gap-2.5 text-xs font-bold text-sky-700 dark:text-sky-300">
+                <Loader2 className="size-4 animate-spin text-sky-500 shrink-0" />
+                <span>{statusMessage || "Güncelleme adımları yürütülüyor, lütfen bekleyin..."}</span>
+              </div>
+              <LogBox log={log} logRef={logRef} placeholder="Günlük bekleniyor..." />
             </div>
           )}
 
           {/* Başarı Mesajı */}
-          {completed && (
-            <div className="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 flex items-center gap-3">
-              <CheckCircle2 className="size-5 text-emerald-500 shrink-0" />
-              <div>
-                <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                  Güncelleme başarıyla tamamlandı!
-                </p>
-                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">
-                  Yeni özellikler aktif edildi. Sayfa birkaç saniye içinde yenilenecek...
-                </p>
+          {phase === "completed" && (
+            <div className="space-y-3">
+              <div className="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 flex items-center gap-3">
+                <CheckCircle2 className="size-5 text-emerald-500 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                    Güncelleme başarıyla tamamlandı!
+                  </p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    {statusMessage || "Yeni sürüm aktif edildi."} Sayfa birkaç saniye içinde yenilenecek...
+                  </p>
+                </div>
               </div>
+              <LogBox log={log} logRef={logRef} />
             </div>
           )}
 
           {/* Hata Mesajı */}
-          {error && (
-            <div className="p-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 flex items-center gap-3">
-              <AlertCircle className="size-5 text-rose-500 shrink-0" />
-              <div>
-                <p className="text-xs font-bold text-rose-700 dark:text-rose-300">Güncelleme Hatası</p>
-                <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">{error}</p>
+          {phase === "failed" && (
+            <div className="space-y-3">
+              <div className="p-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 flex items-start gap-3">
+                <AlertCircle className="size-5 text-rose-500 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-rose-700 dark:text-rose-300">Güncelleme Hatası</p>
+                  <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5 break-words">{error}</p>
+                </div>
               </div>
+              {log && <LogBox log={log} logRef={logRef} />}
             </div>
           )}
         </div>
@@ -196,7 +311,7 @@ export function SystemUpdateModal({
             variant="outline"
             size="sm"
             onClick={() => onOpenChange(false)}
-            disabled={updating}
+            disabled={busy}
             className="rounded-xl border-slate-200 dark:border-[#1e3568] dark:text-slate-300 text-xs font-semibold cursor-pointer"
           >
             Kapat
@@ -205,18 +320,23 @@ export function SystemUpdateModal({
           <Button
             size="sm"
             onClick={handleStartUpdate}
-            disabled={updating || completed}
+            disabled={busy || phase === "completed"}
             className="rounded-xl bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white text-xs font-semibold px-4 border border-[#c8a87c]/40 dark:border-[#2a4687]/70 shadow-md cursor-pointer flex items-center gap-2"
           >
-            {updating ? (
+            {busy ? (
               <>
                 <Loader2 className="size-3.5 animate-spin" />
                 Güncelleniyor...
               </>
-            ) : completed ? (
+            ) : phase === "completed" ? (
               <>
                 <CheckCircle2 className="size-3.5 text-emerald-400" />
                 Tamamlandı
+              </>
+            ) : phase === "failed" ? (
+              <>
+                <RefreshCw className="size-3.5" />
+                Tekrar Dene
               </>
             ) : (
               <>
@@ -227,6 +347,31 @@ export function SystemUpdateModal({
           </Button>
         </div>
       </div>
+    </div>
+  )
+}
+
+function LogBox({
+  log,
+  logRef,
+  placeholder,
+}: {
+  log: string
+  logRef: React.RefObject<HTMLPreElement | null>
+  placeholder?: string
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200/80 dark:border-[#16223f] bg-slate-950 dark:bg-[#03050c] overflow-hidden">
+      <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-slate-800 text-[10px] font-mono text-slate-400">
+        <Terminal className="size-3" />
+        /var/log/panel-update/update.log
+      </div>
+      <pre
+        ref={logRef}
+        className="p-3 text-[11px] leading-relaxed font-mono text-slate-200 whitespace-pre-wrap break-words max-h-56 overflow-y-auto"
+      >
+        {log || placeholder || ""}
+      </pre>
     </div>
   )
 }

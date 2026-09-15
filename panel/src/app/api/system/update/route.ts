@@ -1,129 +1,120 @@
 import { NextResponse } from "next/server"
-import { exec } from "child_process"
-import { promisify } from "util"
-import fs from "fs"
-import path from "path"
 import { getSession } from "@/lib/auth"
 import { isSuperAdmin } from "@/lib/permissions"
 import { logAudit } from "@/lib/audit"
+import {
+  DEFAULT_SOURCE_DIR,
+  isUpdateUnitActive,
+  isValidUpdateRef,
+  readUpdateStatus,
+  resolveSourceDir,
+  SelfUpdateStartError,
+  startSelfUpdate,
+} from "@/lib/self-update"
 
-const execAsync = promisify(exec)
+/**
+ * Panel içi güncelleme.
+ *
+ * POST — güncellemeyi BAŞLATIR ve hemen döner. Asıl iş (git fetch/checkout
+ *        kaynak klonda + install.sh --yes) root olarak, panel.service'den
+ *        bağımsız geçici bir systemd unit'inde çalışır; çünkü install.sh
+ *        sonunda paneli yeniden başlatır ve panelin çocuğu olan bir süreç
+ *        o anda onunla birlikte ölürdü. Bkz. scripts/self-update.sh.
+ * GET  — status.json + log kuyruğunu döndürür; arayüz bunu 2-3 sn'de bir
+ *        sorgulayarak canlı ilerleme gösterir (panel yeniden başlarken
+ *        birkaç istek başarısız olur, arayüz bunu tolere eder).
+ */
 
-function findGitRoot(): string {
-  let curr = process.cwd()
-  while (curr && curr !== path.dirname(curr)) {
-    if (fs.existsSync(path.join(curr, ".git"))) {
-      return curr
-    }
-    curr = path.dirname(curr)
-  }
-  return process.cwd()
+async function requireSuperAdmin() {
+  const session = await getSession()
+  if (!session || !(await isSuperAdmin(session.userId))) return null
+  return session
 }
 
-export async function POST(request: Request) {
-  const session = await getSession()
-  if (!session || !(await isSuperAdmin(session.userId))) {
+export async function GET() {
+  const session = await requireSuperAdmin()
+  if (!session) {
     return NextResponse.json({ error: "Bu işlem için yetkiniz yok (Süper Yönetici gerekli)." }, { status: 403 })
   }
 
-  let body: any = {}
+  const status = await readUpdateStatus()
+  // status.json 'running' diyor ama unit yoksa (sunucu yeniden başladı,
+  // süreç öldürüldü...) arayüz sonsuza kadar beklemesin.
+  if (status.state === "running" && !(await isUpdateUnitActive())) {
+    return NextResponse.json({
+      ...status,
+      state: "failed",
+      message:
+        status.message && status.message.includes("başlatılıyor")
+          ? "Güncelleme birimi başlatılamadı ya da beklenmedik şekilde sonlandı. Ayrıntılar için günlüğe bakın."
+          : "Güncelleme süreci beklenmedik şekilde sonlandı (unit artık çalışmıyor). Ayrıntılar için günlüğe bakın.",
+    })
+  }
+  return NextResponse.json(status)
+}
+
+export async function POST(request: Request) {
+  const session = await requireSuperAdmin()
+  if (!session) {
+    return NextResponse.json({ error: "Bu işlem için yetkiniz yok (Süper Yönetici gerekli)." }, { status: 403 })
+  }
+
+  let body: { targetVersion?: unknown } = {}
   try {
     body = await request.json()
   } catch {}
 
-  const targetVersion = body.targetVersion || "latest"
-  const gitRoot = findGitRoot()
-  const panelDir = fs.existsSync(path.join(gitRoot, "panel")) ? path.join(gitRoot, "panel") : gitRoot
+  const ref =
+    typeof body.targetVersion === "string" && body.targetVersion.trim() ? body.targetVersion.trim() : "latest"
+  if (!isValidUpdateRef(ref)) {
+    return NextResponse.json({ ok: false, error: `Geçersiz sürüm etiketi: ${ref}` }, { status: 400 })
+  }
 
-  const stepsLog: Array<{ step: string; status: "success" | "skipped" | "failed"; output: string }> = []
-
-  try {
-    // 1. Git Fetch
-    try {
-      const { stdout } = await execAsync("git fetch --tags origin", { cwd: gitRoot, timeout: 30000 })
-      stepsLog.push({ step: "git_fetch", status: "success", output: stdout.trim() || "Etiketler ve değişiklikler getirildi." })
-    } catch (err: any) {
-      stepsLog.push({ step: "git_fetch", status: "failed", output: err?.message || "git fetch başarısız oldu." })
-      throw new Error(`Git fetch hatası: ${err?.message || err}`)
-    }
-
-    // 2. Git Pull / Checkout
-    try {
-      let pullCmd = "git pull"
-      if (targetVersion && targetVersion !== "latest") {
-        pullCmd = `git checkout ${targetVersion} || git pull origin main`
-      }
-      const { stdout } = await execAsync(pullCmd, { cwd: gitRoot, timeout: 30000 })
-      stepsLog.push({ step: "git_pull", status: "success", output: stdout.trim() || "Kodlar güncellendi." })
-    } catch (err: any) {
-      stepsLog.push({ step: "git_pull", status: "failed", output: err?.message || "git pull başarısız oldu." })
-      throw new Error(`Git pull hatası: ${err?.message || err}`)
-    }
-
-    // 3. Paket Kurulumu (npm install)
-    try {
-      const { stdout } = await execAsync("npm install --omit=dev --no-audit --no-fund", { cwd: panelDir, timeout: 120000 })
-      stepsLog.push({ step: "npm_install", status: "success", output: stdout.trim() || "Bağımlılıklar eşitlendi." })
-    } catch (err: any) {
-      stepsLog.push({ step: "npm_install", status: "skipped", output: err?.message || "npm install uyarısı (atlanıyor)." })
-    }
-
-    // 4. Veritabanı Şeması & Prisma Generate
-    try {
-      await execAsync("npx prisma generate", { cwd: panelDir, timeout: 60000 })
-      try {
-        await execAsync("npx prisma migrate deploy", { cwd: panelDir, timeout: 60000 })
-      } catch {}
-      stepsLog.push({ step: "prisma_migrate", status: "success", output: "Veritabanı şeması ve istemcisi güncellendi." })
-    } catch (err: any) {
-      stepsLog.push({ step: "prisma_migrate", status: "skipped", output: err?.message || "Prisma adımı atlandı." })
-    }
-
-    // 5. Next.js Build
-    try {
-      const { stdout } = await execAsync("npm run build", { cwd: panelDir, timeout: 300000 })
-      stepsLog.push({ step: "npm_build", status: "success", output: stdout.trim() || "Panel başarıyla derlendi." })
-    } catch (err: any) {
-      stepsLog.push({ step: "npm_build", status: "failed", output: err?.message || "Derleme başarısız." })
-      throw new Error(`Derleme hatası: ${err?.message || err}`)
-    }
-
-    // 6. Linux Servis Yeniden Başlatma
-    try {
-      await execAsync("sudo systemctl restart panel || systemctl restart panel || pm2 restart panel", { timeout: 10000 })
-      stepsLog.push({ step: "service_restart", status: "success", output: "Panel servisi yeniden başlatıldı." })
-    } catch (err: any) {
-      stepsLog.push({ step: "service_restart", status: "skipped", output: "Servis restart komutu iletildi veya gerekmedi." })
-    }
-
-    // Denetim kaydı oluştur
-    try {
-      await logAudit({
-        userId: session.userId,
-        action: "UPDATE",
-        targetType: "SYSTEM",
-        targetId: "panel",
-        detail: JSON.stringify({
-          targetVersion,
-          steps: stepsLog.map((s) => s.step),
-        }),
-      })
-    } catch {}
-
-    return NextResponse.json({
-      ok: true,
-      message: "Güncelleme başarıyla tamamlandı! Sayfa yenileniyor.",
-      steps: stepsLog,
-      requiresReload: true,
-    })
-  } catch (error: any) {
+  const sourceDir = resolveSourceDir()
+  if (!sourceDir) {
     return NextResponse.json(
       {
         ok: false,
-        error: error?.message || "Güncelleme sırasında bir hata oluştu.",
-        steps: stepsLog,
+        error:
+          `Kaynak git klonu bulunamadı. Panel bir rsync kopyasında çalışır (.git içermez); güncelleme için ` +
+          `install.sh'ın çalıştırıldığı klon gerekir (varsayılan: ${DEFAULT_SOURCE_DIR}). ` +
+          `Sunucuda klonun içinden bir kez 'sudo bash install.sh --yes' çalıştırın — klonun yeri .env'e ` +
+          `(PANEL_SRC_DIR) kaydedilir ve panel içi güncelleme çalışır hale gelir.`,
       },
+      { status: 400 }
+    )
+  }
+
+  try {
+    await startSelfUpdate(sourceDir, ref)
+  } catch (error) {
+    if (error instanceof SelfUpdateStartError) {
+      if (error.status === 409) {
+        return NextResponse.json({ ok: true, alreadyRunning: true, message: error.message }, { status: 409 })
+      }
+      return NextResponse.json({ ok: false, error: error.message }, { status: error.status })
+    }
+    return NextResponse.json(
+      { ok: false, error: error instanceof Error ? error.message : "Güncelleme başlatılamadı." },
       { status: 500 }
     )
   }
+
+  try {
+    await logAudit({
+      userId: session.userId,
+      action: "UPDATE",
+      targetType: "SYSTEM",
+      targetId: "panel",
+      detail: JSON.stringify({ targetVersion: ref, sourceDir }),
+    })
+  } catch {}
+
+  return NextResponse.json({
+    ok: true,
+    started: true,
+    message: "Güncelleme arka planda başlatıldı.",
+    sourceDir,
+    targetVersion: ref,
+  })
 }

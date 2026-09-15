@@ -93,6 +93,23 @@ database migrations, creates the initial super admin account, writes the Nginx v
 and starts the `panel.service` systemd unit. Pass `--yes` to auto-confirm dependency
 installation.
 
+## Updating
+
+When the panel sees a newer GitHub release, it can update itself with one click
+from the Settings page: the release tag is checked out in the source clone on the
+server and `install.sh --yes` is re-run in the background (in a systemd unit
+independent of the panel service), with live progress shown in the panel. To do the
+same by hand:
+
+```bash
+cd /opt/sunucu-paneli-src        # or wherever you ran install.sh from
+sudo git fetch --tags && sudo git checkout tags/vX.Y.Z
+sudo bash install.sh --yes
+```
+
+`install.sh` records the clone location as `PANEL_SRC_DIR` in the panel's `.env`;
+the in-panel updater relies on it. Log: `/var/log/panel-update/update.log`.
+
 ## First login
 
 Open `http://<server-ip>:24428` in a browser. The super admin username and
