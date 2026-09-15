@@ -164,6 +164,10 @@ export default function SiteDetailPage() {
   const [gitPullError, setGitPullError] = useState<string | null>(null)
   const [gitPullMessage, setGitPullMessage] = useState<string | null>(null)
 
+  const [dockerActionPending, setDockerActionPending] = useState<"up" | "down" | "restart" | null>(null)
+  const [dockerActionError, setDockerActionError] = useState<string | null>(null)
+  const [dockerActionMessage, setDockerActionMessage] = useState<string | null>(null)
+
   // GitHub App'e bağlı depo seçimi (bkz. /api/sites/[id]/github-connect) —
   // seçilince yalnızca `repoUrl`/`gitBranch`'i doldurmakla kalmaz, sitenin
   // kök dizinine İLK KURULUMU (git clone) da tetikler.
@@ -377,6 +381,35 @@ export default function SiteDetailPage() {
       setGitPullError("Sunucuya bağlanılamadı.")
     } finally {
       setGitPulling(false)
+    }
+  }
+
+  async function handleDockerAction(action: "up" | "down" | "restart") {
+    if (!site) return
+    setDockerActionPending(action)
+    setDockerActionError(null)
+    setDockerActionMessage(null)
+    try {
+      const res = await fetch(`/api/sites/${site.id}/docker-compose`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      })
+      const data = (await res.json().catch(() => null)) as (ApiSite & { error?: string }) | null
+      if (!res.ok || !data) {
+        setDockerActionError(
+          data?.error ?? (lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı.")
+        )
+        return
+      }
+      setSite(apiSiteToUiSite(data))
+      setDockerActionMessage(
+        lang === "en" ? `docker compose ${action} completed.` : `docker compose ${action} tamamlandı.`
+      )
+    } catch {
+      setDockerActionError(lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı.")
+    } finally {
+      setDockerActionPending(null)
     }
   }
 
@@ -1209,6 +1242,82 @@ export default function SiteDetailPage() {
                   {gitLastPull.at ? new Date(gitLastPull.at).toLocaleString(lang === "en" ? "en-US" : "tr-TR") : t("sites.detail.gitPullNever")}
                 </span>
               </div>
+
+              {/* Docker Compose Elle Kontrol — yalnızca süreç yöneticisi
+                  DOCKER_COMPOSE iken anlamlı. "Pull Now" sonrası restart
+                  yalnızca mevcut container'ları yeniden başlatır (bkz.
+                  restart.ts) — compose dosyası veya image değiştiyse bu
+                  yetmez, kullanıcının elle "down" + "up" yapması gerekir. */}
+              {gitForm.processManager === "DOCKER_COMPOSE" && (
+                <div className="pt-4 border-t border-border space-y-3">
+                  <div>
+                    <p className="text-xs font-bold text-foreground">
+                      {lang === "en" ? "Docker Compose Control" : "Docker Compose Kontrolü"}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {lang === "en"
+                        ? "Manually start, stop, or restart the containers in this site's working directory. Use down + up after a compose file or image change — restart alone won't apply it."
+                        : "Bu sitenin çalışma dizinindeki konteynerleri elle başlat, durdur veya yeniden başlat. Compose dosyası veya image değiştiyse restart yetmez — down + up kullanın."}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={dockerActionPending !== null}
+                      onClick={() => handleDockerAction("up")}
+                      className="h-9 px-3.5 rounded-xl border border-border bg-card text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 cursor-pointer"
+                    >
+                      {dockerActionPending === "up" ? (
+                        <Loader2 className="size-3.5 animate-spin mr-1" />
+                      ) : (
+                        <Play className="size-3.5 mr-1 fill-emerald-600 dark:fill-emerald-400" />
+                      )}
+                      {lang === "en" ? "Up" : "Başlat (up)"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={dockerActionPending !== null}
+                      onClick={() => handleDockerAction("down")}
+                      className="h-9 px-3.5 rounded-xl border border-border bg-card text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                    >
+                      {dockerActionPending === "down" ? (
+                        <Loader2 className="size-3.5 animate-spin mr-1" />
+                      ) : (
+                        <Square className="size-3.5 mr-1 fill-slate-500" />
+                      )}
+                      {lang === "en" ? "Down" : "Durdur (down)"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={dockerActionPending !== null}
+                      onClick={() => handleDockerAction("restart")}
+                      className="h-9 px-3.5 rounded-xl border border-border bg-card text-xs font-semibold text-[#580619] dark:text-blue-300 hover:bg-[#580619]/10 dark:hover:bg-[#162752] cursor-pointer"
+                    >
+                      {dockerActionPending === "restart" ? (
+                        <Loader2 className="size-3.5 animate-spin mr-1" />
+                      ) : (
+                        <RotateCw className="size-3.5 mr-1" />
+                      )}
+                      {lang === "en" ? "Restart" : "Yeniden Başlat"}
+                    </Button>
+                  </div>
+                  {(dockerActionMessage || dockerActionError) && (
+                    <div
+                      className={cn(
+                        "p-3 rounded-xl text-xs font-mono",
+                        dockerActionError
+                          ? "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900"
+                          : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900"
+                      )}
+                    >
+                      {dockerActionError ?? dockerActionMessage}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

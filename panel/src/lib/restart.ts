@@ -98,3 +98,31 @@ export async function restartSite(site: RestartableSite): Promise<void> {
       throw new RestartError(`Bilinmeyen process manager: ${site.processManager}`)
   }
 }
+
+export type DockerComposeControlAction = "up" | "down" | "restart"
+
+/**
+ * Manuel "docker compose up/down/restart" — `restartSite`'ın DOCKER_COMPOSE
+ * dalıyla AYNI yetkiyle (panel süreci, sudo YOK) çalışır; NODEJS/PYTHON/
+ * REVERSE_PROXY/DOCKER işleri panel:panel sahipliğinde olduğu için bu
+ * yeterli (bkz. site-paths.ts). `up` container'ları görüntüde yoksa
+ * oluşturur (`-d --remove-orphans`); `down` durdurup kaldırır; `restart`
+ * mevcut container'ları yeniden başlatır (image/compose değişikliği
+ * uygulamaz — bunun için önce `down` sonra `up` gerekir).
+ */
+export async function dockerComposeControl(
+  site: SiteLike,
+  action: DockerComposeControlAction
+): Promise<void> {
+  const workdir = resolveSiteWorkdir(site)
+  if (!workdir) throw new RestartError("Bu site türü için çalışma dizini belirlenemedi.")
+
+  const args =
+    action === "up" ? ["compose", "up", "-d", "--remove-orphans"] : ["compose", action]
+
+  try {
+    await execFileAsync("docker", args, { cwd: workdir, timeout: RESTART_TIMEOUT_MS })
+  } catch (error) {
+    throw new RestartError(extractDetail(error))
+  }
+}

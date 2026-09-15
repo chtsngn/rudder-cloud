@@ -326,6 +326,11 @@ export async function POST(request: Request) {
         status: "PROVISIONING",
         sslEnabled: sslEnabledBool,
         config: initialConfig as Prisma.InputJsonValue,
+        // DOCKER tipi hiçbir zaman systemd birimi almaz (bkz. cmd_create_service
+        // yalnızca NODEJS/PYTHON çağırır) — varsayılan SYSTEMD bu tip için
+        // anlamsız kalır, dolayısıyla wizard'ın zaten yazdığı docker-compose.yml
+        // ile eşleşen DOCKER_COMPOSE'u baştan ayarlıyoruz.
+        ...(plan.type === "DOCKER" ? { processManager: "DOCKER_COMPOSE" as const } : {}),
       },
     })
   } catch (error) {
