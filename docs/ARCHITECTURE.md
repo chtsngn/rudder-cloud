@@ -1005,3 +1005,91 @@ frontend/       kullanılmıyor (önceki plandan kalma, boş)
 9. ~~Wizard'ın 3. adımını (gerçek provisioning) bağlamak~~ ✅ sudoers + `provision-site.sh` ile (bkz. Güvenlik Notları). (Canlı, adım adım log akışı kapsam dışı bırakıldı — senkron/best-effort sonuç ekranı var.)
 10. Gerçek/test bir Ubuntu sunucusunda uçtan uca kurulum testi.
 11. Genişletilmiş özellik yol haritası (bkz. yukarıdaki bölüm) — ~~Aşama A (port görüntüleyici)~~ ✅, ~~Aşama B (git pull + proje restart + RBAC şema iskeleti)~~ ✅, ~~Aşama C (dosya yöneticisi + .env yönetimi + Monaco editör)~~ ✅, ~~Aşama D (Ayarlar ekranı/AWS-S3 + veritabanı yedekleme)~~ ✅, ~~Aşama E (GitHub deploy/actions key yönetimi)~~ ✅, ~~Aşama F (sunucu terminali)~~ ✅, ~~Aşama G (tam kullanıcı/RBAC yönetimi + AuditLog)~~ ✅. **Yol haritası TAMAMLANDI (2026-09-01).**
+
+### 2026-09-15 güncellemesi (v1.3.0): Akış denetimi düzeltmeleri — deploy hattı, gerçek süreç durumu, deploy hook/webhook, sahiplik modeli
+
+Kullanıcının CloudPanel-dönemi akışı ("Cloudflare A kaydı → ters proxy site →
+deploy key → clone → .env PORT → docker compose/pm2 → upstream portu") uçtan uca
+denetlendi; bulunan 30+ madde tek turda düzeltildi. Karar listesi ve ilerleme
+`docs/AUDIT_FIX_PROGRESS.md`'de; burada mimariye giren kalıcı değişiklikler:
+
+- **Deploy hattı tek giriş noktası** — `src/lib/deploy.ts` `deploySite()`: pull
+  (repo varsa) → HEAD değiştiyse ya da zorlandıysa `Site.deployCommand` (panel
+  kullanıcısı, `bash -lc`, site klasöründe, `PORT`/`GIT_COMMIT` ortamıyla) →
+  `restartSite(site, { deploy: true })`. Elle "Deploy Et", "Pull", auto-pull
+  zamanlayıcısı, deploy hook ve GitHub webhook hepsi buradan geçer; aynı site için
+  eş zamanlı deploy `inFlight` ile engellenir. Sonuç `lastDeploy*` alanlarında
+  (çıktının son 16KB'ı dahil).
+- **Docker Compose deploy = `up -d --build --remove-orphans`** (`rebuild`); eski
+  `docker compose restart` kaynaktan build edilen image'larda yeni kodu HİÇ yayına
+  almıyordu (yerelde doğrulandı: restart sonrası eski içerik, `up --build` sonrası
+  yeni). Elle kontroller: up/down/restart/rebuild/pull + `docker compose logs`.
+- **`ProcessManager.NONE`** eklendi; REVERSE_PROXY varsayılanı NONE (migration
+  eski SYSTEMD'deki proxy siteleri çeker — o birim hiç var olmuyordu). PM2 artık
+  `provision-site.sh pm2-action` ile ROOT'un pm2 daemon'ında (`Site.pm2ProcessName`).
+- **Gerçek süreç durumu** — `GET /api/sites/[id]/process-status`: systemd
+  is-active + MemoryCurrent, `docker compose ps` + `docker stats`, pm2 jlist; ayrıca
+  proxy hedefine TCP bağlantı denemesi (`src/lib/upstream-check.ts`). Dashboard'daki
+  DB `status` iyimser kalır, detay sayfası gerçeğini gösterir.
+- **Portlar** — `src/lib/ports.ts`: `config.port` artık sayı olarak saklanır
+  (sihirbaz string gönderiyordu, etiketleme hiç çalışmıyordu; eski string kayıtlar da
+  okunur), ters proxy'nin yerel upstream portu da haritaya girer, site kayıtlarındaki
+  portlar öneri listesinden düşülür. Oluştururken sert çakışma kontrolü (başka site
+  kaydı ya da o an dinlenen port → 409). Node/Python/Docker'da port ve başlatma
+  komutu sonradan değiştirilebilir (`update-upstream` + `create-service`).
+- **DOCKER tipi tamamlandı** — git bağlanabilir (`GIT_PULL_TYPES`), sihirbazda
+  repo seçilirse örnek compose/otomatik up atlanır (`create-vhost ... bootstrap=false`),
+  detay sayfasında systemd butonları yerine compose kontrolleri + compose logları.
+- **GitHub Actions SSH anahtarı KALDIRILDI** (`panel` nologin olduğu için hiç
+  çalışamıyordu). Yerine: site başına **deploy hook** (`POST /api/hooks/deploy/<token>`,
+  token yalnızca SHA-256 özeti olarak saklanır, URL bir kez gösterilir, `?wait=1`) ve
+  **GitHub App push webhook'u** (`POST /api/hooks/github`, HMAC; manifest artık
+  `hook_attributes` + `push` olayı + `contents: read`; eski App'ler için secret
+  Ayarlar'dan elle girilir). Her ikisi de middleware matcher'ında bilinçli olarak yok.
+- **Manuel repo adresi + SSH deploy key geri geldi** (`src/lib/deploy-keys.ts`):
+  anahtar `~/.ssh/site_<slug>_deploy`, git `GIT_SSH_COMMAND="ssh -i ... -o
+  IdentitiesOnly=yes"` ile kullanır — `~/.ssh/config` alias'ı yok, her git host'u
+  (GitLab/Bitbucket/Gitea) aynı şekilde çalışır. GitHub App bağlıyken alan salt-okunur.
+- **STATIC/PHP/WORDPRESS sahiplik modeli** — sihirbaz artık `linux-user` alanını
+  gerçekten gösteriyor (eskiden `buildConfig` okuyordu ama input hiç render
+  edilmiyordu → dosyalar root'ta kalıyor, WordPress yükleme/güncelleme kırılıyordu).
+  Boşsa `site_<slug>` otomatik. `apply_owned_site_access`: dosyalar kullanıcıya ait,
+  panel/nginx erişimi ACL (`setfacl`, `acl` paketi doctor.sh'da), PHP/WordPress
+  için site başına PHP-FPM havuzu (`/etc/php/<ver>/fpm/pool.d/<domain>.conf`,
+  `user = site_x`, kendi soketi) + php-fpm `UMask=0002` drop-in'i; panel.service'e
+  de `UMask=0002`. `ensure-site-user <domain> <dir> <user> owned [php_ver]` eski
+  siteleri geriye dönük dönüştürür ("Dedicated Kullanıcı Kur").
+- **Site silme temizliği** — `cleanup-site`: compose down, PHP havuzu, isteğe bağlı
+  klasör + dedicated kullanıcı (yalnızca `siteusers` grubundaysa), deploy key.
+  Arayüzde onaylı diyalog (`?removeFolder=true&removeUser=true`).
+- **DNS ön kontrolü** — `src/lib/dns-check.ts`: certbot'tan önce A/AAAA çözümü
+  sunucunun adresleriyle (yerel arayüzler + ipify genel IP, 10 dk önbellek)
+  karşılaştırılır; Cloudflare aralıklarına çözümleniyorsa "proxy arkasında,
+  muhtemelen tamam". Oluşturmada ve `/ssl`'de (`force` ile atlanabilir) uygulanır,
+  `GET .../dns-check` arayüzde gösterilir. Cloudflare real_ip: `refresh-cloudflare-ips`
+  (install.sh'da best-effort, Ayarlar'da buton).
+- **Yetki sıkılaştırmaları** — `/logs` VIEW izni (eskiden hiç kontrol yoktu),
+  `/settings/github/repos` SUPER_ADMIN ya da MANAGE_DEPLOY_KEYS grant'i,
+  `/preferences` matcher'da, `POST /api/sites` config beyaz listesi (istemciden gelen
+  `workingDir` vb. artık saklanmıyor), yürütme alanları (processManager,
+  customRestartCommand, deployCommand, pm2ProcessName, port, startCommand)
+  SUPER_ADMIN-only: `panel`'in root kabuğa sudo'su olduğu için panel olarak çalışan
+  her komut fiilen root — EDIT_FILES'lı bir MEMBER özel betikle root'a çıkabiliyordu.
+  **Açık konu:** systemd site birimleri hâlâ `User=panel` (repo kodu = root
+  yetkisi); sitenin kendi kullanıcısıyla çalıştırmak docker grubu/pm2 ile çakıştığı
+  için ayrı bir karar (bkz. AUDIT_FIX_PROGRESS.md).
+- **Terminal** — SUPER_ADMIN site sekmesinden açınca root kabuk o sitenin
+  klasöründe başlar (eskiden home dizini).
+- **Yedekleme** — `.env`'deki DB host'u compose dosyasındaki bir servis adıysa
+  (`db`) dump `docker compose exec -T -e PGPASSWORD <svc> pg_dump` ile konteyner
+  içinden alınır (host'ta pg_dump gerekmez).
+- **Doküman düzeltmesi:** Node.js/Python systemd birimleri sitenin kendi
+  kullanıcısıyla DEĞİL `panel` olarak çalışır (README/önceki notlar aksini söylüyordu).
+
+**Doğrulama:** `tsc --noEmit`, `next build` temiz; yerel Postgres + sahte
+`sudo`/`provision-site.sh` düzeneğiyle uçtan uca: config beyaz listesi, manuel repo
+ile deploy (deploy komutu `GIT_COMMIT` ile çalıştı), compose rebuild (v1 → v2), gerçek
+durum + upstream erişilebilirliği, compose logları, deploy hook (`?wait=1`), DNS kapısı
+(certbot hiç çağrılmadı), port çakışması 409 + öneri listesi, admin port/komut
+değişikliği (update-upstream + create-service), MEMBER yetki sınırları, admin terminal
+cwd. Gerçek nginx/certbot/ACL/PHP-FPM/`cleanup-site` yolları sunucuda test edilmeli.

@@ -21,10 +21,17 @@ gelir ve düz bir Ubuntu/Debian sunucusuna tek bir script ile kendini kurar.
 - **Port görüntüleyici** — sunucudaki tüm dinleyen TCP portlarını (Docker varsa
   container portlarını da) yönettiğiniz sitelerle eşleştirerek gösterir, yeni
   dağıtımlar için boş port önerir.
-- **Git tabanlı dağıtım** — bir Node.js/Python sitesini bir Git deposuna ve dalına
-  bağlayın; elle veya belirli aralıklarla pull edin, ardından systemd, Docker
-  Compose, PM2 veya özel bir script ile yeniden başlatın — yalnızca dağıtılan
-  commit gerçekten değiştiyse.
+- **Deploy hattı** — bir Node.js/Python/ters proxy/Docker sitesini bir depoya
+  bağlayın (GitHub App ya da site başına SSH deploy key ile herhangi bir git adresi);
+  panel `pull → deploy komutu → yeniden başlatma` zincirini çalıştırır: deploy komutu
+  sizin (örn. `npm ci && npm run build`), yeniden başlatma systemd, `docker compose
+  up -d --build`, PM2 (root daemon'ı) ya da özel betik. Elle, periyodik kontrolle, site
+  başına **deploy hook URL'i** (herhangi bir CI'dan tek `POST`) ya da GitHub App'in
+  **push webhook'u** ile anında tetiklenir.
+- **Gerçek süreç durumu** — systemd / `docker compose ps` / pm2 durumu, bellek
+  kullanımı ve proxy hedefinde gerçekten bir şeyin dinleyip dinlemediği (ziyaretçi
+  502 görürken "Aktif" yazmaz). Compose siteleri up/down/restart/rebuild/pull
+  kontrolleri ve canlı `docker compose logs` alır.
 - **Dosya yöneticisi** — bir sitenin kendi dizinini gezin, düzenleyin (Monaco
   editör), yükleyin/indirin, zip'leyin; `.env.example`'dan tek tıkla `.env`
   oluşturun. Path traversal ve symlink ile kaçış girişimleri dosya sistemi
@@ -33,9 +40,10 @@ gelir ve düz bir Ubuntu/Debian sunucusuna tek bir script ile kendini kurar.
   `wp-config.php`'si dahil) ve MongoDB'yi otomatik algılar; zamanlanmış, sıkıştırılmış
   yedekler alır, saklama süresi ayarlanabilir ve isteğe bağlı olarak S3 uyumlu bir
   depoya yükler.
-- **GitHub anahtar yönetimi** — bir site için salt-okunur deploy key (`git pull`
-  için) veya bir Actions key (CI'ın sunucuya SSH ile bağlanması için) üretir; özel
-  anahtar hiçbir zaman veritabanına yazılmaz.
+- **DNS ön kontrollü SSL** — certbot çağrılmadan önce alan adı çözümlenir ve bu
+  sunucuya işaret edip etmediği söylenir (Cloudflare proxy'si tanınır); dakikalar
+  sonra ham bir ACME hatası yerine saniyeler içinde net bir mesaj. Cloudflare gerçek
+  ziyaretçi IP aralıkları Ayarlar'dan Nginx'e kurulabilir.
 - **Web terminali** — tarayıcıda gerçek bir PTY (xterm.js + node-pty), yetkisiz
   panel kullanıcısı olarak çalışır, yalnızca süper adminlere açık.
 - **Kullanıcılar, roller ve denetim kaydı** — ekip üyelerini `MEMBER` olarak davet
@@ -52,7 +60,8 @@ gelir ve düz bir Ubuntu/Debian sunucusuna tek bir script ile kendini kurar.
 | Node.js | Nginx reverse proxy, ayrı systemd servisi |
 | Python | Nginx reverse proxy, ayrı systemd servisi |
 | Statik | Bir dizini sunan Nginx vhost |
-| Reverse proxy | İstediğiniz bir upstream URL'e Nginx reverse proxy |
+| Reverse proxy | İstediğiniz bir upstream URL'e Nginx reverse proxy (+ git/compose için site klasörü) |
+| Docker | Site klasöründeki Docker Compose projesinin yayınladığı porta Nginx reverse proxy |
 
 Tüm tipler isteğe bağlı olarak bir domain, `www` alias'ı ve Certbot ile SSL
 sertifikası alabilir.

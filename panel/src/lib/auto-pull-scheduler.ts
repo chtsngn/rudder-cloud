@@ -2,26 +2,26 @@
  * Otomatik git pull zamanlayıcısı — gerçek bir cron/systemd-timer DEĞİL;
  * panel süreci (`panel.service`) ayaktayken çalışan, uygulama içi bir
  * "reconciliation loop"dur. Süreç yeniden başlarsa zamanlayıcı da sıfırdan
- * başlar (bu kabul edilebilir: `autoPullIntervalSeconds` varsayılan 15sn
- * gibi kısa aralıklar için önemsiz bir fark yaratır).
+ * başlar (kabul edilebilir: 15sn gibi kısa aralıklar için önemsiz).
  *
- * Her TICK_MS'de bir: `autoPullEnabled = true` olan ve git-pull desteklenen
- * (NODEJS/PYTHON/REVERSE_PROXY) siteleri DB'den okur, her biri için kendi
- * `autoPullIntervalSeconds` süresi dolmuşsa `gitPullOrClone` çalıştırır;
- * HEAD değiştiyse `restartSite` de tetiklenir. Aynı site için bir pull hâlâ
- * sürüyorsa (yavaş repo/ağ) bir sonraki tick o siteyi atlar — üst üste
- * binen pull'lar engellenir.
+ * Her TICK_MS'de bir: `autoPullEnabled = true` olan ve git desteklenen
+ * (NODEJS/PYTHON/REVERSE_PROXY/DOCKER) siteleri okur, süresi dolanlar için
+ * deploy hattını (`deploySite`, bkz. src/lib/deploy.ts) çalıştırır — HEAD
+ * değiştiyse deployCommand + yeniden başlatma da oradan tetiklenir. Aynı site
+ * için bir deploy hâlâ sürüyorsa (yavaş build/ağ) o site atlanır.
+ *
+ * Not: GitHub App push webhook'u (`/api/hooks/github`) bağlıysa bu döngü
+ * yalnızca yedek/emniyet görevi görür — webhook anında tetikler.
  */
-import { GitError, gitPullOrClone, isGitPullSupported } from "@/lib/git"
+import { DeployError, deploySite, isDeployInFlight, toDeployable } from "@/lib/deploy"
+import { isGitPullSupported } from "@/lib/git"
 import { prisma } from "@/lib/prisma"
-import { RestartError, restartSite } from "@/lib/restart"
 
 const TICK_MS = 5_000
 
 let started = false
 let timer: ReturnType<typeof setInterval> | null = null
 const lastAttemptAt = new Map<string, number>()
-const inFlight = new Set<string>()
 
 async function tick(): Promise<void> {
   let sites
@@ -40,65 +40,27 @@ async function tick(): Promise<void> {
   for (const site of sites) {
     if (!site.repoUrl) continue
     if (!isGitPullSupported(site.type)) continue
-    if (inFlight.has(site.id)) continue
+    if (isDeployInFlight(site.id)) continue
 
     const last = lastAttemptAt.get(site.id) ?? 0
     const intervalMs = Math.max(5, site.autoPullIntervalSeconds) * 1000
     if (now - last < intervalMs) continue
 
     lastAttemptAt.set(site.id, now)
-    inFlight.add(site.id)
-
-    void runPull(site).finally(() => {
-      inFlight.delete(site.id)
-    })
-  }
-}
-
-async function runPull(site: {
-  id: string
-  domain: string
-  type: string
-  config: unknown
-  repoUrl: string | null
-  gitBranch: string
-  processManager: string
-  customRestartCommand: string | null
-  githubInstallation: { installationId: string } | null
-}): Promise<void> {
-  if (!site.repoUrl) return
-
-  try {
-    const result = await gitPullOrClone({
-      ...site,
-      repoUrl: site.repoUrl,
-      githubInstallationId: site.githubInstallation?.installationId ?? null,
-    })
-    const updated = await prisma.site.update({
-      where: { id: site.id },
-      data: { lastPullAt: new Date(), lastPullOk: true, lastPullError: null },
-    })
-
-    if (result.changed) {
-      try {
-        await restartSite(updated)
-        console.log(`[auto-pull-scheduler] ${site.domain}: yeni commit çekildi ve yeniden başlatıldı.`)
-      } catch (error) {
-        const message = error instanceof RestartError ? error.message : String(error)
-        console.error(`[auto-pull-scheduler] ${site.domain}: pull başarılı ama restart başarısız: ${message}`)
-      }
-    }
-  } catch (error) {
-    const message = error instanceof GitError ? error.message : "git pull başarısız oldu."
-    console.error(`[auto-pull-scheduler] ${site.domain}: ${message}`)
-    try {
-      await prisma.site.update({
-        where: { id: site.id },
-        data: { lastPullAt: new Date(), lastPullOk: false, lastPullError: message },
+    void deploySite(toDeployable(site), { trigger: "auto-pull" })
+      .then((result) => {
+        if (result.changed) {
+          console.log(
+            `[auto-pull-scheduler] ${site.domain}: yeni commit ${result.commit?.slice(0, 7) ?? ""} çekildi` +
+              (result.restartError ? ` ama yeniden başlatma başarısız: ${result.restartError}` : ", deploy edildi.")
+          )
+        }
       })
-    } catch (dbError) {
-      console.error("[auto-pull-scheduler] durum güncellenemedi:", dbError)
-    }
+      .catch((error) => {
+        if (error instanceof DeployError && error.stage === "busy") return
+        const message = error instanceof Error ? error.message : String(error)
+        console.error(`[auto-pull-scheduler] ${site.domain}: ${message}`)
+      })
   }
 }
 

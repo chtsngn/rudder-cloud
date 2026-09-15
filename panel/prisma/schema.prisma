@@ -32,6 +32,11 @@ enum ProcessManager {
   DOCKER_COMPOSE
   PM2
   CUSTOM_SCRIPT
+  // Hiç yeniden başlatma yapma — süreç elle yönetiliyor ya da (ör. statik bir
+  // ters proxy hedefi) panelin dokunmaması gereken bir şey. REVERSE_PROXY'nin
+  // varsayılanı (eski SYSTEMD varsayılanı bu tipte hiç var olmayan bir
+  // systemd birimini yeniden başlatmaya çalışıyordu — bkz. docs/AUDIT_FIX_PROGRESS.md).
+  NONE
 }
 
 // Kullanıcı/rol/izin yönetimi (Aşama G). SUPER_ADMIN her şeye erişir (bkz.
@@ -107,9 +112,24 @@ model Site {
   lastPullOk              Boolean?
   lastPullError           String?
 
-  // Proje restart (Aşama B) — yalnızca NODEJS/PYTHON/REVERSE_PROXY için anlamlı.
+  // Proje restart (Aşama B) — yalnızca NODEJS/PYTHON/REVERSE_PROXY/DOCKER için anlamlı.
   processManager       ProcessManager @default(SYSTEMD)
   customRestartCommand String?
+  // Deploy hattı (2026-09-15): pull sonrası, yeniden başlatmadan ÖNCE sitenin
+  // kök dizininde `panel` kullanıcısı olarak çalıştırılan isteğe bağlı komut
+  // (ör. `npm ci && npm run build`). PM2 yöneticisinde süreç adı (boşsa domain
+  // slug'ı). Son deploy sonucu ayrı alanlarda (pull ile karışmasın diye).
+  deployCommand    String?
+  pm2ProcessName   String?
+  lastDeployAt     DateTime?
+  lastDeployOk     Boolean?
+  lastDeployError  String?
+  lastDeployOutput String?
+  // Deploy hook (2026-09-15): CI/CD'nin SSH yerine tek bir `POST` ile bu siteyi
+  // deploy ettirmesi için gizli URL. Token'ın kendisi ASLA saklanmaz — yalnızca
+  // SHA-256 özeti; URL üretim anında bir kez gösterilir (bkz. src/lib/deploy-hook.ts).
+  deployHookTokenHash String?
+  deployHookCreatedAt DateTime?
 
   // Veritabanı yedekleme (Aşama D) — bkz. docs/ARCHITECTURE.md → Aşama D.
   // Her sitenin TEK bir zamanlaması var (BackupSchedule gibi ayrı bir tablo
@@ -124,20 +144,17 @@ model Site {
   lastBackupOk          Boolean?
   lastBackupError       String?
 
-  // GitHub deploy key / Actions key (Aşama E) — private key ASLA veritabanına
-  // yazılmaz, yalnızca `panel` kullanıcısının kendi ~/.ssh dizininde (0600)
-  // durur (bkz. src/lib/github-keys.ts). Buradaki alanlar yalnızca PUBLIC
-  // bilgiyi önbelleğe alır (arayüzde göstermek için disk her istekte
-  // okunmasın diye).
+  // SSH deploy key (manuel/GitHub dışı depolar için, bkz. src/lib/deploy-keys.ts)
+  // — private key ASLA veritabanına yazılmaz, yalnızca `panel` kullanıcısının
+  // kendi ~/.ssh dizininde (0600) durur; git bu anahtarı GIT_SSH_COMMAND ile
+  // kullanır. Buradaki alanlar yalnızca PUBLIC bilgiyi önbelleğe alır.
+  // (Eski "GitHub Actions SSH key" alanları 2026-09-15'te kaldırıldı — `panel`
+  // kullanıcısı nologin olduğu için özellik hiç çalışamıyordu; yerine
+  // deployHookToken* geldi.)
   deployKeyName         String?
   deployKeyPublicKey    String?
   deployKeyFingerprint  String?
   deployKeyCreatedAt    DateTime?
-
-  actionsKeyName         String?
-  actionsKeyPublicKey    String?
-  actionsKeyFingerprint  String?
-  actionsKeyCreatedAt    DateTime?
 
   // GitHub App entegrasyonu (Aşama H — PAT tabanlı "tüm depolara erişim"
   // modelinin yerini alır, bkz. GitHubAppConfig/GitHubInstallation notu).

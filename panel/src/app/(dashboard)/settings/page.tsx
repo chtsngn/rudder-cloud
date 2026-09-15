@@ -90,6 +90,8 @@ interface GitHubInstallationView {
 }
 
 interface GitHubAppStatus {
+  webhookUrl?: string
+  webhookSecretConfigured?: boolean
   configured: boolean
   app: GitHubAppInfo | null
   installations: GitHubInstallationView[]
@@ -489,6 +491,56 @@ export default function SettingsPage() {
     }
   }
 
+
+  // ═══ PUSH WEBHOOK SECRET + CLOUDFLARE (2026-09-15) ═══
+  const [webhookSecretInput, setWebhookSecretInput] = useState("")
+  const [webhookSaving, setWebhookSaving] = useState(false)
+  const [webhookMessage, setWebhookMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [webhookUrlCopied, setWebhookUrlCopied] = useState(false)
+  const [cfRefreshing, setCfRefreshing] = useState(false)
+  const [cfMessage, setCfMessage] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const handleSaveWebhookSecret = async () => {
+    setWebhookSaving(true)
+    setWebhookMessage(null)
+    try {
+      const res = await fetch("/api/settings/github/app", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ webhookSecret: webhookSecretInput.trim() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setWebhookMessage({ ok: false, text: data?.error ?? (lang === "en" ? "Could not save." : "Kaydedilemedi.") })
+        return
+      }
+      setWebhookSecretInput("")
+      setWebhookMessage({ ok: true, text: lang === "en" ? "Webhook secret saved." : "Webhook secret kaydedildi." })
+      await loadGithubStatus()
+    } catch {
+      setWebhookMessage({ ok: false, text: lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı." })
+    } finally {
+      setWebhookSaving(false)
+    }
+  }
+
+  const handleRefreshCloudflare = async () => {
+    setCfRefreshing(true)
+    setCfMessage(null)
+    try {
+      const res = await fetch("/api/settings/cloudflare-ips", { method: "POST" })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setCfMessage({ ok: false, text: data?.error ?? (lang === "en" ? "Refresh failed." : "Yenileme başarısız.") })
+        return
+      }
+      setCfMessage({ ok: true, text: lang === "en" ? "Cloudflare IP ranges updated, Nginx reloaded." : "Cloudflare IP aralıkları güncellendi, Nginx yeniden yüklendi." })
+    } catch {
+      setCfMessage({ ok: false, text: lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı." })
+    } finally {
+      setCfRefreshing(false)
+    }
+  }
 
   const {
     data: versionData,
@@ -944,6 +996,35 @@ export default function SettingsPage() {
                     )}
                     {domainSaving ? t("settings.domain.bindingBtn") : (domainSettings?.domain ? t("common.save") : t("settings.domain.bindBtn"))}
                   </Button>
+                </div>
+
+                {/* Cloudflare gerçek ziyaretçi IP'si (2026-09-15) */}
+                <div className="mt-6 rounded-xl border border-slate-200/90 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] p-4 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                        {lang === "en" ? "Cloudflare — real visitor IP" : "Cloudflare — gerçek ziyaretçi IP'si"}
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl leading-relaxed">
+                        {lang === "en"
+                          ? "If your sites sit behind Cloudflare's proxy (orange cloud), Nginx sees Cloudflare's IPs. This installs Cloudflare's published ranges as trusted proxies (real_ip) so logs and apps get the visitor's IP. Re-run when Cloudflare updates its list."
+                          : "Siteleriniz Cloudflare proxy'si (turuncu bulut) arkasındaysa Nginx Cloudflare IP'lerini görür. Bu, Cloudflare'ın yayınladığı aralıkları güvenilir proxy (real_ip) olarak tanımlar; loglar ve uygulamalar ziyaretçinin gerçek IP'sini alır. Cloudflare listeyi güncellediğinde tekrar çalıştırın."}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={cfRefreshing}
+                      onClick={handleRefreshCloudflare}
+                      className="h-9 px-3 rounded-xl text-xs font-semibold dark:border-[#16223f] dark:text-slate-300 dark:hover:bg-[#111f40] shrink-0"
+                    >
+                      {cfRefreshing ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <RefreshCw className="size-3.5 mr-1" />}
+                      {lang === "en" ? "Refresh Cloudflare IPs" : "Cloudflare IP'lerini Yenile"}
+                    </Button>
+                  </div>
+                  {cfMessage && (
+                    <p className={cn("text-xs", cfMessage.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>{cfMessage.text}</p>
+                  )}
                 </div>
               </div>
             )}
@@ -1587,6 +1668,69 @@ export default function SettingsPage() {
                   </div>
                 )}
 
+                {/* 2.5 Push webhook (2026-09-15) */}
+                <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] p-5 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                        {lang === "en" ? "Push webhook (instant deploy)" : "Push webhook'u (anında deploy)"}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl leading-relaxed">
+                        {lang === "en"
+                          ? "GitHub sends a signed request here on every push; sites connected to that repo + branch deploy immediately (pull → deploy command → restart) instead of waiting for the polling interval."
+                          : "GitHub her push'ta buraya imzalı bir istek gönderir; o depo + branch'e bağlı siteler polling aralığını beklemeden anında deploy edilir (pull → deploy komutu → yeniden başlatma)."}
+                      </p>
+                    </div>
+                    <span className={cn("inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border shrink-0", githubStatus.webhookSecretConfigured ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900" : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900")}>
+                      {githubStatus.webhookSecretConfigured ? (lang === "en" ? "Secret set" : "Secret ayarlı") : (lang === "en" ? "Secret missing" : "Secret yok")}
+                    </span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <code className="flex-1 min-w-0 truncate rounded-lg bg-white dark:bg-[#090e1f] border border-slate-200 dark:border-[#16223f] px-3 py-2 text-[11px] font-mono text-slate-800 dark:text-slate-200">
+                      {githubStatus.webhookUrl ?? "/api/hooks/github"}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        navigator.clipboard.writeText(githubStatus.webhookUrl ?? "").then(() => {
+                          setWebhookUrlCopied(true)
+                          setTimeout(() => setWebhookUrlCopied(false), 2000)
+                        }).catch(() => {})
+                      }}
+                      className="h-8 text-xs shrink-0"
+                    >
+                      {webhookUrlCopied ? t("common.copied") : t("common.copy")}
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                    {lang === "en"
+                      ? "Apps created from this panel from now on get this webhook automatically. For an App created earlier: open the App on GitHub → Webhook, enter the URL above and a secret, then paste the same secret here."
+                      : "Bundan sonra panelden oluşturulan App'ler bu webhook'u otomatik alır. Daha önce oluşturulmuş bir App için: GitHub'da App'i açın → Webhook, yukarıdaki URL'i ve bir secret girin, aynı secret'ı buraya yapıştırın."}
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Input
+                      type="password"
+                      value={webhookSecretInput}
+                      onChange={(e) => setWebhookSecretInput(e.target.value)}
+                      placeholder={lang === "en" ? "Webhook secret (8-200 chars)" : "Webhook secret (8-200 karakter)"}
+                      className="h-10 rounded-xl font-mono text-xs bg-white dark:bg-[#090e1f] dark:border-[#16223f] dark:text-slate-100"
+                    />
+                    <Button
+                      size="sm"
+                      disabled={webhookSaving || webhookSecretInput.trim().length < 8}
+                      onClick={handleSaveWebhookSecret}
+                      className="h-10 px-4 rounded-xl text-xs font-semibold bg-[#580619] dark:bg-[#162752] text-white hover:bg-[#720a22] dark:hover:bg-[#1e346b] border border-[#c8a87c]/40 dark:border-[#2a4687]/60 shrink-0"
+                    >
+                      {webhookSaving ? <Loader2 className="size-3.5 animate-spin mr-1" /> : null}
+                      {lang === "en" ? "Save Secret" : "Secret'ı Kaydet"}
+                    </Button>
+                  </div>
+                  {webhookMessage && (
+                    <p className={cn("text-xs", webhookMessage.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>{webhookMessage.text}</p>
+                  )}
+                </div>
+
                 {/* 3. Bilgilendirme ve Site Yönetimine Yönlendirme Kartı */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17]">
                   <div className="flex items-start gap-3">
@@ -1599,8 +1743,8 @@ export default function SettingsPage() {
                       </h4>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl leading-relaxed">
                         {lang === "en"
-                          ? "Go to a Node.js/Python/Reverse Proxy site's \"Git & Deployment\" tab to pick one of the authorized repositories and connect it — the panel clones it straight into that site's root folder and keeps it updated, no SSH deploy key needed."
-                          : "Bir Node.js/Python/Ters Proxy sitesinin \"Git & Dağıtım\" sekmesinden izin verilen depolardan birini seçip bağlayın — panel onu doğrudan o sitenin kök klasörüne klonlar ve günceller, SSH deploy key gerekmez."}
+                          ? "Go to a Node.js/Python/Reverse Proxy/Docker site's \"Git & Deployment\" tab to pick one of the authorized repositories — the panel clones it into the site folder, runs your deploy command and restarts (Docker Compose: up -d --build). No SSH deploy key needed for GitHub."
+                          : "Bir Node.js/Python/Ters Proxy/Docker sitesinin \"Git & Dağıtım\" sekmesinden izin verilen depolardan birini seçin — panel onu site klasörüne klonlar, deploy komutunuzu çalıştırır ve yeniden başlatır (Docker Compose: up -d --build). GitHub için SSH deploy key gerekmez."}
                       </p>
                     </div>
                   </div>

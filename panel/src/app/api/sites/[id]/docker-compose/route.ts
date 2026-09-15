@@ -4,21 +4,24 @@ import { logAudit } from "@/lib/audit"
 import { getSession } from "@/lib/auth"
 import { canManageSite } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
-import { dockerComposeControl, RestartError, type DockerComposeControlAction } from "@/lib/restart"
+import {
+  DOCKER_COMPOSE_ACTIONS,
+  dockerComposeControl,
+  getProcessStatus,
+  RestartError,
+  type DockerComposeControlAction,
+} from "@/lib/restart"
 
 interface RouteParams {
   params: Promise<{ id: string }>
 }
 
-const VALID_ACTIONS = new Set<DockerComposeControlAction>(["up", "down", "restart"])
-
 /**
- * `POST /api/sites/[id]/docker-compose` — body: { action: "up" | "down" | "restart" }
- * Yalnızca `processManager: DOCKER_COMPOSE` olan siteler için — git pull
- * sonrası restart yeterli olmadığında (ör. compose dosyası/image değiştiğinde)
- * kullanıcının elle "down" + "up" yapabilmesini sağlar (bkz. RESTART izniyle
- * aynı yetki, `/git-pull` route'uyla tutarlı — bir sub-user'a RESTART
- * verildiyse bu da otomatik olarak açılır, ayrı bir izin eklenmedi).
+ * `POST /api/sites/[id]/docker-compose` — body: { action: "up" | "down" |
+ * "restart" | "rebuild" | "pull" }. Yalnızca `processManager: DOCKER_COMPOSE`.
+ * `rebuild` = `up -d --build --remove-orphans` (kod/compose/image değişikliği
+ * için); `restart` mevcut konteynerleri yeniden başlatır. Yanıt: güncel site +
+ * komut çıktısı + gerçek konteyner durumu.
  */
 export async function POST(request: Request, { params }: RouteParams) {
   const session = await getSession()
@@ -48,23 +51,22 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 })
   }
   const { action } = (body ?? {}) as { action?: unknown }
-  if (typeof action !== "string" || !VALID_ACTIONS.has(action as DockerComposeControlAction)) {
-    return NextResponse.json(
-      { error: "Geçerli bir eylem gereklidir (up, down, restart)." },
-      { status: 400 }
-    )
+  if (typeof action !== "string" || !DOCKER_COMPOSE_ACTIONS.includes(action as DockerComposeControlAction)) {
+    return NextResponse.json({ error: "Geçerli bir eylem gereklidir (up, down, restart, rebuild, pull)." }, { status: 400 })
   }
 
+  let output = ""
   try {
-    await dockerComposeControl(site, action as DockerComposeControlAction)
+    output = await dockerComposeControl(site, action as DockerComposeControlAction)
   } catch (error) {
     const message = error instanceof RestartError ? error.message : "Docker Compose eylemi başarısız oldu."
     return NextResponse.json({ error: message }, { status: 500 })
   }
 
+  const process = await getProcessStatus(site)
   const updated = await prisma.site.update({
     where: { id },
-    data: { status: action === "down" ? "STOPPED" : "ACTIVE" },
+    data: { status: action === "down" ? "STOPPED" : process.state === "failed" ? "FAILED" : "ACTIVE" },
   })
   await logAudit({
     userId: session.userId,
@@ -73,5 +75,5 @@ export async function POST(request: Request, { params }: RouteParams) {
     targetId: id,
     detail: site.domain,
   })
-  return NextResponse.json(updated)
+  return NextResponse.json({ ...updated, output, process })
 }

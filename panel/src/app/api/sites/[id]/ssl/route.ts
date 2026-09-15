@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client"
 
 import { logAudit } from "@/lib/audit"
 import { getSession } from "@/lib/auth"
+import { checkDomainDns } from "@/lib/dns-check"
 import { canManageSite } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { isValidEmail, ProvisionError, requestSsl } from "@/lib/provision"
@@ -12,14 +13,12 @@ interface RouteParams {
 }
 
 /**
- * `POST /api/sites/[id]/ssl` — bir site için SSL sertifikasını (yeniden)
- * dener. Site oluşturma sırasında SSL başarısız olsa bile site ACTIVE kalır
- * (bkz. /api/sites/route.ts → runProvisioning notu); bu endpoint, DNS
- * düzeltildikten sonra (ya da ilk kurulumda SSL hiç istenmediyse, sonradan
- * eklemek için) o adımı bağımsız olarak tekrar çalıştırır.
+ * `POST /api/sites/[id]/ssl` — SSL sertifikasını (yeniden) dener. Önce DNS ön
+ * kontrolü (bkz. src/lib/dns-check.ts): alan adı bu sunucuya/Cloudflare'a
+ * bakmıyorsa certbot hiç çağrılmaz ve net bir mesaj döner — `force: true`
+ * ile atlanabilir (ör. panelin genel IP tespiti yanılıyorsa).
  *
- * body: { email?: string } — verilmezse site.config.sslEmail (oluşturma
- * sırasında girilmişse) kullanılır; ikisi de yoksa 400 döner.
+ * body: { email?: string, force?: boolean } — email verilmezse config.sslEmail.
  */
 export async function POST(request: Request, { params }: RouteParams) {
   const session = await getSession()
@@ -40,20 +39,32 @@ export async function POST(request: Request, { params }: RouteParams) {
   try {
     body = await request.json()
   } catch {
-    // gövde boş/geçersiz olabilir — email opsiyonel, aşağıda config'ten okunur
+    // gövde boş olabilir
   }
   const input = (body ?? {}) as Record<string, unknown>
   const bodyEmail = typeof input.email === "string" ? input.email.trim() : ""
+  const force = input.force === true
 
   const cfg = (site.config ?? {}) as Record<string, unknown>
   const configEmail = typeof cfg.sslEmail === "string" ? cfg.sslEmail : ""
   const email = bodyEmail || configEmail
-
   if (!isValidEmail(email)) {
     return NextResponse.json({ error: "Geçerli bir e-posta adresi gereklidir." }, { status: 400 })
   }
-
   const www = cfg.www === true || cfg.www === "true"
+  const nextConfig = bodyEmail ? ({ ...cfg, sslEmail: email } as Prisma.InputJsonValue) : undefined
+
+  if (!force) {
+    const dns = await checkDomainDns(site.domain, www).catch(() => null)
+    if (dns && !dns.ok) {
+      const message = `DNS ön kontrolü: ${dns.message}`
+      const updated = await prisma.site.update({
+        where: { id },
+        data: { sslStatus: "error", sslLastError: message, config: nextConfig },
+      })
+      return NextResponse.json({ error: message, dns, ...updated }, { status: 409 })
+    }
+  }
 
   try {
     await requestSsl(site.domain, email, www)
@@ -61,11 +72,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const message = error instanceof ProvisionError ? error.message : "SSL sertifikası alınamadı."
     const updated = await prisma.site.update({
       where: { id },
-      data: {
-        sslStatus: "error",
-        sslLastError: message,
-        config: bodyEmail ? ({ ...cfg, sslEmail: email } as Prisma.InputJsonValue) : undefined,
-      },
+      data: { sslStatus: "error", sslLastError: message, config: nextConfig },
     })
     void logAudit({
       userId: session.userId,
@@ -79,19 +86,8 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   const updated = await prisma.site.update({
     where: { id },
-    data: {
-      sslEnabled: true,
-      sslStatus: "active",
-      sslLastError: null,
-      config: bodyEmail ? ({ ...cfg, sslEmail: email } as Prisma.InputJsonValue) : undefined,
-    },
+    data: { sslEnabled: true, sslStatus: "active", sslLastError: null, config: nextConfig },
   })
-  void logAudit({
-    userId: session.userId,
-    action: "SITE_SSL_RETRY_OK",
-    targetType: "Site",
-    targetId: id,
-    detail: site.domain,
-  })
+  void logAudit({ userId: session.userId, action: "SITE_SSL_RETRY_OK", targetType: "Site", targetId: id, detail: site.domain })
   return NextResponse.json(updated)
 }

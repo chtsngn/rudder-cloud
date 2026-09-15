@@ -1,16 +1,17 @@
 /**
  * Manuel/otomatik `git pull` — panel süreci (`panel` kullanıcısı) doğrudan,
  * hiçbir sudo/privileged script olmadan çalıştırır. Bu yüzden yalnızca
- * panelin zaten yazma izni olduğu dizinlerde çalışır: NODEJS/PYTHON tipleri
- * (systemd birimleri her zaman `User=panel` ile oluşturuluyor, bkz.
- * provision-site.sh `cmd_create_service`) ve REVERSE_PROXY (dizin panel
- * tarafından ilk pull'da oluşturulur, bkz. site-paths.ts — CloudPanel-tarzı
- * "reverse-proxy + git clone + PM2/Docker Compose ile ayağa kaldır" akışı
- * tam olarak bunu gerektiriyor). STATIC/PHP/WORDPRESS tipleri isteğe bağlı
- * "dedicated linux user" desteklediği için (bkz. `ensure_linux_user`)
- * panelin o dizine yazma izni garanti değil — bu tipler için git-pull
- * kasıtlı olarak DESTEKLENMİYOR (bkz. docs/ARCHITECTURE.md → Aşama B,
- * "kapsam dışı bırakılanlar").
+ * panelin zaten yazma izni olduğu dizinlerde çalışır: NODEJS/PYTHON (systemd
+ * birimleri `User=panel`), REVERSE_PROXY ve DOCKER (klasör panel tarafından
+ * oluşturulur — CloudPanel-tarzı "reverse-proxy + git clone + Docker Compose
+ * ile ayağa kaldır" akışı tam olarak bunu gerektiriyor). STATIC/PHP/WORDPRESS
+ * dosyaları dedicated kullanıcıya ait olduğu için (bkz. provision-site.sh
+ * apply_owned_site_access) git-pull kasıtlı olarak DESTEKLENMİYOR.
+ *
+ * Kimlik doğrulama: site bir GitHub App kurulumuna bağlıysa kısa ömürlü
+ * installation token (HTTPS); SSH adresli manuel depolarda sitenin kendi
+ * deploy key'i (`GIT_SSH_COMMAND`, bkz. src/lib/deploy-keys.ts); public
+ * HTTPS depolarda hiçbir şey.
  */
 import { execFile } from "node:child_process"
 import { mkdtemp, rm } from "node:fs/promises"
@@ -18,15 +19,16 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { promisify } from "node:util"
 
+import { gitSshEnvFor } from "@/lib/deploy-keys"
 import { getInstallationAccessToken } from "@/lib/github-app"
 import { resolveSiteWorkdir, type SiteLike } from "@/lib/site-paths"
 
 const execFileAsync = promisify(execFile)
-const GIT_TIMEOUT_MS = 120_000
+const GIT_TIMEOUT_MS = 180_000
 
-// https:// (opsiyonel gömülü token ile) veya git@host:owner/repo(.git) — ssh
+// https:// (opsiyonel gömülü token ile), git@host:owner/repo(.git) ya da ssh://git@host/owner/repo(.git)
 const REPO_URL_RE =
-  /^(https:\/\/[A-Za-z0-9_.:@-]+\/[A-Za-z0-9_.\/-]+(\.git)?|git@[A-Za-z0-9_.-]+:[A-Za-z0-9_.\/-]+(\.git)?)$/
+  /^(https:\/\/[A-Za-z0-9_.:@-]+\/[A-Za-z0-9_.\/-]+(\.git)?|git@[A-Za-z0-9_.-]+:[A-Za-z0-9_.\/-]+(\.git)?|ssh:\/\/[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+(:[0-9]{1,5})?\/[A-Za-z0-9_.\/-]+(\.git)?)$/
 const BRANCH_RE = /^[A-Za-z0-9._/-]{1,100}$/
 
 export function isValidRepoUrl(url: string): boolean {
@@ -44,11 +46,14 @@ export class GitError extends Error {
   }
 }
 
-const GIT_PULL_TYPES = new Set(["NODEJS", "PYTHON", "REVERSE_PROXY"])
+const GIT_PULL_TYPES = new Set(["NODEJS", "PYTHON", "REVERSE_PROXY", "DOCKER"])
 
 export function isGitPullSupported(siteType: string): boolean {
   return GIT_PULL_TYPES.has(siteType)
 }
+
+export const GIT_PULL_UNSUPPORTED_MESSAGE =
+  "Bu site türü için git bağlama desteklenmiyor (yalnızca Node.js/Python/Ters Proxy/Docker)."
 
 async function pathExists(path: string): Promise<boolean> {
   try {
@@ -61,7 +66,7 @@ async function pathExists(path: string): Promise<boolean> {
 
 export interface GitPullResult {
   /** Pull sonucunda HEAD değişti mi (yoksa zaten güncel miydi) — çağıran bunu
-   * "restart gerekli mi" kararı için kullanır (bkz. auto-pull-scheduler.ts). */
+   * "deploy/restart gerekli mi" kararı için kullanır (bkz. deploy.ts). */
   changed: boolean
   commit: string
 }
@@ -85,17 +90,11 @@ async function currentRemoteUrl(workdir: string): Promise<string | null> {
 }
 
 /**
- * Site bir GitHub App kurulumuna bağlıysa (`githubInstallationId`), SSH
- * deploy key YERİNE bu kurulumun kısa ömürlü installation token'ını HTTPS
- * kimlik doğrulaması olarak enjekte eden `git -c http.extraHeader=...`
- * argümanlarını döner — GitHub'ın kendi `actions/checkout`'ta kullandığı
- * biçim (`x-access-token:<token>` Basic Auth olarak base64), git'in smart-
- * HTTP protokolü Bearer şemasını değil bunu bekliyor. Token hiçbir zaman
- * diske (`.git/config`, remote URL içine) YAZILMAZ — yalnızca bu tek
- * `execFile` çağrısının argümanlarında, bellekte yaşar; her çağrıda TAZE
- * mintlendiği için (bkz. getInstallationAccessToken önbelleği) sonraki
- * `git fetch`'ler eski/süresi dolmuş bir token'a asla bağlı kalmaz. Kurulum
- * bağlı değilse boş dizi döner (mevcut repoUrl/SSH akışı değişmeden çalışır).
+ * Site bir GitHub App kurulumuna bağlıysa (`githubInstallationId`), kısa
+ * ömürlü installation token'ı HTTPS kimlik doğrulaması olarak enjekte eden
+ * `git -c http.extraHeader=...` argümanlarını döner — GitHub'ın kendi
+ * `actions/checkout`'ta kullandığı biçim (`x-access-token:<token>` Basic Auth).
+ * Token hiçbir zaman diske (`.git/config`, remote URL) YAZILMAZ.
  */
 async function githubAppAuthArgs(githubInstallationId: string | null | undefined): Promise<string[]> {
   if (!githubInstallationId) return []
@@ -105,22 +104,17 @@ async function githubAppAuthArgs(githubInstallationId: string | null | undefined
 }
 
 /**
- * `.git` yoksa (veya varsa ama farklı bir depoya bağlıysa — bkz. aşağıda
- * `repoChanged`) temiz bir geçici dizine klonlayıp içeriğini `rsync -a
- * --delete` ile hedefe yansıtır — `--delete` KASITLI: repo değiştiğinde
- * eski repodan kalan dosyaların silinip hedefin yeni repoyla BİREBİR eşit
- * hale gelmesini garantiler (bkz. site-github-keys-card kaldırılırken
- * eklenen kullanıcı uyarısı: "repo değiştirilirse eski dosyalar silinir").
- * `.git` varsa VE aynı depoya bağlıysa doğrudan `git fetch` + `reset --hard`
- * ile hızlı, aşamalı bir pull yapılır.
+ * `.git` yoksa (veya varsa ama farklı bir depoya bağlıysa — `repoChanged`)
+ * temiz bir geçici dizine klonlayıp içeriğini `rsync -a [--delete]` ile hedefe
+ * yansıtır (`--delete` YALNIZCA repo değiştiğinde: eski repodan kalanlar
+ * temizlensin; ilk klonlamada var olan dosyalara — .env gibi — dokunulmaz).
+ * `.git` varsa VE aynı depoya bağlıysa `git fetch` + `reset --hard`.
  */
 export async function gitPullOrClone(
   site: SiteLike & { repoUrl: string; gitBranch: string; githubInstallationId?: string | null }
 ): Promise<GitPullResult> {
   if (!isGitPullSupported(site.type)) {
-    throw new GitError(
-      "Bu site türü için git pull henüz desteklenmiyor (yalnızca Node.js/Python)."
-    )
+    throw new GitError(GIT_PULL_UNSUPPORTED_MESSAGE)
   }
   if (!isValidRepoUrl(site.repoUrl)) {
     throw new GitError(`Geçersiz repo adresi: ${site.repoUrl}`)
@@ -140,33 +134,32 @@ export async function gitPullOrClone(
   const reuseExisting = hasGit && !repoChanged
   const before = reuseExisting ? await currentCommit(workdir) : null
 
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    GIT_TERMINAL_PROMPT: "0", // kimlik sorulursa asılı kalmak yerine hemen hata ver
+    ...(await gitSshEnvFor(site.domain, site.repoUrl)),
+  }
+
   try {
     const authArgs = await githubAppAuthArgs(site.githubInstallationId)
     if (reuseExisting) {
-      await execFileAsync(
-        "git",
-        ["-C", workdir, ...authArgs, "fetch", "origin", site.gitBranch],
-        { timeout: GIT_TIMEOUT_MS }
-      )
-      await execFileAsync(
-        "git",
-        ["-C", workdir, "reset", "--hard", `origin/${site.gitBranch}`],
-        { timeout: GIT_TIMEOUT_MS }
-      )
+      await execFileAsync("git", ["-C", workdir, ...authArgs, "fetch", "origin", site.gitBranch], {
+        timeout: GIT_TIMEOUT_MS,
+        env,
+      })
+      await execFileAsync("git", ["-C", workdir, "reset", "--hard", `origin/${site.gitBranch}`], {
+        timeout: GIT_TIMEOUT_MS,
+        env,
+      })
     } else {
       const tmp = await mkdtemp(join(tmpdir(), "site-git-"))
       try {
         await execFileAsync(
           "git",
           [...authArgs, "clone", "--branch", site.gitBranch, "--single-branch", site.repoUrl, tmp],
-          { timeout: GIT_TIMEOUT_MS }
+          { timeout: GIT_TIMEOUT_MS, env }
         )
         await execFileAsync("mkdir", ["-p", workdir])
-        // `--delete` SADECE repo gerçekten değiştiyse (repoChanged) eklenir —
-        // gerçek ilk klonlamada üstteki dosya-fonksiyonu-dışı dosyaları
-        // SİLMEME garantisi (WordPress-tarzı senaryo, bkz. fonksiyon başlığı)
-        // korunuyor; yalnızca "eski repo -> yeni repo" geçişinde eski
-        // içerik bilinçli olarak temizleniyor.
         const rsyncArgs = repoChanged ? ["-a", "--delete", `${tmp}/`, `${workdir}/`] : ["-a", `${tmp}/`, `${workdir}/`]
         await execFileAsync("rsync", rsyncArgs, { timeout: GIT_TIMEOUT_MS })
       } finally {
@@ -174,7 +167,8 @@ export async function gitPullOrClone(
       }
     }
   } catch (error) {
-    const err = error as NodeJS.ErrnoException & { stderr?: string }
+    const err = error as NodeJS.ErrnoException & { stderr?: string; killed?: boolean }
+    if (err.killed) throw new GitError("git işlemi zaman aşımına uğradı.")
     const detail = err.stderr?.toString().trim() || err.message
     throw new GitError(detail || "git pull başarısız oldu.")
   }

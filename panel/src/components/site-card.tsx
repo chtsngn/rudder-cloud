@@ -1,20 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import {
-  ArrowUpRight,
-  Globe,
-  Play,
-  RotateCw,
-  Square,
-  ExternalLink,
-  ShieldCheck,
-  Settings2,
-  Layers,
-  Code2,
-  Server,
-  Box,
-} from "lucide-react"
+import { ArrowUpRight, Globe, ShieldCheck, Settings2, Layers, Code2, Server, Box } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "@/components/language-provider"
@@ -110,7 +97,7 @@ export function SiteCard({ site }: { site: Site }) {
                 {t(`sites.types.${site.type}.label`) || typeInfo.label}
               </span>
               <span className="text-[10.5px] text-slate-400 dark:text-slate-500 font-mono">
-                {typeInfo.managed ? "systemd" : "Nginx"}
+                {site.type === "nodejs" || site.type === "python" ? "systemd" : site.type === "docker" ? "Docker" : "Nginx"}
               </span>
             </div>
           </div>
@@ -150,19 +137,6 @@ export function SiteCard({ site }: { site: Site }) {
         </div>
 
         <div className="flex items-center gap-1.5">
-          {typeInfo.managed && (
-            <div className="flex items-center gap-1 mr-1">
-              <Button
-                size="icon"
-                variant="outline"
-                className="size-7 rounded-lg text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#16223f] hover:text-[#580619] dark:hover:text-blue-300 hover:border-[#c8a87c] dark:hover:border-[#2a4687] dark:hover:bg-[#111f40]"
-                title={t("sites.restartBtn")}
-              >
-                <RotateCw className="size-3" />
-              </Button>
-            </div>
-          )}
-
           <Button
             asChild
             size="sm"

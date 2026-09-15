@@ -218,6 +218,15 @@ nginx -t
 systemctl reload nginx
 msg "Nginx vhost aktif: :${PUBLIC_PORT} -> 127.0.0.1:${PANEL_PORT}"
 
+# Cloudflare proxy'si arkasındaki siteler için gerçek ziyaretçi IP'si (real_ip)
+# — best-effort; ağ yoksa uyarır, kurulumu durdurmaz. Ayarlar'dan tekrar
+# çalıştırılabilir.
+if bash "${PANEL_DIR}/scripts/provision-site.sh" refresh-cloudflare-ips >/dev/null 2>&1; then
+  msg "Cloudflare IP aralıkları (nginx real_ip) güncellendi."
+else
+  warn "Cloudflare IP aralıkları alınamadı (ağ?) — Ayarlar → Panel Alan Adı → 'Cloudflare IP'lerini Yenile' ile sonra deneyebilirsin."
+fi
+
 # ------------------------------------------------------------
 # 8) systemd servisi
 # ------------------------------------------------------------
@@ -236,6 +245,10 @@ EnvironmentFile=${PANEL_DIR}/.env
 ExecStart=/usr/bin/env npm run start
 Restart=on-failure
 RestartSec=3
+# Panelin oluşturduğu dosyalar (dosya yöneticisi, git clone) grup-yazılabilir
+# olsun: site klasörleri setgid ile sitenin kendi grubunu taşır, dedicated
+# kullanıcı (PHP-FPM havuzu / üye terminali) bu dosyaları düzenleyebilsin.
+UMask=0002
 
 [Install]
 WantedBy=multi-user.target

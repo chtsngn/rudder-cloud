@@ -158,7 +158,18 @@ async function resolveTerminalAuthorization(req, siteId) {
     if (!user) return { authorized: false, reason: "NO_SESSION" }
 
     if (user.role === "SUPER_ADMIN") {
-      return { authorized: true, mode: "root" }
+      // Site sekmesinden açıldıysa (siteId verildiyse) root kabuk o sitenin
+      // klasöründe başlasın (2026-09-15: eskiden hep home dizininde açılıyordu
+      // — akışın "klasöre gir" adımı için her seferinde cd gerekiyordu).
+      let workdir = null
+      if (siteId) {
+        const site = await prisma.site.findUnique({ where: { id: siteId } })
+        if (site) {
+          const candidate = resolveMemberSiteWorkdir(site)
+          if (existsSync(candidate)) workdir = candidate
+        }
+      }
+      return { authorized: true, mode: "root", workdir }
     }
 
     // MEMBER — site-scoped, gerçek izolasyon.
@@ -297,7 +308,7 @@ wss.on("connection", (ws) => {
       name: "xterm-256color",
       cols: 80,
       rows: 24,
-      cwd: auth.mode === "site" ? auth.workdir : homedir(),
+      cwd: auth.workdir && existsSync(auth.workdir) ? auth.workdir : homedir(),
       env: { ...process.env, TERM: "xterm-256color" },
     })
   } catch (error) {

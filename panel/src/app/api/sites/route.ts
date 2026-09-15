@@ -3,7 +3,9 @@ import { Prisma, SiteType } from "@prisma/client"
 
 import { logAudit } from "@/lib/audit"
 import { getSession } from "@/lib/auth"
+import { checkDomainDns } from "@/lib/dns-check"
 import { isSuperAdmin } from "@/lib/permissions"
+import { isPortListening, sitePortOf } from "@/lib/ports"
 import { prisma } from "@/lib/prisma"
 import {
   autoLinuxUserFor,
@@ -14,6 +16,7 @@ import {
   isValidAbsolutePath,
   isValidDbIdentifier,
   isValidDbPassword,
+  isValidDeployCommand,
   isValidEmail,
   isValidLinuxUsername,
   isValidPhpVersion,
@@ -26,12 +29,11 @@ import {
 } from "@/lib/provision"
 
 const VALID_TYPES = new Set<string>(Object.values(SiteType))
+const VALID_PROCESS_MANAGERS = new Set(["SYSTEMD", "DOCKER_COMPOSE", "PM2", "CUSTOM_SCRIPT", "NONE"])
 
 /**
  * SUPER_ADMIN tüm siteleri görür. MEMBER yalnızca kendisine `VIEW` izni
- * verilmiş siteleri görür (bkz. src/lib/permissions.ts). Dashboard'daki
- * site listesi, site sihirbazı adım dışındaki HER yerde bu endpoint'ten
- * besleniyor — bu yüzden filtreleme burada tek noktadan yapılıyor.
+ * verilmiş siteleri görür (bkz. src/lib/permissions.ts).
  */
 export async function GET() {
   const session = await getSession()
@@ -45,9 +47,7 @@ export async function GET() {
   }
 
   const grants = await prisma.userSiteAccess.findMany({ where: { userId: session.userId } })
-  const viewableIds = new Set(
-    grants.filter((g) => g.permissions.includes("VIEW")).map((g) => g.siteId)
-  )
+  const viewableIds = new Set(grants.filter((g) => g.permissions.includes("VIEW")).map((g) => g.siteId))
   return NextResponse.json(sites.filter((s) => viewableIds.has(s.id)))
 }
 
@@ -65,10 +65,11 @@ function toPort(value: unknown): number | null {
 }
 
 /**
- * Bir sonraki adımda gerçek provisioning çağrılarını yapmak için gereken,
- * doğrulanmış, tipe özel alanları taşır. `POST` içinde DB satırı
- * oluşturulmadan ÖNCE derlenir, böylece açıkça geçersiz girdiler için
- * hiçbir satır yaratılmaz.
+ * Doğrulanmış, tipe özel alanlar. `POST` içinde DB satırı oluşturulmadan ÖNCE
+ * derlenir; kalıcı `config` de YALNIZCA bu alanlardan üretilir (2026-09-15:
+ * eskiden istemcinin gönderdiği her anahtar olduğu gibi saklanıyordu —
+ * `workingDir` gibi yol alanları doğrulanmadan dosya yöneticisi/klon kökü
+ * olabiliyordu).
  */
 type ProvisionPlan =
   | { type: "STATIC"; siteRoot: string; linuxUser: string }
@@ -83,35 +84,45 @@ type ProvisionPlan =
       dbPassword: string
     }
   | { type: "NODEJS" | "PYTHON"; port: number; startCommand: string; workingDir: string; linuxUser: string }
-  | { type: "REVERSE_PROXY"; upstreamUrl: string; linuxUser: string }
-  | { type: "DOCKER"; port: number; workingDir: string; composeService: string; linuxUser: string }
+  | { type: "REVERSE_PROXY"; upstreamUrl: string; workingDir: string; linuxUser: string }
+  | { type: "DOCKER"; port: number; workingDir: string; composeService: string; linuxUser: string; bootstrap: boolean }
 
 function buildPlan(
   type: string,
   domain: string,
-  cfg: Record<string, unknown>
+  cfg: Record<string, unknown>,
+  skipDockerBootstrap: boolean
 ): { plan: ProvisionPlan } | { error: string } {
+  // STATIC/PHP/WORDPRESS: dedicated kullanıcı artık her zaman var (elle ad
+  // verilmezse otomatik `site_<slug>`) — dosyalar root'ta kalmasın, PHP/
+  // WordPress yazabilsin, MEMBER terminali mümkün olsun (bkz. provision-site.sh
+  // apply_owned_site_access).
+  const ownedUser = (): string | { error: string } => {
+    const linuxUser = toStr(cfg.linuxUser) || autoLinuxUserFor(domain)
+    if (!isValidLinuxUsername(linuxUser)) return { error: "Geçersiz linux kullanıcı adı (küçük harfle başlamalı, en fazla 32 karakter)." }
+    return linuxUser
+  }
+
   switch (type) {
     case "STATIC": {
       const siteRoot = toStr(cfg.siteRoot) || defaultSiteRoot(domain)
-      const linuxUser = toStr(cfg.linuxUser)
       if (!isValidSiteRoot(siteRoot)) return { error: "Geçerli bir site kök dizini gereklidir (/var/www/... altında)." }
-      if (linuxUser && !isValidLinuxUsername(linuxUser)) return { error: "Geçersiz linux kullanıcı adı." }
+      const linuxUser = ownedUser()
+      if (typeof linuxUser !== "string") return linuxUser
       return { plan: { type: "STATIC", siteRoot, linuxUser } }
     }
     case "PHP": {
       const phpVersion = toStr(cfg.phpVersion) || "8.3"
       const siteRoot = toStr(cfg.siteRoot) || defaultSiteRoot(domain)
-      const linuxUser = toStr(cfg.linuxUser)
       if (!isValidPhpVersion(phpVersion)) return { error: "Geçerli bir PHP sürümü gereklidir (örn. 8.3)." }
       if (!isValidSiteRoot(siteRoot)) return { error: "Geçerli bir site kök dizini gereklidir (/var/www/... altında)." }
-      if (linuxUser && !isValidLinuxUsername(linuxUser)) return { error: "Geçersiz linux kullanıcı adı." }
+      const linuxUser = ownedUser()
+      if (typeof linuxUser !== "string") return linuxUser
       return { plan: { type: "PHP", phpVersion, siteRoot, linuxUser } }
     }
     case "WORDPRESS": {
       const phpVersion = toStr(cfg.phpVersion) || "8.3"
       const siteRoot = toStr(cfg.siteRoot) || defaultSiteRoot(domain)
-      const linuxUser = toStr(cfg.linuxUser)
       const dbNameDefault = domain.replace(/[^A-Za-z0-9_]/g, "_").slice(0, 60)
       const dbName = toStr(cfg.dbName) || dbNameDefault
       const dbUser = toStr(cfg.dbUser) || `${dbNameDefault}_u`.slice(0, 64)
@@ -127,7 +138,8 @@ function buildPlan(
             "Veritabanı şifresi 8-64 karakter olmalı ve yalnızca harf/rakam ile !@#%^*_+=.- sembollerini içerebilir.",
         }
       }
-      if (linuxUser && !isValidLinuxUsername(linuxUser)) return { error: "Geçersiz linux kullanıcı adı." }
+      const linuxUser = ownedUser()
+      if (typeof linuxUser !== "string") return linuxUser
       return { plan: { type: "WORDPRESS", phpVersion, siteRoot, linuxUser, dbName, dbUser, dbPassword } }
     }
     case "NODEJS":
@@ -149,43 +161,99 @@ function buildPlan(
             "Geçerli bir hedef adres gereklidir (http:// veya https:// ile başlamalı, örn. http://127.0.0.1:4000).",
         }
       }
-      return { plan: { type: "REVERSE_PROXY", upstreamUrl, linuxUser: autoLinuxUserFor(domain) } }
+      return {
+        plan: { type: "REVERSE_PROXY", upstreamUrl, workingDir: defaultSiteRoot(domain), linuxUser: autoLinuxUserFor(domain) },
+      }
     }
     case "DOCKER": {
       const port = toPort(cfg.port)
       const workingDir = toStr(cfg.workingDir) || defaultSiteRoot(domain)
       const composeService = toStr(cfg.composeService)
       if (!port || !isValidPort(port)) return { error: "Geçerli bir port numarası gereklidir (1-65535)." }
-      if (!isValidAbsolutePath(workingDir)) {
+      if (!isValidSiteRoot(workingDir)) {
         return { error: "Geçerli bir çalışma dizini gereklidir (/var/www/... altında)." }
       }
-      return { plan: { type: "DOCKER", port, workingDir, composeService, linuxUser: autoLinuxUserFor(domain) } }
+      if (composeService && !/^[A-Za-z0-9._-]{1,64}$/.test(composeService)) {
+        return { error: "Geçersiz compose servis adı." }
+      }
+      return {
+        plan: { type: "DOCKER", port, workingDir, composeService, linuxUser: autoLinuxUserFor(domain), bootstrap: !skipDockerBootstrap },
+      }
     }
     default:
       return { error: "Geçerli bir site türü gereklidir." }
   }
 }
 
+/** Kalıcı `config` — yalnızca planın doğrulanmış alanları (+ www/sslEmail). Şifre ASLA yazılmaz. */
+function configFromPlan(plan: ProvisionPlan, www: boolean, sslEmail: string): Record<string, unknown> {
+  const base: Record<string, unknown> = { www }
+  if (sslEmail) base.sslEmail = sslEmail
+  switch (plan.type) {
+    case "STATIC":
+      return { ...base, siteRoot: plan.siteRoot, linuxUser: plan.linuxUser }
+    case "PHP":
+      return { ...base, phpVersion: plan.phpVersion, siteRoot: plan.siteRoot, linuxUser: plan.linuxUser }
+    case "WORDPRESS":
+      return {
+        ...base,
+        phpVersion: plan.phpVersion,
+        siteRoot: plan.siteRoot,
+        linuxUser: plan.linuxUser,
+        dbName: plan.dbName,
+        dbUser: plan.dbUser,
+      }
+    case "NODEJS":
+    case "PYTHON":
+      return { ...base, port: plan.port, startCommand: plan.startCommand, workingDir: plan.workingDir, linuxUser: plan.linuxUser }
+    case "REVERSE_PROXY":
+      return { ...base, upstreamUrl: plan.upstreamUrl, workingDir: plan.workingDir, linuxUser: plan.linuxUser }
+    case "DOCKER":
+      return {
+        ...base,
+        port: plan.port,
+        workingDir: plan.workingDir,
+        composeService: plan.composeService || undefined,
+        linuxUser: plan.linuxUser,
+      }
+  }
+}
+
+function defaultProcessManager(plan: ProvisionPlan): "SYSTEMD" | "DOCKER_COMPOSE" | "NONE" {
+  if (plan.type === "DOCKER") return "DOCKER_COMPOSE"
+  if (plan.type === "REVERSE_PROXY") return "NONE"
+  return "SYSTEMD"
+}
+
 /**
- * SADECE vhost/systemd/db oluşturmayı kapsar — SSL isteği KASITLI olarak
- * burada DEĞİL, ayrı ve bağımsız bir adımda (bkz. POST altında). Sebep: SSL
- * (certbot) alan adının DNS'inin bu sunucuya yönlendirilmiş olmasını
- * gerektirir — bu genelde site oluşturma anında henüz gerçekleşmemiş olur
- * (kullanıcı DNS'i sonradan ayarlar). Eskiden requestSsl() burada çağrılıp
- * hata fırlatırsa TÜM site FAILED işaretleniyordu — vhost'un kendisi
- * başarıyla kurulmuş olsa bile. Artık vhost/servis/db adımı bu fonksiyonun
- * sorumluluğu, SSL ayrı bir "best-effort" adım (bkz. Site.sslStatus notu).
+ * Uygulamanın KENDİSİNİN bağlanacağı portlarda (Node.js/Python/Docker)
+ * çakışma sert hata: başka bir site kaydı aynı portu kullanıyorsa ya da
+ * sunucuda o an biri dinliyorsa. Ters proxy'de hedef port zaten çalışan bir
+ * uygulama olabilir — yalnızca başka bir site kaydıyla çakışma engellenir.
  */
+async function findPortConflict(plan: ProvisionPlan, domain: string): Promise<string | null> {
+  const port =
+    plan.type === "NODEJS" || plan.type === "PYTHON" || plan.type === "DOCKER"
+      ? plan.port
+      : plan.type === "REVERSE_PROXY"
+        ? sitePortOf({ type: "REVERSE_PROXY", config: { upstreamUrl: plan.upstreamUrl } })
+        : null
+  if (!port) return null
+
+  const others = await prisma.site.findMany({ select: { domain: true, type: true, config: true } })
+  const clash = others.find((s) => s.domain !== domain && sitePortOf(s) === port)
+  if (clash) return `Port ${port} zaten "${clash.domain}" sitesi tarafından kullanılıyor.`
+
+  if (plan.type !== "REVERSE_PROXY" && (await isPortListening(port))) {
+    return `Port ${port} sunucuda şu an başka bir süreç tarafından dinleniyor — Portlar sayfasından boş bir port seçin.`
+  }
+  return null
+}
+
 async function runProvisioning(domain: string, www: boolean, plan: ProvisionPlan): Promise<void> {
   switch (plan.type) {
     case "STATIC":
-      await createVhost({
-        domain,
-        type: "STATIC",
-        www,
-        siteRoot: plan.siteRoot,
-        linuxUser: plan.linuxUser || undefined,
-      })
+      await createVhost({ domain, type: "STATIC", www, siteRoot: plan.siteRoot, linuxUser: plan.linuxUser })
       break
     case "PHP":
       await createVhost({
@@ -194,7 +262,7 @@ async function runProvisioning(domain: string, www: boolean, plan: ProvisionPlan
         www,
         phpVersion: plan.phpVersion,
         siteRoot: plan.siteRoot,
-        linuxUser: plan.linuxUser || undefined,
+        linuxUser: plan.linuxUser,
       })
       break
     case "WORDPRESS":
@@ -208,7 +276,7 @@ async function runProvisioning(domain: string, www: boolean, plan: ProvisionPlan
         dbName: plan.dbName,
         dbUser: plan.dbUser,
         dbPassword: plan.dbPassword,
-        linuxUser: plan.linuxUser || undefined,
+        linuxUser: plan.linuxUser,
       })
       break
     case "NODEJS":
@@ -223,13 +291,7 @@ async function runProvisioning(domain: string, www: boolean, plan: ProvisionPlan
       })
       break
     case "REVERSE_PROXY":
-      await createVhost({
-        domain,
-        type: "REVERSE_PROXY",
-        www,
-        upstreamUrl: plan.upstreamUrl,
-        linuxUser: plan.linuxUser,
-      })
+      await createVhost({ domain, type: "REVERSE_PROXY", www, upstreamUrl: plan.upstreamUrl, linuxUser: plan.linuxUser })
       break
     case "DOCKER":
       await createVhost({
@@ -240,24 +302,21 @@ async function runProvisioning(domain: string, www: boolean, plan: ProvisionPlan
         workingDir: plan.workingDir,
         composeService: plan.composeService || undefined,
         linuxUser: plan.linuxUser,
+        bootstrap: plan.bootstrap,
       })
       break
   }
 }
 
 /**
- * Site satırını PROVISIONING durumunda oluşturur, ardından gerçek
- * provisioning'i (`scripts/provision-site.sh` üzerinden nginx/systemd/
- * certbot/mysql) senkron olarak çalıştırır ve satırı ACTIVE veya FAILED
- * olarak günceller. Bu geçiş senkron/best-effort'tur (canlı log akışı bu
- * aşamada kapsam dışı) — execFile çağrıları makul zaman aşımlarıyla
- * sınırlıdır, bu yüzden istek sonsuza kadar asılı kalmaz.
+ * Site satırını PROVISIONING durumunda oluşturur, gerçek provisioning'i
+ * (`scripts/provision-site.sh` üzerinden nginx/systemd/mysql) senkron çalıştırır
+ * ve satırı ACTIVE/FAILED yapar. SSL ayrı, best-effort bir adımdır: önce DNS
+ * ön kontrolü (bkz. src/lib/dns-check.ts) — alan adı bu sunucuya (ya da
+ * Cloudflare'a) bakmıyorsa certbot hiç çağrılmaz, net bir mesaj yazılır;
+ * kullanıcı DNS'i düzeltince site detayından tekrar dener.
  */
 export async function POST(request: Request) {
-  // Site oluşturma (provisioning) sistem düzeyinde işlemler yapar (nginx/
-  // systemd/certbot/mysql, yeni bir linux kullanıcısı vb.) — bu yüzden
-  // site-scoped bir izinle DEĞİL, doğrudan SUPER_ADMIN rolüyle korunuyor
-  // (bkz. docs/ARCHITECTURE.md → Aşama G).
   const session = await getSession()
   if (!session || !(await isSuperAdmin(session.userId))) {
     return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 })
@@ -270,52 +329,59 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 })
   }
 
-  const { domain, type, sslEnabled, config } = (body ?? {}) as {
+  const { domain, type, sslEnabled, config, deployCommand, processManager, skipDockerBootstrap } = (body ?? {}) as {
     domain?: unknown
     type?: unknown
     sslEnabled?: unknown
     config?: unknown
+    deployCommand?: unknown
+    processManager?: unknown
+    skipDockerBootstrap?: unknown
   }
 
   const domainValue = typeof domain === "string" ? domain.trim().toLowerCase() : ""
   if (!domainValue) {
     return NextResponse.json({ error: "Alan adı gereklidir." }, { status: 400 })
   }
-
   if (typeof type !== "string" || !VALID_TYPES.has(type)) {
     return NextResponse.json({ error: "Geçerli bir site türü gereklidir." }, { status: 400 })
   }
 
-  const cfg = (config && typeof config === "object" ? (config as Record<string, unknown>) : {})
+  const cfg = config && typeof config === "object" ? (config as Record<string, unknown>) : {}
   const www = toBool(cfg.www)
   const sslEnabledBool = Boolean(sslEnabled)
   const sslEmail = toStr(cfg.sslEmail)
-
   if (sslEnabledBool && !isValidEmail(sslEmail)) {
     return NextResponse.json({ error: "SSL için geçerli bir e-posta adresi gereklidir." }, { status: 400 })
   }
 
-  const planResult = buildPlan(type, domainValue, cfg)
+  const planResult = buildPlan(type, domainValue, cfg, toBool(skipDockerBootstrap))
   if ("error" in planResult) {
     return NextResponse.json({ error: planResult.error }, { status: 400 })
   }
   const { plan } = planResult
 
-  // Ham veritabanı şifresini DB satırı ilk oluşturulurken bile kalıcı
-  // config'e yazmıyoruz — provisioning çöker/süreç ortada kesilirse
-  // (ör. WordPress indirmesi sırasında) satırın PROVISIONING durumunda
-  // düz metin şifreyle sonsuza dek kalmasını önler. `plan` içindeki
-  // doğrulanmış şifre `runProvisioning`'e ayrıca, config'ten bağımsız
-  // olarak geçiyor zaten.
-  const initialConfig: Record<string, unknown> = { ...cfg }
-  delete initialConfig.dbPassword
-  // NODEJS/PYTHON/REVERSE_PROXY/DOCKER'da sihirbazda elle bir linux kullanıcı
-  // adı girme alanı YOK (STATIC/PHP/WORDPRESS'in aksine) — terminal
-  // izolasyonunun her zaman kurulu olması için otomatik üretilen kullanıcı
-  // adı burada config'e yazılıyor (bkz. buildPlan -> autoLinuxUserFor).
-  if (plan.type === "NODEJS" || plan.type === "PYTHON" || plan.type === "REVERSE_PROXY" || plan.type === "DOCKER") {
-    initialConfig.linuxUser = plan.linuxUser
+  const deployCommandValue = toStr(deployCommand)
+  if (deployCommandValue && !isValidDeployCommand(deployCommandValue)) {
+    return NextResponse.json({ error: "Deploy komutu en fazla 500 karakter olabilir." }, { status: 400 })
   }
+  let processManagerValue = defaultProcessManager(plan) as string
+  if (typeof processManager === "string" && processManager) {
+    if (!VALID_PROCESS_MANAGERS.has(processManager)) {
+      return NextResponse.json({ error: "Geçersiz process manager." }, { status: 400 })
+    }
+    if (processManager === "SYSTEMD" && plan.type !== "NODEJS" && plan.type !== "PYTHON") {
+      return NextResponse.json({ error: "systemd yalnızca Node.js/Python sitelerinde kullanılabilir." }, { status: 400 })
+    }
+    processManagerValue = processManager
+  }
+
+  const conflict = await findPortConflict(plan, domainValue)
+  if (conflict) {
+    return NextResponse.json({ error: conflict }, { status: 409 })
+  }
+
+  const initialConfig = configFromPlan(plan, www, sslEmail)
 
   let site
   try {
@@ -326,19 +392,13 @@ export async function POST(request: Request) {
         status: "PROVISIONING",
         sslEnabled: sslEnabledBool,
         config: initialConfig as Prisma.InputJsonValue,
-        // DOCKER tipi hiçbir zaman systemd birimi almaz (bkz. cmd_create_service
-        // yalnızca NODEJS/PYTHON çağırır) — varsayılan SYSTEMD bu tip için
-        // anlamsız kalır, dolayısıyla wizard'ın zaten yazdığı docker-compose.yml
-        // ile eşleşen DOCKER_COMPOSE'u baştan ayarlıyoruz.
-        ...(plan.type === "DOCKER" ? { processManager: "DOCKER_COMPOSE" as const } : {}),
+        processManager: processManagerValue as "SYSTEMD" | "DOCKER_COMPOSE" | "PM2" | "CUSTOM_SCRIPT" | "NONE",
+        deployCommand: deployCommandValue || null,
       },
     })
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return NextResponse.json(
-        { error: "Bu alan adına sahip bir site zaten var." },
-        { status: 409 }
-      )
+      return NextResponse.json({ error: "Bu alan adına sahip bir site zaten var." }, { status: 409 })
     }
     console.error("Site oluşturulamadı:", error)
     return NextResponse.json({ error: "Site oluşturulamadı." }, { status: 500 })
@@ -351,35 +411,29 @@ export async function POST(request: Request) {
   } catch (error) {
     status = "FAILED"
     provisionError =
-      error instanceof ProvisionError
-        ? error.message
-        : "Provisioning sırasında beklenmeyen bir hata oluştu."
+      error instanceof ProvisionError ? error.message : "Provisioning sırasında beklenmeyen bir hata oluştu."
     console.error(`Site provisioning başarısız (${domainValue}):`, error)
   }
 
-  // Ham veritabanı şifresini kalıcı config'te tutmuyoruz — yalnızca yukarıdaki
-  // provisioning çağrısı için geçici olarak kullanıldı.
   const finalConfig: Record<string, unknown> = { ...initialConfig }
-  if (status === "FAILED") {
-    finalConfig.provisionError = provisionError
-  }
+  if (status === "FAILED") finalConfig.provisionError = provisionError
 
-  // SSL, vhost/servis başarıyla kurulduysa ve kullanıcı istediyse AYRI ve
-  // BAĞIMSIZ bir adım olarak denenir — başarısız olsa bile site FAILED
-  // olmaz (bkz. runProvisioning'in üzerindeki not). DNS henüz bu sunucuya
-  // yönlendirilmemişse bu beklenen bir durumdur; kullanıcı DNS'i düzelttikten
-  // sonra site detay sayfasından yeniden deneyebilir (bkz. /api/sites/[id]/ssl).
   let sslStatus: "none" | "active" | "error" = "none"
   let sslLastError: string | null = null
   if (status === "ACTIVE" && sslEnabledBool) {
-    try {
-      await requestSsl(domainValue, sslEmail, www)
-      sslStatus = "active"
-    } catch (error) {
+    const dnsCheck = await checkDomainDns(domainValue, www).catch(() => null)
+    if (dnsCheck && !dnsCheck.ok) {
       sslStatus = "error"
-      sslLastError =
-        error instanceof ProvisionError ? error.message : "SSL sertifikası alınamadı."
-      console.error(`SSL isteği başarısız (${domainValue}), site yine de ACTIVE kalıyor:`, error)
+      sslLastError = `DNS ön kontrolü: ${dnsCheck.message}`
+    } else {
+      try {
+        await requestSsl(domainValue, sslEmail, www)
+        sslStatus = "active"
+      } catch (error) {
+        sslStatus = "error"
+        sslLastError = error instanceof ProvisionError ? error.message : "SSL sertifikası alınamadı."
+        console.error(`SSL isteği başarısız (${domainValue}), site yine de ACTIVE kalıyor:`, error)
+      }
     }
   }
 

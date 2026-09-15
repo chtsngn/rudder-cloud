@@ -75,12 +75,14 @@ function assertSafeBackupFileName(fileName: string): void {
   }
 }
 
-/** `pg_dump`/`mysqldump` çıktısını gzip ile sıkıştırarak doğrudan dosyaya akıtır. */
+/** `pg_dump`/`mysqldump` çıktısını gzip ile sıkıştırarak doğrudan dosyaya akıtır
+ * (`gzip: false` — çıktı zaten sıkıştırılmış, ör. `mongodump --archive --gzip`). */
 function runDumpToGzipFile(
   command: string,
   args: string[],
   env: NodeJS.ProcessEnv,
-  outPath: string
+  outPath: string,
+  opts: { cwd?: string; gzip?: boolean } = {}
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     let settled = false
@@ -95,16 +97,14 @@ function runDumpToGzipFile(
       resolve()
     }
 
-    const child = spawn(command, args, { env, stdio: ["ignore", "pipe", "pipe"] })
+    const child = spawn(command, args, { env, cwd: opts.cwd, stdio: ["ignore", "pipe", "pipe"] })
     let stderr = ""
     child.stderr.on("data", (chunk: Buffer) => {
       stderr += chunk.toString()
     })
     child.on("error", (err) => fail(new BackupError(`${command} başlatılamadı: ${err.message}`)))
 
-    const gzip = createGzip()
     const out = createWriteStream(outPath)
-    gzip.on("error", (err) => fail(new BackupError(`Sıkıştırma hatası: ${err.message}`)))
     out.on("error", (err) => fail(new BackupError(`Yedek dosyası yazılamadı: ${err.message}`)))
 
     let exitCode: number | null = null
@@ -122,8 +122,70 @@ function runDumpToGzipFile(
       if (exitCode === 0) succeed()
     })
 
-    child.stdout.pipe(gzip).pipe(out)
+    if (opts.gzip === false) {
+      child.stdout.pipe(out)
+    } else {
+      const gzip = createGzip()
+      gzip.on("error", (err) => fail(new BackupError(`Sıkıştırma hatası: ${err.message}`)))
+      child.stdout.pipe(gzip).pipe(out)
+    }
   })
+}
+
+/**
+ * Veritabanı bir Docker Compose servisinde çalışıyorsa (bkz. db-detect.ts
+ * resolveComposeService) dump konteyner İÇİNDEN, `docker compose exec -T`
+ * ile alınır — host'ta pg_dump/mysqldump kurulu olması gerekmez ve `db:5432`
+ * gibi yalnızca compose ağında çözülen adresler sorun olmaz. Şifre `-e VAR`
+ * ile (değer komut satırında DEĞİL, docker istemcisinin ortamından) geçer.
+ */
+async function createComposeDump(domain: string, detected: DetectedDatabase, dir: string, slug: string): Promise<BackupFileInfo> {
+  await assertToolAvailable("docker", "Docker Compose")
+  const service = detected.composeService!
+  const cwd = detected.composeWorkdir!
+  const env: NodeJS.ProcessEnv = { ...process.env }
+
+  if (detected.engine === "postgres") {
+    const fileName = `${domain}_postgres_${slug}.sql.gz`
+    const args = ["compose", "exec", "-T"]
+    if (detected.password) {
+      env.PGPASSWORD = detected.password
+      args.push("-e", "PGPASSWORD")
+    }
+    args.push(service, "pg_dump", "--no-owner", "--no-privileges", "-F", "p")
+    if (detected.user) args.push("-U", detected.user)
+    if (detected.database) args.push(detected.database)
+    await runDumpToGzipFile("docker", args, env, path.join(dir, fileName), { cwd })
+    return statBackupFile(dir, fileName)
+  }
+
+  if (detected.engine === "mysql") {
+    const fileName = `${domain}_mysql_${slug}.sql.gz`
+    const args = ["compose", "exec", "-T"]
+    if (detected.password) {
+      env.MYSQL_PWD = detected.password
+      args.push("-e", "MYSQL_PWD")
+    }
+    args.push(service, "mysqldump", "-h", "127.0.0.1", "--single-transaction", "--quick")
+    if (detected.user) args.push("-u", detected.user)
+    if (detected.database) args.push(detected.database)
+    await runDumpToGzipFile("docker", args, env, path.join(dir, fileName), { cwd })
+    return statBackupFile(dir, fileName)
+  }
+
+  // mongo — konteyner içinde host artık localhost
+  const fileName = `${domain}_mongo_${slug}.archive.gz`
+  let uri = mongoUriFrom(detected)
+  try {
+    const parsed = new URL(uri)
+    parsed.hostname = "127.0.0.1"
+    uri = parsed.toString()
+  } catch {
+    // olduğu gibi bırak
+  }
+  const args = ["compose", "exec", "-T", service, "mongodump", "--uri", uri, "--archive", "--gzip"]
+  await runDumpToGzipFile("docker", args, env, path.join(dir, fileName), { cwd, gzip: false })
+  return statBackupFile(dir, fileName)
 }
 
 function mongoUriFrom(detected: DetectedDatabase): string {
@@ -139,6 +201,10 @@ function mongoUriFrom(detected: DetectedDatabase): string {
 export async function createDatabaseDump(domain: string, detected: DetectedDatabase): Promise<BackupFileInfo> {
   const dir = await ensureBackupDir(domain)
   const slug = timestampSlug()
+
+  if (detected.composeService && detected.composeWorkdir) {
+    return createComposeDump(domain, detected, dir, slug)
+  }
 
   if (detected.engine === "postgres") {
     await assertToolAvailable("pg_dump", "PostgreSQL")

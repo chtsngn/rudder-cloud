@@ -2,10 +2,10 @@ import { NextResponse } from "next/server"
 
 import { logAudit } from "@/lib/audit"
 import { getSession } from "@/lib/auth"
-import { GitError, gitPullOrClone, isGitPullSupported, isValidGitBranch } from "@/lib/git"
+import { DeployError, deploySite, toDeployable } from "@/lib/deploy"
+import { GIT_PULL_UNSUPPORTED_MESSAGE, isGitPullSupported, isValidGitBranch } from "@/lib/git"
 import { canManageSite } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
-import { RestartError, restartSite } from "@/lib/restart"
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -14,15 +14,10 @@ interface RouteParams {
 const REPO_FULL_NAME_RE = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/
 
 /**
- * `POST /api/sites/[id]/github-connect` — bu siteyi, bağlı bir GitHub App
- * kurulumundaki (installation) GitHub'ın izin verdiği bir depoya bağlar VE
- * hemen ardından ilk kurulumu (`gitPullOrClone` — `.git` yoksa clone)
- * sitenin kendi kök dizinine (bkz. `resolveSiteWorkdir`) yapar — "repoyu
- * domaine bağlayınca kök klasöre kurulum yapması" tam olarak bu iki adımı
- * TEK bir işlemde birleştiriyor. Eskiden (bkz. site-github-keys-card.tsx)
- * bir depo SEÇMEK yalnızca deploy-key kartındaki yerel state'i güncelliyordu
- * — `Site.repoUrl`'e hiç yazmıyordu, kullanıcı SSH URL'ini elle "Git &
- * Dağıtım" alanına kopyalamak ZORUNDAYDI. Bu route o kopukluğu gideriyor.
+ * `POST /api/sites/[id]/github-connect` — siteyi bir GitHub App kurulumundaki
+ * depoya bağlar VE hemen deploy hattını çalıştırır (klon → deployCommand →
+ * yeniden başlatma; bkz. src/lib/deploy.ts). Body: { installationId,
+ * repoFullName, branch? }.
  */
 export async function POST(request: Request, { params }: RouteParams) {
   const session = await getSession()
@@ -39,13 +34,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 })
   }
   if (!isGitPullSupported(site.type)) {
-    return NextResponse.json(
-      {
-        error:
-          "Bu site türü için GitHub'a bağlama desteklenmiyor (yalnızca Node.js/Python/Ters Proxy).",
-      },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: GIT_PULL_UNSUPPORTED_MESSAGE }, { status: 400 })
   }
 
   let body: unknown
@@ -55,10 +44,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 })
   }
   const input = (body ?? {}) as Record<string, unknown>
-  // `installationId` burada GitHub'ın KENDİ (sayısal) installation ID'si —
-  // repo listeleme uç noktasının (`/api/settings/github/repos`) her depoyla
-  // birlikte zaten döndürdüğü değer, istemcinin ayrıca bizim iç `cuid`'imizi
-  // bilmesine gerek yok (bkz. GitHubInstallation.installationId @unique).
   const installationId = typeof input.installationId === "string" ? input.installationId.trim() : ""
   const repoFullName = typeof input.repoFullName === "string" ? input.repoFullName.trim() : ""
   const branch = typeof input.branch === "string" && input.branch.trim() ? input.branch.trim() : "main"
@@ -88,6 +73,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       githubInstallationId: installation.id,
       githubRepoFullName: repoFullName,
     },
+    include: { githubInstallation: true },
   })
 
   await logAudit({
@@ -99,53 +85,31 @@ export async function POST(request: Request, { params }: RouteParams) {
   })
 
   try {
-    const result = await gitPullOrClone({
-      ...updated,
-      repoUrl,
-      githubInstallationId: installation.installationId,
-    })
-    const afterPull = await prisma.site.update({
-      where: { id },
-      data: { lastPullAt: new Date(), lastPullOk: true, lastPullError: null },
-    })
-
-    let restartError: string | null = null
-    if (result.changed) {
-      try {
-        await restartSite(afterPull)
-      } catch (error) {
-        restartError =
-          error instanceof RestartError ? error.message : "Yeniden başlatma başarısız oldu."
-      }
-    }
-
+    const result = await deploySite(toDeployable(updated), { force: true, trigger: "connect" })
+    const after = await prisma.site.findUnique({ where: { id } })
     return NextResponse.json({
-      ...afterPull,
+      ...after,
       pullChanged: result.changed,
       pullCommit: result.commit,
-      restartError,
+      restartError: result.restartError,
+      deployOutput: result.output,
     })
   } catch (error) {
-    // Bağlantı (repoUrl/repo bilgisi) KALICI kalır — yalnızca ilk klonlama
-    // başarısız oldu; kullanıcı "Şimdi Pull Et" ile tekrar deneyebilir
-    // (SSL'in ayrı, tekrar denenebilir bir alt-durum olmasıyla aynı desen).
-    const message = error instanceof GitError ? error.message : "İlk kurulum (git clone) başarısız oldu."
-    const afterPull = await prisma.site.update({
-      where: { id },
-      data: { lastPullAt: new Date(), lastPullOk: false, lastPullError: message },
-    })
-    return NextResponse.json({ error: message, site: afterPull }, { status: 500 })
+    // Bağlantı KALICI kalır — yalnızca ilk deploy başarısız oldu; kullanıcı
+    // "Deploy Et" ile tekrar deneyebilir.
+    const message = error instanceof DeployError ? error.message : "İlk kurulum (git clone) başarısız oldu."
+    const after = await prisma.site.findUnique({ where: { id } })
+    return NextResponse.json(
+      { error: message, site: after, deployOutput: error instanceof DeployError ? error.output : "" },
+      { status: 500 }
+    )
   }
 }
 
 /**
- * `DELETE /api/sites/[id]/github-connect` — siteyi GitHub App kurulumundan
- * ayırır (`githubInstallationId`/`githubRepoFullName` temizlenir). `repoUrl`/
- * `gitBranch`'e KASITLI dokunulmaz — zaten klonlanmış kod ve auto-pull ayarı
- * olduğu gibi kalır, yalnızca sonraki pull'lar artık installation token
- * YERİNE düz `repoUrl` (genel depo veya elle eklenmiş bir SSH deploy key)
- * ile denenir. Tamamen kaldırmak isteyen `PATCH .../route.ts` ile ayrıca
- * `repoUrl: null` gönderebilir.
+ * `DELETE /api/sites/[id]/github-connect` — GitHub App bağlantısını kaldırır;
+ * `repoUrl`/`gitBranch` KASITLI korunur (klonlanmış kod ve auto-pull ayarı
+ * olduğu gibi kalır; sonraki pull'lar düz repo adresiyle denenir).
  */
 export async function DELETE(_request: Request, { params }: RouteParams) {
   const session = await getSession()

@@ -158,7 +158,7 @@ export function SiteAccessCard({
     RESTART: lang === "en" ? "Restart / stop" : "Yeniden başlat / durdur",
     DELETE: lang === "en" ? "Delete files (file manager)" : "Dosya sil (dosya yöneticisi)",
     MANAGE_BACKUPS: lang === "en" ? "Manage backups" : "Yedeklemeleri yönet",
-    MANAGE_DEPLOY_KEYS: lang === "en" ? "Manage GitHub keys" : "GitHub anahtarlarını yönet",
+    MANAGE_DEPLOY_KEYS: lang === "en" ? "Repository / deploy keys & hooks" : "Depo bağlantısı / deploy anahtarları ve hook'lar",
     TERMINAL: lang === "en" ? "Terminal (as this site's Linux user)" : "Terminal (bu sitenin linux kullanıcısı olarak)",
   }
 

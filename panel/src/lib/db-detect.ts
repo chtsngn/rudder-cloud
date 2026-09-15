@@ -5,8 +5,14 @@
  * Emin olamadığında (bilinmeyen bir motor/desen) SESSİZCE YANLIŞ TAHMİN
  * ETMEZ — `null` döner, kullanıcı arayüzü "otomatik algılanamadı" gösterir.
  */
+import { execFile } from "node:child_process"
+import { promisify } from "node:util"
+
+import { findComposeFile } from "@/lib/restart"
 import { readTextFile, SiteFsError } from "@/lib/site-fs"
-import type { SiteLike } from "@/lib/site-paths"
+import { resolveSiteWorkdir, type SiteLike } from "@/lib/site-paths"
+
+const execFileAsync = promisify(execFile)
 
 export type DbEngine = "postgres" | "mysql" | "mongo"
 
@@ -21,6 +27,50 @@ export interface DetectedDatabase {
   connectionUri?: string
   /** Kullanıcıya gösterilecek: hangi dosyadan/değişkenden bulundu. */
   source: string
+  /** Veritabanı bir Docker Compose servisinde çalışıyorsa (2026-09-15): host adı
+   * compose'daki servis adıyla eşleşti — dump `docker compose exec` ile
+   * konteyner İÇİNDEN alınır (host'tan `db:5432` erişilemez). */
+  composeService?: string
+  composeWorkdir?: string
+}
+
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"])
+
+async function composeServiceNames(workdir: string): Promise<string[]> {
+  try {
+    const { stdout } = await execFileAsync("docker", ["compose", "config", "--services"], {
+      cwd: workdir,
+      timeout: 15_000,
+    })
+    return stdout.split("\n").map((l) => l.trim()).filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
+function hostOf(detected: DetectedDatabase): string | null {
+  if (detected.host) return detected.host
+  if (detected.connectionUri) {
+    try {
+      return new URL(detected.connectionUri).hostname || null
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+/** `.env`'deki DB host'u sitenin compose dosyasındaki bir servis adıysa
+ * (`db`, `postgres`, `mysql`...) bunu işaretler — yedek konteyner içinden alınır. */
+export async function resolveComposeService(site: SiteLike, detected: DetectedDatabase): Promise<DetectedDatabase> {
+  const host = hostOf(detected)
+  if (!host || LOOPBACK_HOSTS.has(host) || host.includes(".")) return detected
+  const workdir = resolveSiteWorkdir(site)
+  if (!workdir) return detected
+  if (!(await findComposeFile(workdir))) return detected
+  const services = await composeServiceNames(workdir)
+  if (!services.includes(host)) return detected
+  return { ...detected, composeService: host, composeWorkdir: workdir }
 }
 
 const ENV_CANDIDATES = [".env", ".env.production", ".env.local"]
@@ -141,6 +191,11 @@ function fromLaravelStyle(env: Record<string, string>, sourceLabel: string): Det
  * için şart.
  */
 export async function detectSiteDatabase(site: SiteLike): Promise<DetectedDatabase | null> {
+  const detected = await detectRaw(site)
+  return detected ? resolveComposeService(site, detected) : null
+}
+
+async function detectRaw(site: SiteLike): Promise<DetectedDatabase | null> {
   for (const fileName of ENV_CANDIDATES) {
     let content: string
     try {

@@ -329,7 +329,7 @@ export default function DashboardPage() {
                 <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400" />
                 {t("dashboard.systemActive")}
               </span>
-              <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">Port 3001</span>
+              <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">{stats.host.platform}</span>
             </div>
           </div>
         )}

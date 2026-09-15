@@ -192,15 +192,237 @@ grant_shared_process_isolation() {
 }
 
 cmd_ensure_site_user() {
-  require_args 3 "$#" "ensure-site-user <domain> <workdir> <linux_user>"
-  local domain="$1" workdir="$2" linux_user="$3"
+  require_args 3 "$#" "ensure-site-user <domain> <workdir> <linux_user> [model:shared|owned] [php_version]"
+  local domain="$1" workdir="$2" linux_user="$3" model="${4:-shared}" php_ver="${5:-}"
   validate_domain "$domain"
   validate_abs_path "$workdir" "çalışma dizini"
   [[ "$linux_user" =~ $USERNAME_RE ]] || die "Geçersiz linux kullanıcı adı: $linux_user"
-  mkdir -p "$workdir"
-  ensure_linux_user "$linux_user" "$workdir"
-  grant_shared_process_isolation "$linux_user" "$workdir"
-  msg "Site kullanıcısı hazır: ${linux_user} (${workdir})"
+  case "$model" in
+    shared)
+      # NODEJS/PYTHON/REVERSE_PROXY/DOCKER: klasör panel'de kalır, kullanıcı grup üzerinden erişir.
+      mkdir -p "$workdir"
+      ensure_linux_user "$linux_user" "$workdir"
+      grant_shared_process_isolation "$linux_user" "$workdir"
+      ;;
+    owned)
+      # STATIC/PHP/WORDPRESS: klasör kullanıcıya ait; panel/nginx ACL ile erişir,
+      # PHP verilmişse site başına FPM havuzu kurulur ve vhost o sokete çevrilir.
+      validate_site_root "$workdir"
+      mkdir -p "${workdir}/public"
+      apply_owned_site_access "$linux_user" "$workdir"
+      if [[ -n "$php_ver" ]]; then
+        validate_php_version "$php_ver"
+        local sock conf="/etc/nginx/sites-available/${domain}.conf"
+        sock="$(ensure_php_pool "$domain" "$php_ver" "$linux_user")"
+        if [[ -f "$conf" ]] && grep -q "fastcgi_pass unix:" "$conf"; then
+          sed -i "s#fastcgi_pass unix:[^;]*;#fastcgi_pass unix:${sock};#g" "$conf"
+          nginx_test_and_reload
+        fi
+        msg "PHP-FPM site havuzu hazır: ${sock}"
+      fi
+      ;;
+    *) die "Geçersiz model (shared|owned olmalı): $model" ;;
+  esac
+  msg "Site kullanıcısı hazır: ${linux_user} (${workdir}, ${model})"
+}
+
+# STATIC/PHP/WORDPRESS için sahiplik modeli (2026-09-15): dosyalar dedicated
+# kullanıcıya ait (PHP-FPM havuzu da o kullanıcı olarak çalışır — WordPress
+# medya/güncelleme yazabilsin diye). Panelin dosya yöneticisi ve nginx'in okuma
+# erişimi ACL ile verilir — grup üyeliği değil, çünkü ACL anında etkili olur
+# (grup üyeliği panel.service yeniden başlamadan işlemez). `g+rwX` KASITLI:
+# ACL "mask"ı grup bitlerinden türer, grup salt-okunur olsaydı panelin rwX
+# ACL'si de salt-okunura düşerdi. setfacl yoksa (acl paketi) grup üyeliğine
+# düşülür ve uyarı verilir.
+apply_owned_site_access() {
+  local user="$1" site_root="$2"
+  [[ -z "$user" ]] && return 0
+  ensure_linux_user "$user" "$site_root"
+  chown -R "${user}:${user}" "$site_root"
+  chmod -R u+rwX,g+rwX,o-rwx "$site_root"
+  find "$site_root" -type d -exec chmod g+s {} +
+  local acl_ok=0
+  if command -v setfacl >/dev/null 2>&1; then
+    if setfacl -R -m "u:panel:rwX,d:u:panel:rwX,u:www-data:rX,d:u:www-data:rX" "$site_root" 2>/dev/null; then
+      acl_ok=1
+    fi
+  fi
+  if (( acl_ok == 0 )); then
+    warn "ACL uygulanamadı (setfacl yok ya da dosya sistemi desteklemiyor) — panel ve www-data '${user}' grubuna ekleniyor; panel.service yeniden başlatılana kadar dosya yöneticisi yazamayabilir."
+    usermod -aG "$user" www-data 2>/dev/null || true
+    usermod -aG "$user" panel 2>/dev/null || true
+  fi
+}
+
+# Site başına PHP-FPM havuzu: `[domain]` havuzu dedicated kullanıcı olarak
+# çalışır, kendi soketini dinler (nginx www-data olarak sokete erişir).
+# UMask=0002 drop-in'i: PHP'nin oluşturduğu dosyalar grup-yazılabilir olsun ki
+# panel (ACL, mask grup bitlerinden gelir) düzenleyebilsin. Yalnızca soket
+# yolunu STDOUT'a yazar (çağıran `$( )` ile alır) — mesajlar stderr'e.
+ensure_php_pool() {
+  local domain="$1" php_ver="$2" user="$3"
+  local pool_dir="/etc/php/${php_ver}/fpm/pool.d"
+  local pool_file="${pool_dir}/${domain}.conf"
+  local sock="/run/php/php${php_ver}-fpm-${domain}.sock"
+  [[ -d "$pool_dir" ]] || die "PHP-FPM havuz dizini bulunamadı: ${pool_dir} (php${php_ver}-fpm kurulu mu?)"
+  cat > "$pool_file" <<POOL
+; Rudder Cloud — ${domain} site havuzu (provision-site.sh tarafından otomatik yazıldı)
+[${domain}]
+user = ${user}
+group = ${user}
+listen = ${sock}
+listen.owner = www-data
+listen.group = www-data
+listen.mode = 0660
+pm = ondemand
+pm.max_children = 10
+pm.process_idle_timeout = 10s
+pm.max_requests = 500
+POOL
+  local dropin_dir="/etc/systemd/system/php${php_ver}-fpm.service.d"
+  local need_restart=0
+  if [[ ! -f "${dropin_dir}/rudder-umask.conf" ]]; then
+    mkdir -p "$dropin_dir"
+    printf '[Service]\nUMask=0002\n' > "${dropin_dir}/rudder-umask.conf"
+    systemctl daemon-reload
+    need_restart=1
+  fi
+  if (( need_restart )); then
+    systemctl restart "php${php_ver}-fpm" || die "php${php_ver}-fpm yeniden başlatılamadı."
+  else
+    systemctl reload "php${php_ver}-fpm" 2>/dev/null || systemctl restart "php${php_ver}-fpm" || die "php${php_ver}-fpm yeniden yüklenemedi."
+  fi
+  local i
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    [[ -S "$sock" ]] && break
+    sleep 0.5
+  done
+  [[ -S "$sock" ]] || die "PHP-FPM site havuzu soketi oluşmadı: ${sock} (journalctl -u php${php_ver}-fpm)"
+  echo "$sock"
+}
+
+remove_php_pools() {
+  local domain="$1" f ver
+  for f in /etc/php/*/fpm/pool.d/"${domain}".conf; do
+    [[ -f "$f" ]] || continue
+    ver="$(echo "$f" | sed -n 's#^/etc/php/\([0-9.]*\)/fpm/.*#\1#p')"
+    rm -f "$f"
+    [[ -n "$ver" ]] && { systemctl reload "php${ver}-fpm" 2>/dev/null || true; }
+    msg "PHP-FPM site havuzu kaldırıldı: ${f}"
+  done
+}
+
+# ------------------------------------------------------------
+# pm2-action — PM2 ile yönetilen süreçler ROOT'un pm2 daemon'ında yaşar
+# (web terminali root; kullanıcı pm2'yi oradan başlatır). Panel kullanıcısı
+# olarak `pm2 restart` o daemon'ı hiç göremezdi — bu yüzden buradan (root).
+# ------------------------------------------------------------
+cmd_pm2_action() {
+  require_args 3 "$#" "pm2-action <domain> <process_name> <start|stop|restart|reload|delete|describe>"
+  local domain="$1" name="$2" action="$3"
+  validate_domain "$domain"
+  [[ "$name" =~ ^[A-Za-z0-9._-]{1,64}$ ]] || die "Geçersiz PM2 süreç adı: $name"
+  case "$action" in
+    start|stop|restart|reload|delete|describe) ;;
+    *) die "Geçersiz pm2 eylemi: $action" ;;
+  esac
+  local pm2_bin
+  pm2_bin="$(command -v pm2 2>/dev/null || true)"
+  local c
+  for c in /usr/local/bin/pm2 /usr/bin/pm2 /usr/local/lib/node_modules/pm2/bin/pm2; do
+    [[ -z "$pm2_bin" && -x "$c" ]] && pm2_bin="$c"
+  done
+  [[ -n "$pm2_bin" ]] || die "pm2 bulunamadı (root için PATH'te değil). Sunucuda 'npm install -g pm2' ile kurun."
+  if [[ "$action" == "describe" ]]; then
+    "$pm2_bin" jlist 2>/dev/null
+    return 0
+  fi
+  "$pm2_bin" "$action" "$name"
+  msg "pm2 ${action} ${name}: tamamlandı."
+}
+
+# ------------------------------------------------------------
+# cleanup-site — site silinirken bırakılan artıkları kaldırır (isteğe bağlı):
+# çalışan compose konteynerleri (portu tutmasın), PHP-FPM havuzu, klasör,
+# dedicated kullanıcı. Kullanıcı yalnızca `siteusers` grubundaysa silinir
+# (sistem hesapları/elle oluşturulmuş hesaplar ASLA).
+# ------------------------------------------------------------
+cmd_cleanup_site() {
+  require_args 5 "$#" "cleanup-site <domain> <workdir> <linux_user|-> <remove_folder:true|false> <remove_user:true|false>"
+  local domain="$1" workdir="$2" linux_user="$3" remove_folder="$4" remove_user="$5"
+  validate_domain "$domain"
+  validate_abs_path "$workdir" "çalışma dizini"
+  [[ "$workdir" == /var/www/* ]] || die "Çalışma dizini /var/www/ altında olmalı: $workdir"
+  [[ "$workdir" != "/var/www" && "$workdir" != "/var/www/" ]] || die "Kök dizin silinemez."
+  case "$remove_folder" in true|false) ;; *) die "remove_folder true|false olmalı" ;; esac
+  case "$remove_user" in true|false) ;; *) die "remove_user true|false olmalı" ;; esac
+
+  if command -v docker >/dev/null 2>&1 && [[ -d "$workdir" ]]; then
+    local cf
+    for cf in docker-compose.yml compose.yml docker-compose.yaml compose.yaml; do
+      if [[ -f "${workdir}/${cf}" ]]; then
+        (cd "$workdir" && docker compose -f "$cf" down --remove-orphans) \
+          && msg "Docker Compose konteynerleri durduruldu." \
+          || warn "docker compose down başarısız oldu — konteynerler elle durdurulmalı."
+        break
+      fi
+    done
+  fi
+
+  remove_php_pools "$domain"
+
+  if [[ "$remove_folder" == "true" && -d "$workdir" ]]; then
+    rm -rf -- "$workdir"
+    msg "Klasör silindi: ${workdir}"
+  fi
+
+  if [[ "$remove_user" == "true" && "$linux_user" != "-" ]]; then
+    [[ "$linux_user" =~ $USERNAME_RE ]] || die "Geçersiz linux kullanıcı adı: $linux_user"
+    if id "$linux_user" >/dev/null 2>&1; then
+      if id -nG "$linux_user" 2>/dev/null | grep -qw siteusers; then
+        pkill -KILL -u "$linux_user" 2>/dev/null || true
+        userdel "$linux_user" 2>/dev/null || warn "Kullanıcı silinemedi: ${linux_user}"
+        getent group "$linux_user" >/dev/null 2>&1 && { groupdel "$linux_user" 2>/dev/null || true; }
+        msg "Kullanıcı silindi: ${linux_user}"
+      else
+        warn "'${linux_user}' siteusers grubunda değil (panel oluşturmamış) — güvenlik için silinmedi."
+      fi
+    fi
+  fi
+  msg "Site temizliği tamamlandı: ${domain}"
+}
+
+# ------------------------------------------------------------
+# refresh-cloudflare-ips — Cloudflare proxy'si arkasındaki sitelerde gerçek
+# ziyaretçi IP'si (CF-Connecting-IP) için nginx real_ip ayarı. Yalnızca
+# Cloudflare'ın yayınladığı aralıklara güvenilir; liste değişirse tekrar
+# çalıştırılır (doctor.sh kurulumda, Ayarlar'daki buton istendiğinde).
+# ------------------------------------------------------------
+cmd_refresh_cloudflare_ips() {
+  command -v curl >/dev/null 2>&1 || die "curl bulunamadı."
+  local out="/etc/nginx/conf.d/rudder-cloudflare-realip.conf" tmp v4 v6 ip
+  v4="$(curl -fsSL --max-time 15 https://www.cloudflare.com/ips-v4)" || die "Cloudflare IPv4 listesi alınamadı."
+  v6="$(curl -fsSL --max-time 15 https://www.cloudflare.com/ips-v6)" || die "Cloudflare IPv6 listesi alınamadı."
+  tmp="$(mktemp)"
+  {
+    echo "# Rudder Cloud — Cloudflare gerçek ziyaretçi IP'si (provision-site.sh refresh-cloudflare-ips, $(date -u +%Y-%m-%dT%H:%MZ))"
+    for ip in $v4 $v6; do
+      [[ "$ip" =~ ^[0-9a-fA-F:.]+/[0-9]{1,3}$ ]] || { rm -f "$tmp"; die "Beklenmeyen IP aralığı biçimi: $ip"; }
+      echo "set_real_ip_from ${ip};"
+    done
+    echo "real_ip_header CF-Connecting-IP;"
+  } > "$tmp"
+  local prev=""
+  [[ -f "$out" ]] && prev="$(mktemp)" && cp "$out" "$prev"
+  install -m 0644 "$tmp" "$out"
+  rm -f "$tmp"
+  if ! nginx -t >/dev/null 2>&1; then
+    if [[ -n "$prev" ]]; then mv "$prev" "$out"; else rm -f "$out"; fi
+    die "nginx -t başarısız oldu, Cloudflare real_ip yapılandırması geri alındı."
+  fi
+  [[ -n "$prev" ]] && rm -f "$prev"
+  systemctl reload nginx
+  msg "Cloudflare IP aralıkları güncellendi: ${out}"
 }
 
 # ------------------------------------------------------------
@@ -233,8 +455,7 @@ cmd_create_vhost() {
 <body><h1>OK - ${domain}</h1></body></html>
 HTML
       fi
-      ensure_linux_user "$linux_user" "$site_root"
-      [[ -n "$linux_user" ]] && chown -R "${linux_user}:${linux_user}" "$site_root"
+      apply_owned_site_access "$linux_user" "$site_root"
 
       cat > "$conf" <<NGINX
 server {
@@ -325,8 +546,14 @@ PHP
       fi
 
       validate_username_optional "$linux_user"
-      ensure_linux_user "$linux_user" "$site_root"
-      [[ -n "$linux_user" ]] && chown -R "${linux_user}:${linux_user}" "$site_root"
+      apply_owned_site_access "$linux_user" "$site_root"
+      if [[ -n "$linux_user" ]]; then
+        # Dedicated kullanıcı varsa PHP de o kullanıcı olarak çalışmalı (aksi
+        # halde www-data, kullanıcıya ait dosyalara yazamaz — WordPress medya
+        # yükleme/güncelleme kırılır): site başına PHP-FPM havuzu + kendi soketi.
+        php_sock="$(ensure_php_pool "$domain" "$php_ver" "$linux_user")"
+        msg "PHP-FPM site havuzu hazır: ${php_sock} (kullanıcı: ${linux_user})"
+      fi
 
       cat > "$conf" <<NGINX
 server {
@@ -453,8 +680,9 @@ NGINX
       ;;
 
     DOCKER)
-      require_args 5 "$#" "create-vhost <domain> DOCKER <www> <port> <working_dir> [compose_service] [linux_user]"
-      local port="$4" working_dir="$5" compose_service="${6:-}" linux_user="${7:-}"
+      require_args 5 "$#" "create-vhost <domain> DOCKER <www> <port> <working_dir> [compose_service] [linux_user] [bootstrap:true|false]"
+      local port="$4" working_dir="$5" compose_service="${6:-}" linux_user="${7:-}" bootstrap="${8:-true}"
+      case "$bootstrap" in true|false) ;; *) die "bootstrap bayrağı 'true' ya da 'false' olmalı: $bootstrap" ;; esac
       validate_port "$port"
       validate_abs_path "$working_dir" "çalışma dizini"
       [[ -n "$linux_user" ]] && [[ ! "$linux_user" =~ $USERNAME_RE ]] && die "Geçersiz linux kullanıcı adı: $linux_user"
@@ -468,8 +696,13 @@ NGINX
         grant_shared_process_isolation "$linux_user" "$working_dir"
       fi
 
-      # docker compose yoksa örnek dosya oluştur
-      if [[ ! -f "${working_dir}/docker-compose.yml" && ! -f "${working_dir}/compose.yml" ]]; then
+      # docker compose yoksa örnek dosya oluştur. bootstrap=false ise ATLA:
+      # sihirbazda bir depo seçildi, gerçek compose dosyası birazdan klonlanacak
+      # — örnek nginx:alpine dosyası/konteyneri yalnızca kafa karıştırırdı.
+      if [[ "$bootstrap" != "true" ]]; then
+        info "Örnek docker-compose.yml ve otomatik 'compose up' atlandı (depo bağlanacak)."
+      elif [[ ! -f "${working_dir}/docker-compose.yml" && ! -f "${working_dir}/compose.yml" \
+              && ! -f "${working_dir}/docker-compose.yaml" && ! -f "${working_dir}/compose.yaml" ]]; then
         cat > "${working_dir}/docker-compose.yml" <<COMPOSE
 services:
   app:
@@ -510,7 +743,9 @@ server {
 NGINX
 
       # docker compose up -d çalıştır (docker kurulu değilse uyar ama başarısız olma)
-      if command -v docker >/dev/null 2>&1; then
+      if [[ "$bootstrap" != "true" ]]; then
+        :
+      elif command -v docker >/dev/null 2>&1; then
         local up_args=("-f" "${working_dir}/docker-compose.yml" "up" "-d" "--remove-orphans")
         [[ -n "$compose_service" ]] && up_args+=("$compose_service")
         docker compose "${up_args[@]}" 2>/dev/null && msg "Docker Compose başlatıldı." \
@@ -561,6 +796,7 @@ cmd_remove_vhost() {
   validate_domain "$domain"
   rm -f "/etc/nginx/sites-enabled/${domain}.conf"
   rm -f "/etc/nginx/sites-available/${domain}.conf"
+  remove_php_pools "$domain"
   local nginx_test_log
   nginx_test_log="$(mktemp)"
   if nginx -t 2>"$nginx_test_log"; then
@@ -707,67 +943,6 @@ GRANT ALL PRIVILEGES ON \`${db_name}\`.* TO '${db_user}'@'localhost';
 FLUSH PRIVILEGES;
 SQL
   msg "WordPress veritabanı hazır: ${db_name} (kullanıcı: ${db_user})"
-}
-
-# ------------------------------------------------------------
-# docker-action / docker-logs (DOCKER site türü)
-# ------------------------------------------------------------
-_find_compose_dir() {
-  local domain="$1"
-  local working_dir="/var/www/${domain}"
-  echo "$working_dir"
-}
-
-_find_compose_file() {
-  local working_dir="$1"
-  if [[ -f "${working_dir}/docker-compose.yml" ]]; then
-    echo "${working_dir}/docker-compose.yml"
-  elif [[ -f "${working_dir}/compose.yml" ]]; then
-    echo "${working_dir}/compose.yml"
-  else
-    die "docker-compose.yml veya compose.yml bulunamadı: ${working_dir}"
-  fi
-}
-
-cmd_docker_action() {
-  require_args 2 "$#" "docker-action <domain> <up|down|restart|pull> [compose_service]"
-  local domain="$1" action="$2" compose_service="${3:-}"
-  validate_domain "$domain"
-  case "$action" in
-    up|down|restart|pull) ;;
-    *) die "Geçersiz docker-compose eylemi (up|down|restart|pull olmalı): $action" ;;
-  esac
-  command -v docker >/dev/null 2>&1 || die "docker komutu bulunamadı."
-
-  local working_dir compose_file
-  working_dir="$(_find_compose_dir "$domain")"
-  compose_file="$(_find_compose_file "$working_dir")"
-
-  local dc_args=("-f" "$compose_file")
-  case "$action" in
-    up)      dc_args+=("up" "-d" "--remove-orphans") ;;
-    down)    dc_args+=("down") ;;
-    restart) dc_args+=("restart") ;;
-    pull)    dc_args+=("pull") ;;
-  esac
-  [[ -n "$compose_service" ]] && dc_args+=("$compose_service")
-
-  docker compose "${dc_args[@]}"
-  msg "docker compose ${action} tamamlandı: ${domain}"
-}
-
-cmd_docker_logs() {
-  require_args 2 "$#" "docker-logs <domain> <lines>"
-  local domain="$1" lines="$2"
-  validate_domain "$domain"
-  validate_lines "$lines"
-  command -v docker >/dev/null 2>&1 || die "docker komutu bulunamadı."
-
-  local working_dir compose_file
-  working_dir="$(_find_compose_dir "$domain")"
-  compose_file="$(_find_compose_file "$working_dir")"
-
-  docker compose -f "$compose_file" logs --tail="$lines" --no-color
 }
 
 # ------------------------------------------------------------
@@ -926,11 +1101,15 @@ Alt komutlar:
   configure-panel-domain <domain>                Panel icin alan adi (HTTP+ACME) yapılandır
   request-panel-ssl <domain> <email>             Panel alan adı için gerçek SSL al (Let's Encrypt)
   remove-panel-domain                             Panel alan adı bağlantısını kaldır
-  docker-action <domain> <up|down|restart|pull> [service]  Docker Compose eylem çalıştır
-  docker-logs <domain> <lines>                   Docker Compose loglarını yazdır
-  ensure-site-user <domain> <workdir> <user>     Paylaşımlı-süreç tiplerinde (Node.js/Python/
-                                                  Ters Proxy/Docker) terminal/dosya izolasyonu
-                                                  için dedicated bir Linux kullanıcısı kur
+  ensure-site-user <domain> <workdir> <user> [shared|owned] [php_ver]
+                                                 Dedicated Linux kullanıcısı kur: shared =
+                                                 Node.js/Python/Ters Proxy/Docker (klasör panel'de,
+                                                 grup erişimi); owned = Static/PHP/WordPress
+                                                 (klasör kullanıcıda, ACL + PHP-FPM havuzu)
+  pm2-action <domain> <name> <action>            Root'un pm2 daemon'ında start|stop|restart|reload|delete|describe
+  cleanup-site <domain> <workdir> <user|-> <rm_folder> <rm_user>
+                                                 Site silme artıkları: compose down, PHP havuzu, klasör, kullanıcı
+  refresh-cloudflare-ips                         Nginx real_ip için Cloudflare IP aralıklarını yenile
 USAGE
 }
 
@@ -949,12 +1128,13 @@ case "$SUBCOMMAND" in
   service-status)  require_args 1 "$#" "service-status <domain>"; cmd_service_status "$@" ;;
   service-logs)    cmd_service_logs "$@" ;;
   create-wp-db)    cmd_create_wp_db "$@" ;;
-  docker-action)   cmd_docker_action "$@" ;;
-  docker-logs)     cmd_docker_logs "$@" ;;
   configure-panel-domain) require_args 1 "$#" "configure-panel-domain <domain>"; cmd_configure_panel_domain "$@" ;;
   request-panel-ssl)      require_args 2 "$#" "request-panel-ssl <domain> <email>"; cmd_request_panel_ssl "$@" ;;
   remove-panel-domain)    cmd_remove_panel_domain "$@" ;;
   ensure-site-user)       cmd_ensure_site_user "$@" ;;
+  pm2-action)             cmd_pm2_action "$@" ;;
+  cleanup-site)           cmd_cleanup_site "$@" ;;
+  refresh-cloudflare-ips) cmd_refresh_cloudflare_ips "$@" ;;
   -h|--help|help)  usage ;;
   *) usage; die "Bilinmeyen alt komut: ${SUBCOMMAND}" ;;
 esac

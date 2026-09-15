@@ -6,11 +6,16 @@
  * bir hata kullanıcıya "işlem başarısız" gibi yanlış bir izlenim verirdi.
  * Bu yüzden hatalar yalnızca `console.error`'a düşer, hiçbir zaman throw
  * edilmez/await eden çağrıyı etkilemez.
+ *
+ * `userId` null olabilir (deploy hook / GitHub webhook gibi oturumsuz
+ * tetikleyiciler) — o zaman `actor` etiketi `username` olarak yazılır.
  */
 import { prisma } from "@/lib/prisma"
 
 export interface LogAuditInput {
-  userId: string
+  userId: string | null
+  /** Oturumsuz tetikleyiciler için görünen ad (ör. "deploy-hook", "github-webhook"). */
+  actor?: string
   action: string
   targetType?: string
   targetId?: string
@@ -19,12 +24,14 @@ export interface LogAuditInput {
 
 export async function logAudit(input: LogAuditInput): Promise<void> {
   try {
-    const user = await prisma.user.findUnique({ where: { id: input.userId }, select: { username: true } })
+    const user = input.userId
+      ? await prisma.user.findUnique({ where: { id: input.userId }, select: { username: true } })
+      : null
     await prisma.auditLog.create({
       data: {
         userId: input.userId,
         // `username` KASITLI denormalize — bkz. prisma/schema.prisma → AuditLog notu.
-        username: user?.username ?? "(silinmiş kullanıcı)",
+        username: user?.username ?? input.actor ?? "(silinmiş kullanıcı)",
         action: input.action,
         targetType: input.targetType ?? null,
         targetId: input.targetId ?? null,

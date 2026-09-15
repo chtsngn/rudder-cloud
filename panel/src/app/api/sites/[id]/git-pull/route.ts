@@ -1,23 +1,19 @@
 import { NextResponse } from "next/server"
 
 import { getSession } from "@/lib/auth"
-import { gitPullOrClone, GitError, isGitPullSupported } from "@/lib/git"
+import { DeployError, deploySite, toDeployable } from "@/lib/deploy"
+import { GIT_PULL_UNSUPPORTED_MESSAGE, isGitPullSupported } from "@/lib/git"
 import { canManageSite } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
-import { RestartError, restartSite } from "@/lib/restart"
 
 interface RouteParams {
   params: Promise<{ id: string }>
 }
 
 /**
- * `POST /api/sites/[id]/git-pull` — manuel tetikleme. Otomatik pull için
- * bkz. `src/lib/auto-pull-scheduler.ts` (aynı `gitPullOrClone`'u kullanır).
- *
- * Pull sonrası HEAD değiştiyse (yani gerçekten yeni bir commit çekildiyse)
- * `restartSite()` de tetiklenir — değişmediyse çalışan süreç gereksiz yere
- * yeniden başlatılmaz. Restart hatası pull'un kendisini başarısız saymaz;
- * ayrı bir `restartError` alanıyla döndürülür.
+ * `POST /api/sites/[id]/git-pull` — "Şimdi Pull Et": deploy hattını ZORLAMADAN
+ * çalıştırır (HEAD değiştiyse deployCommand + yeniden başlatma; değişmediyse
+ * hiçbir şey). Zorlamak için bkz. `/deploy`.
  */
 export async function POST(_request: Request, { params }: RouteParams) {
   const session = await getSession()
@@ -34,51 +30,30 @@ export async function POST(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 })
   }
   if (!isGitPullSupported(site.type)) {
-    return NextResponse.json(
-      {
-        error:
-          "Bu site türü için git pull desteklenmiyor (yalnızca Node.js/Python/Ters Proxy).",
-      },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: GIT_PULL_UNSUPPORTED_MESSAGE }, { status: 400 })
   }
   if (!site.repoUrl) {
     return NextResponse.json({ error: "Bu site için repo adresi tanımlı değil." }, { status: 400 })
   }
 
   try {
-    const result = await gitPullOrClone({
-      ...site,
-      repoUrl: site.repoUrl,
-      githubInstallationId: site.githubInstallation?.installationId ?? null,
-    })
-    const updated = await prisma.site.update({
-      where: { id },
-      data: { lastPullAt: new Date(), lastPullOk: true, lastPullError: null },
-    })
-
-    let restartError: string | null = null
-    if (result.changed) {
-      try {
-        await restartSite(updated)
-      } catch (error) {
-        restartError =
-          error instanceof RestartError ? error.message : "Yeniden başlatma başarısız oldu."
-      }
-    }
-
+    const result = await deploySite(toDeployable(site), { trigger: "pull" })
+    const updated = await prisma.site.findUnique({ where: { id } })
     return NextResponse.json({
       ...updated,
       pullChanged: result.changed,
       pullCommit: result.commit,
-      restartError,
+      deployed: result.deployed,
+      restartError: result.restartError,
+      deployOutput: result.output,
     })
   } catch (error) {
-    const message = error instanceof GitError ? error.message : "git pull başarısız oldu."
-    const updated = await prisma.site.update({
-      where: { id },
-      data: { lastPullAt: new Date(), lastPullOk: false, lastPullError: message },
-    })
-    return NextResponse.json({ error: message, site: updated }, { status: 500 })
+    const message = error instanceof DeployError ? error.message : "git pull başarısız oldu."
+    const status = error instanceof DeployError && error.stage === "busy" ? 409 : 500
+    const updated = await prisma.site.findUnique({ where: { id } })
+    return NextResponse.json(
+      { error: message, site: updated, deployOutput: error instanceof DeployError ? error.output : "" },
+      { status }
+    )
   }
 }

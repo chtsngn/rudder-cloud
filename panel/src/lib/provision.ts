@@ -18,6 +18,8 @@ const PROVISION_SCRIPT =
 const DEFAULT_TIMEOUT_MS = 30_000
 const WORDPRESS_TIMEOUT_MS = 120_000 // WordPress indirme daha uzun sürebilir
 const SSL_TIMEOUT_MS = 60_000 // certbot ağ erişimi gerektirir
+const DOCKER_TIMEOUT_MS = 180_000 // ilk `compose up` image çekebilir
+const CLEANUP_TIMEOUT_MS = 180_000 // compose down + rm -rf büyük klasörlerde sürebilir
 
 // ------------------------------------------------------------
 // Doğrulama — scripts/provision-site.sh'daki regex'lerin TS karşılığı
@@ -74,6 +76,18 @@ export function isValidAbsolutePath(value: string): boolean {
 
 export function isValidSiteRoot(value: string): boolean {
   return isValidAbsolutePath(value) && value.startsWith("/var/www/")
+}
+
+const PM2_NAME_RE = /^[A-Za-z0-9._-]{1,64}$/
+export function isValidPm2Name(value: string): boolean {
+  return typeof value === "string" && PM2_NAME_RE.test(value)
+}
+
+/** Deploy komutu `panel` kullanıcısı olarak `bash -lc` ile çalışır (bkz.
+ * src/lib/deploy.ts) — shell sözdizimi serbest; yalnızca uzunluk ve kontrol
+ * karakterleri sınırlanır. Yalnızca SUPER_ADMIN ayarlayabilir (bkz. PATCH /api/sites/[id]). */
+export function isValidDeployCommand(value: string): boolean {
+  return typeof value === "string" && value.length >= 1 && value.length <= 500 && !/[\0\r]/.test(value)
 }
 
 /** `example.com` -> `example-com`, the same transform `provision-site.sh` uses for systemd unit names. */
@@ -180,6 +194,9 @@ export interface CreateVhostDockerParams {
   workingDir: string
   composeService?: string
   linuxUser?: string
+  /** false: örnek docker-compose.yml yazma ve otomatik `up` yapma (sihirbazda
+   * bir depo seçildi, gerçek compose dosyası klonlanacak). Varsayılan true. */
+  bootstrap?: boolean
 }
 
 export type CreateVhostParams =
@@ -314,16 +331,20 @@ export async function createVhost(params: CreateVhostParams): Promise<void> {
       if (!isValidAbsolutePath(params.workingDir)) {
         throw new ProvisionError(`Geçersiz çalışma dizini: ${params.workingDir}`)
       }
-      await runProvisionScript([
-        "create-vhost",
-        params.domain,
-        "DOCKER",
-        www,
-        String(params.port),
-        params.workingDir,
-        params.composeService ?? "",
-        params.linuxUser ?? "",
-      ])
+      await runProvisionScript(
+        [
+          "create-vhost",
+          params.domain,
+          "DOCKER",
+          www,
+          String(params.port),
+          params.workingDir,
+          params.composeService ?? "",
+          params.linuxUser ?? "",
+          params.bootstrap === false ? "false" : "true",
+        ],
+        DOCKER_TIMEOUT_MS
+      )
       return
     }
   }
@@ -420,10 +441,20 @@ export async function createService(params: {
 // çağrının aynısı, ama var olan (bu değişiklikten ÖNCE oluşturulmuş) bir
 // site için elle/geriye dönük tetiklenebilir (bkz. /api/sites/[id]/ensure-terminal-user).
 // ------------------------------------------------------------
+export type SiteUserModel = "shared" | "owned"
+
+/**
+ * `model`: "shared" — Node.js/Python/Ters Proxy/Docker (klasör panel'de, grup
+ * erişimi); "owned" — Static/PHP/WordPress (klasör kullanıcıya ait, panel/nginx
+ * ACL ile; `phpVersion` verilirse site başına PHP-FPM havuzu da kurulur ve
+ * vhost o sokete çevrilir — bkz. provision-site.sh cmd_ensure_site_user).
+ */
 export async function ensureSiteUser(
   domain: string,
   workdir: string,
-  linuxUser: string
+  linuxUser: string,
+  model: SiteUserModel = "shared",
+  phpVersion?: string
 ): Promise<void> {
   requireDomain(domain)
   if (!isValidAbsolutePath(workdir)) {
@@ -432,7 +463,67 @@ export async function ensureSiteUser(
   if (!isValidLinuxUsername(linuxUser)) {
     throw new ProvisionError(`Geçersiz linux kullanıcı adı: ${linuxUser}`)
   }
-  await runProvisionScript(["ensure-site-user", domain, workdir, linuxUser])
+  if (phpVersion && !isValidPhpVersion(phpVersion)) {
+    throw new ProvisionError(`Geçersiz PHP sürümü: ${phpVersion}`)
+  }
+  const args = ["ensure-site-user", domain, workdir, linuxUser, model]
+  if (phpVersion) args.push(phpVersion)
+  await runProvisionScript(args, DEFAULT_TIMEOUT_MS * 2)
+}
+
+/**
+ * Site silinirken artıkları kaldırır (2026-09-15 denetimi: eskiden yalnızca
+ * vhost + systemd birimi kaldırılıyor; klasör, dedicated kullanıcı, compose
+ * konteynerleri — dolayısıyla meşgul portlar — geride kalıyordu). Compose
+ * konteynerleri ve PHP-FPM havuzu her zaman kaldırılır; klasör ve kullanıcı
+ * seçeneğe bağlı (bkz. DELETE /api/sites/[id]).
+ */
+export async function cleanupSite(params: {
+  domain: string
+  workdir: string
+  linuxUser?: string | null
+  removeFolder: boolean
+  removeUser: boolean
+}): Promise<void> {
+  requireDomain(params.domain)
+  if (!isValidSiteRoot(params.workdir)) {
+    throw new ProvisionError(`Geçersiz çalışma dizini: ${params.workdir}`)
+  }
+  const user = params.linuxUser?.trim() || ""
+  if (user && !isValidLinuxUsername(user)) {
+    throw new ProvisionError(`Geçersiz linux kullanıcı adı: ${user}`)
+  }
+  await runProvisionScript(
+    [
+      "cleanup-site",
+      params.domain,
+      params.workdir,
+      user || "-",
+      params.removeFolder ? "true" : "false",
+      params.removeUser ? "true" : "false",
+    ],
+    CLEANUP_TIMEOUT_MS
+  )
+}
+
+/** Root'un pm2 daemon'ında bir süreç üzerinde eylem (bkz. provision-site.sh pm2-action). */
+export type Pm2Action = "start" | "stop" | "restart" | "reload" | "delete" | "describe"
+
+export async function pm2Action(domain: string, processName: string, action: Pm2Action): Promise<string> {
+  requireDomain(domain)
+  if (!isValidPm2Name(processName)) {
+    throw new ProvisionError(`Geçersiz PM2 süreç adı: ${processName}`)
+  }
+  if (!["start", "stop", "restart", "reload", "delete", "describe"].includes(action)) {
+    throw new ProvisionError(`Geçersiz pm2 eylemi: ${action}`)
+  }
+  const { stdout } = await runProvisionScript(["pm2-action", domain, processName, action], 60_000)
+  return stdout
+}
+
+/** Nginx real_ip için Cloudflare IP aralıklarını yeniler (Ayarlar → Cloudflare). */
+export async function refreshCloudflareIps(): Promise<void> {
+  await runProvisionScript(["refresh-cloudflare-ips"], 60_000)
 }
 
 /** `site_<slug>` — Node.js/Python/Ters Proxy/Docker siteleri için otomatik
@@ -496,30 +587,4 @@ export async function createWpDb(params: {
     ["create-wp-db", params.domain, params.dbName, params.dbUser, params.dbPassword],
     WORDPRESS_TIMEOUT_MS
   )
-}
-
-// ------------------------------------------------------------
-// Docker Compose yönetimi (docker site türü)
-// ------------------------------------------------------------
-export type DockerComposeAction = "up" | "down" | "restart" | "pull"
-
-export async function dockerComposeAction(
-  domain: string,
-  action: DockerComposeAction,
-  composeService?: string
-): Promise<void> {
-  requireDomain(domain)
-  if (!["up", "down", "restart", "pull"].includes(action)) {
-    throw new ProvisionError(`Geçersiz docker-compose eylemi: ${action}`)
-  }
-  const args = ["docker-action", domain, action]
-  if (composeService) args.push(composeService)
-  await runProvisionScript(args)
-}
-
-export async function dockerComposeLogs(domain: string, lines: number): Promise<string> {
-  requireDomain(domain)
-  const safeLines = Number.isInteger(lines) && lines >= 1 && lines <= 2000 ? lines : 200
-  const { stdout } = await runProvisionScript(["docker-logs", domain, String(safeLines)])
-  return stdout
 }

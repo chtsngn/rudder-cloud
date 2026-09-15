@@ -64,6 +64,7 @@ export const config = {
     "/terminal/:path*",
     "/users/:path*",
     "/audit/:path*",
+    "/preferences/:path*",
     "/login",
     "/api/system/:path*",
     "/api/terminal/:path*",

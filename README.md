@@ -1,8 +1,9 @@
 # Rudder Cloud
 
 **Rudder Cloud** is a self-hosted server management panel, in the spirit of CloudPanel
-but with a broader feature set: site provisioning, Git-based deployments, a built-in
-file manager, database backups, GitHub key management, a web terminal, and full
+but with a broader feature set: site provisioning, a Git-based deploy pipeline
+(pull → build → restart, Docker Compose aware), a built-in file manager, database
+backups, deploy hooks and GitHub App push webhooks, a web terminal, and full
 user/role-based access control — all from a single dashboard on your own server.
 
 It ships as one Next.js application (no separate backend service to run or deploy)
@@ -18,24 +19,33 @@ and installs itself onto a plain Ubuntu/Debian box with a single script.
 - **Port viewer** — see every listening TCP port on the server (plus Docker container
   ports when Docker is present), matched against the sites you manage, with free-port
   suggestions for new deployments.
-- **Git-based deployments** — point a Node.js/Python site at a Git repo and branch;
-  pull manually or on an interval, then restart via systemd, Docker Compose, PM2, or a
-  custom script — only when the deployed commit actually changed.
+- **Deploy pipeline** — connect a Node.js/Python/reverse-proxy/Docker site to a
+  repository (GitHub App, or any git address with a per-site SSH deploy key) and the
+  panel runs `pull → deploy command → restart`: the deploy command is yours (e.g.
+  `npm ci && npm run build`), the restart is systemd, `docker compose up -d --build`,
+  PM2 (root daemon) or a custom script. Triggered manually, by polling, by a per-site
+  **deploy hook URL** (one `POST` from any CI) or instantly by the GitHub App's
+  **push webhook**.
+- **Real process status** — systemd / `docker compose ps` / pm2 state, memory usage,
+  and whether anything is actually listening on the proxy target (no more "Active"
+  while visitors get a 502). Compose sites get up/down/restart/rebuild/pull controls
+  and live `docker compose logs`.
 - **File manager** — browse, edit (Monaco editor), upload/download, zip, and manage a
   site's own directory, plus one-click `.env` setup from `.env.example`. Path
   traversal and symlink escapes are blocked at the filesystem layer.
 - **Database backups** — detects PostgreSQL, MySQL/MariaDB (including WordPress'
   `wp-config.php`), and MongoDB automatically; runs scheduled, compressed dumps with
   configurable retention and optional upload to S3-compatible storage.
-- **GitHub key management** — generate a read-only deploy key for a site (for
-  `git pull`) or an Actions key (for CI to SSH into the server), without ever storing
-  a private key in the database.
+- **SSL with a DNS pre-check** — before calling certbot the panel resolves the domain
+  and tells you whether it points at this server (Cloudflare proxying is recognised),
+  instead of surfacing a raw ACME failure minutes later. Cloudflare real-visitor-IP
+  ranges can be installed into Nginx from Settings.
 - **Web terminal** — a real PTY in the browser (xterm.js + node-pty), running as the
   unprivileged panel user, restricted to super admins.
 - **Users, roles & audit log** — invite team members as `MEMBER`s and grant them
   per-site permissions (view, edit files, restart, delete, manage backups, manage
-  deploy keys); `SUPER_ADMIN`s have full access. Every sensitive action is recorded
-  in an audit log.
+  deploy keys and hooks, terminal); `SUPER_ADMIN`s have full access. Every sensitive
+  action is recorded in an audit log.
 
 ## Site types supported
 
@@ -46,7 +56,8 @@ and installs itself onto a plain Ubuntu/Debian box with a single script.
 | Node.js | Nginx reverse proxy, dedicated systemd service |
 | Python | Nginx reverse proxy, dedicated systemd service |
 | Static | Nginx vhost serving a directory |
-| Reverse proxy | Nginx reverse proxy to an arbitrary upstream URL |
+| Reverse proxy | Nginx reverse proxy to an arbitrary upstream URL (+ site folder for git/compose) |
+| Docker | Nginx reverse proxy to a port published by a Docker Compose project in the site folder |
 
 All types optionally get a domain, `www` alias, and SSL certificate via Certbot.
 
@@ -147,8 +158,9 @@ lint` should be clean before committing.
   interpolation) — nothing else is granted broader sudo access.
 - Session cookies carry only a user ID; roles and permissions are read fresh from the
   database on every request, so a demoted or deleted user loses access immediately.
-- Secrets (S3 credentials) are encrypted at rest with AES-256-GCM; deploy/Actions
-  private keys are never written to the database.
+- Secrets (S3 credentials, GitHub App keys) are encrypted at rest with AES-256-GCM; SSH
+  deploy keys stay on disk (0600) and deploy-hook tokens are stored only as SHA-256
+  hashes — neither ever appears in the database in the clear.
 
 ## Documentation
 

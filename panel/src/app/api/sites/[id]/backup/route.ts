@@ -26,6 +26,8 @@ function toPublicDetected(detected: DetectedDatabase) {
     port: detected.port,
     database: detected.database,
     source: detected.source,
+    // Compose servisindeki veritabanı: dump konteyner içinden alınır (bkz. backup.ts createComposeDump).
+    composeService: detected.composeService ?? null,
   }
 }
 

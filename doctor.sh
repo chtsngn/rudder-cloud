@@ -101,6 +101,7 @@ check_cmd curl "curl"
 check_cmd rsync "rsync"
 check_cmd unzip "unzip"
 check_cmd nginx "nginx"
+check_cmd setfacl "acl (setfacl — Static/PHP/WordPress site dosyalarında panel/nginx erişimi için)"
 
 hr
 info "Node.js kontrol ediliyor..."
@@ -214,6 +215,12 @@ if [[ "${#MISSING[@]}" -gt 0 ]]; then
         info "${item} kuruluyor..."
         DEBIAN_FRONTEND=noninteractive apt-get install -y "$item"
         msg "${item} kuruldu."
+        ;;
+      setfacl)
+        apt_update_once
+        info "acl kuruluyor (setfacl)..."
+        DEBIAN_FRONTEND=noninteractive apt-get install -y acl
+        msg "acl kuruldu."
         ;;
       nodejs)
         info "Node.js 20 LTS kuruluyor (NodeSource)..."
@@ -445,6 +452,29 @@ fi
 #    dahi otomatik onaylanmaz.
 # ------------------------------------------------------------
 hr
+if ! command -v docker >/dev/null 2>&1; then
+  # Docker kurulu değil — CloudPanel-tarzı akışın (git clone + docker compose)
+  # çalışması için gerekli. Sistem düzeyinde büyük bir kurulum olduğu için
+  # yalnızca etkileşimli çalıştırmada SORULUR (--yes ile otomatik kurulMAZ;
+  # panel içi güncelleme etkileşimsiz çalışır ve buraya hiç uğramaz).
+  if [[ -t 0 ]]; then
+    warn "Docker bulunamadı — Docker/Compose ile deploy edilen siteler için gerekli."
+    read -r -p "Docker (Engine + Compose eklentisi) get.docker.com betiğiyle kurulsun mu? [e/H]: " ANS
+    if [[ "${ANS}" =~ ^[Ee]$ ]]; then
+      info "Docker kuruluyor (https://get.docker.com)..."
+      if curl -fsSL https://get.docker.com | sh; then
+        systemctl enable --now docker >/dev/null 2>&1 || true
+        msg "Docker kuruldu: $(docker --version 2>/dev/null || echo '?')"
+      else
+        warn "Docker kurulumu başarısız oldu — elle kurun: https://docs.docker.com/engine/install/"
+      fi
+    else
+      info "Docker kurulumu atlandı. İstersen sonra: curl -fsSL https://get.docker.com | sh"
+    fi
+  else
+    info "Docker bulunamadı (etkileşimsiz çalıştırma — kurulum sorusu atlandı). Docker/Compose siteleri için: curl -fsSL https://get.docker.com | sh"
+  fi
+fi
 if command -v docker >/dev/null 2>&1; then
   if id -nG "${PANEL_USER}" 2>/dev/null | grep -qw docker; then
     msg "${PANEL_USER} kullanıcısı zaten docker grubunda."
@@ -469,8 +499,6 @@ if command -v docker >/dev/null 2>&1; then
       warn "Atlandı — DOCKER_COMPOSE tipi restart bu sunucuda çalışmayacak (manuel/CUSTOM_SCRIPT ile yönetilebilir)."
     fi
   fi
-else
-  info "Docker bulunamadı — DOCKER_COMPOSE restart desteği atlanıyor (kurulum gerekmiyor, opsiyonel)."
 fi
 
 # ------------------------------------------------------------

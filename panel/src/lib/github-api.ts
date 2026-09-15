@@ -10,6 +10,8 @@
  * istenmediği için GitHub her zaman "Resource not accessible by integration"
  * ile reddediyordu (bkz. docs/ARCHITECTURE.md).
  */
+import { APP_VERSION } from "@/lib/version"
+
 export const GITHUB_API_BASE = "https://api.github.com"
 export const GITHUB_API_VERSION = "2022-11-28"
-export const USER_AGENT = "Rudder-Cloud-Panel/1.2.4"
+export const USER_AGENT = `Rudder-Cloud-Panel/${APP_VERSION.replace(/^v/, "")}`

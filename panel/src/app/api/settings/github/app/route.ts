@@ -1,7 +1,9 @@
+import { headers } from "next/headers"
 import { NextResponse } from "next/server"
 
 import { logAudit } from "@/lib/audit"
 import { getSession } from "@/lib/auth"
+import { getWebhookSecret, resolveRequestOrigin, setWebhookSecret } from "@/lib/github-app"
 import { isSuperAdmin } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 
@@ -27,12 +29,17 @@ export async function GET() {
     include: { installations: { orderBy: { createdAt: "asc" } } },
   })
 
+  const origin = resolveRequestOrigin(await headers()) ?? ""
+  const webhookUrl = `${origin}/api/hooks/github`
+
   if (!config) {
-    return NextResponse.json({ configured: false, app: null, installations: [] })
+    return NextResponse.json({ configured: false, app: null, installations: [], webhookUrl, webhookSecretConfigured: false })
   }
 
   return NextResponse.json({
     configured: true,
+    webhookUrl,
+    webhookSecretConfigured: (await getWebhookSecret()).length > 0,
     app: {
       slug: config.slug,
       name: config.name,
@@ -80,5 +87,35 @@ export async function DELETE() {
     detail: `GitHub App bağlantısı panelden kaldırıldı: ${existing.slug}`,
   })
 
+  return NextResponse.json({ ok: true })
+}
+
+/**
+ * `PATCH /api/settings/github/app` — body: { webhookSecret } — push webhook'u
+ * için secret'ı elle ayarlar (manifest akışı webhook'suz oluşturulmuş eski
+ * App'ler için: GitHub → App ayarları → Webhook URL + secret girildikten sonra
+ * aynı secret buraya yazılır).
+ */
+export async function PATCH(request: Request) {
+  const session = await getSession()
+  if (!session || !(await isSuperAdmin(session.userId))) {
+    return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 })
+  }
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 })
+  }
+  const secret = typeof (body as Record<string, unknown>)?.webhookSecret === "string" ? ((body as Record<string, string>).webhookSecret).trim() : ""
+  if (secret.length < 8 || secret.length > 200) {
+    return NextResponse.json({ error: "Webhook secret 8-200 karakter olmalı." }, { status: 400 })
+  }
+  try {
+    await setWebhookSecret(secret)
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Kaydedilemedi." }, { status: 400 })
+  }
+  void logAudit({ userId: session.userId, action: "GITHUB_WEBHOOK_SECRET_SET", targetType: "GITHUB_APP" })
   return NextResponse.json({ ok: true })
 }

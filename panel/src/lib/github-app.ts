@@ -104,6 +104,8 @@ export interface GitHubAppManifest {
   public: boolean
   default_permissions: Record<string, "read" | "write">
   default_events: string[]
+  /** Push webhook'u (bkz. src/lib/github-webhook.ts, /api/hooks/github). */
+  hook_attributes?: { url: string; active: boolean }
 }
 
 /** `origin`: panelin admin'in tarayıcısından erişildiği taban adres (ör. `https://panel.example.com` veya `http://1.2.3.4:24428`). */
@@ -116,11 +118,17 @@ export function buildManifest(origin: string): GitHubAppManifest {
     callback_urls: [`${origin}/api/settings/github/app/callback`],
     setup_url: `${origin}/api/settings/github/app/setup`,
     public: false,
+    // `contents: read` — panel yalnızca klon/pull yapar, depoya hiç yazmaz
+    // (2026-09-15: eskiden gereksiz yere "write" isteniyordu).
     default_permissions: {
-      contents: "write",
+      contents: "read",
       metadata: "read",
     },
-    default_events: [],
+    // Push olayları → /api/hooks/github (anında deploy; polling yedek kalır).
+    // GitHub, webhook'u IP:24428 gibi adreslere de teslim edebilir; panel
+    // dışarıdan erişilemiyorsa teslimatlar başarısız olur ama App yine çalışır.
+    default_events: ["push"],
+    hook_attributes: { url: `${origin}/api/hooks/github`, active: true },
   }
 }
 
@@ -306,6 +314,27 @@ export async function fetchInstallationDetails(installationId: string): Promise<
     accountAvatarUrl: data.account?.avatar_url ?? "",
     accountType: data.account?.type ?? "User",
     repositorySelection: data.repository_selection,
+  }
+}
+
+/** Ayarlar'dan elle girilen webhook secret'ı (manifest akışından ÖNCE oluşturulmuş
+ * App'ler için — GitHub o App'lerde secret döndürmemişti). Şifreli saklanır. */
+export async function setWebhookSecret(secret: string): Promise<void> {
+  await getAppConfigOrThrow()
+  await prisma.gitHubAppConfig.update({
+    where: { id: "panel" },
+    data: { webhookSecretEnc: encryptSecret(secret) },
+  })
+}
+
+/** Webhook imzasını doğrulamak için düz secret (boş string = hiç ayarlanmamış). */
+export async function getWebhookSecret(): Promise<string> {
+  const config = await prisma.gitHubAppConfig.findUnique({ where: { id: "panel" } })
+  if (!config) return ""
+  try {
+    return decryptSecret(config.webhookSecretEnc)
+  } catch {
+    return ""
   }
 }
 
