@@ -49,7 +49,7 @@ export function SystemUpdateModal({
   onOpenChange,
   versionData,
 }: SystemUpdateModalProps) {
-  const { data: hookData } = useSystemVersion()
+  const { data: hookData, checkUpdate, checking } = useSystemVersion()
   const data = versionData || hookData
 
   const [phase, setPhase] = useState<Phase>("idle")
@@ -117,6 +117,16 @@ export function SystemUpdateModal({
     }
   }, [phase])
 
+  // Modal açılınca sürüm bilgisini GitHub'dan TAZE al (önbelleği atla) —
+  // panel yeni sürüme geçtikten hemen sonra bayat "son sürüm" gösterilmesin.
+  useEffect(() => {
+    if (!open) return
+    const timer = setTimeout(() => {
+      void checkUpdate(true)
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [open, checkUpdate])
+
   // Modal açıldığında zaten süren bir güncelleme varsa (başka sekmeden
   // başlatılmış, ya da sayfa yenilendi) ona bağlan.
   useEffect(() => {
@@ -146,8 +156,10 @@ export function SystemUpdateModal({
   if (!open || !data) return null
 
   const busy = phase === "starting" || phase === "running"
+  const upToDate = !data.hasUpdate
 
   const handleStartUpdate = async () => {
+    if (upToDate) return
     setPhase("starting")
     setError(null)
     setLog("")
@@ -209,28 +221,43 @@ export function SystemUpdateModal({
         {/* Modal Gövdesi */}
         <div className="p-5 sm:p-6 space-y-5 max-h-[75vh] overflow-y-auto">
           {/* Sürüm Karşılaştırma Bandı */}
-          <div className="flex items-center justify-between p-4 rounded-2xl border border-sky-500/20 bg-sky-500/[0.04] dark:bg-sky-500/[0.08]">
-            <div>
-              <span className="text-[11px] font-mono text-slate-400 block mb-1">Mevcut Sürüm</span>
-              <span className="text-sm sm:text-base font-bold text-slate-700 dark:text-slate-300 font-mono">
-                {data.currentVersion}
-              </span>
+          {upToDate ? (
+            <div className="flex items-center gap-3 p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.05] dark:bg-emerald-500/[0.08]">
+              <div className="size-8 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="size-5" />
+              </div>
+              <div>
+                <span className="text-sm font-bold text-slate-800 dark:text-slate-200">Sisteminiz güncel</span>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+                  Mevcut: {data.currentVersion} · GitHub&apos;daki son sürüm: {data.latestVersion}
+                  {data.error ? ` · ${data.error}` : ""}
+                </p>
+              </div>
             </div>
+          ) : (
+            <div className="flex items-center justify-between p-4 rounded-2xl border border-sky-500/20 bg-sky-500/[0.04] dark:bg-sky-500/[0.08]">
+              <div>
+                <span className="text-[11px] font-mono text-slate-400 block mb-1">Mevcut Sürüm</span>
+                <span className="text-sm sm:text-base font-bold text-slate-700 dark:text-slate-300 font-mono">
+                  {data.currentVersion}
+                </span>
+              </div>
 
-            <div className="size-8 rounded-full bg-sky-500/10 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center">
-              <ArrowUpCircle className="size-5" />
-            </div>
+              <div className="size-8 rounded-full bg-sky-500/10 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                <ArrowUpCircle className="size-5" />
+              </div>
 
-            <div className="text-right">
-              <span className="text-[11px] font-mono text-emerald-500 block mb-1">Yeni Sürüm (GitHub)</span>
-              <span className="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                {data.latestVersion}
-              </span>
+              <div className="text-right">
+                <span className="text-[11px] font-mono text-emerald-500 block mb-1">Yeni Sürüm (GitHub)</span>
+                <span className="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                  {data.latestVersion}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Sürüm Notları (Changelog) */}
-          {phase === "idle" && (
+          {phase === "idle" && !upToDate && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
@@ -317,6 +344,18 @@ export function SystemUpdateModal({
             Kapat
           </Button>
 
+          {phase === "idle" && upToDate ? (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={checking}
+              onClick={() => void checkUpdate(true)}
+              className="rounded-xl text-xs font-semibold px-4 cursor-pointer flex items-center gap-2"
+            >
+              <RefreshCw className={`size-3.5 ${checking ? "animate-spin" : ""}`} />
+              {checking ? "Denetleniyor..." : "Güncellemeleri Denetle"}
+            </Button>
+          ) : (
           <Button
             size="sm"
             onClick={handleStartUpdate}
@@ -345,6 +384,7 @@ export function SystemUpdateModal({
               </>
             )}
           </Button>
+          )}
         </div>
       </div>
     </div>

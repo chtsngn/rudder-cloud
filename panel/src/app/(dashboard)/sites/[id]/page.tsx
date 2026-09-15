@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { createPortal } from "react-dom"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -33,6 +33,8 @@ import { SiteBackupCard } from "@/components/site-backup-card"
 import { SiteDeployHookCard } from "@/components/site-deploy-hook-card"
 import { SiteGitCard } from "@/components/site-git-card"
 import { SiteProcessCard } from "@/components/site-process-card"
+import { SiteFileEditor } from "@/components/site-file-editor"
+import { SiteFileManager } from "@/components/site-file-manager"
 import { SITE_TYPES, type Site, type SiteType } from "@/lib/mock-data"
 import { apiSiteToUiSite, GIT_CAPABLE_DB_TYPES, sitePortFromConfig, type ApiSite } from "@/lib/site-adapter"
 import { useTranslation } from "@/components/language-provider"
@@ -48,7 +50,12 @@ const STATUS_CONFIG: Record<Site["status"], { label: string; dot: string; badge:
   error: { label: "Hata", dot: "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]", badge: "bg-red-50 text-red-700 border-red-200/80" },
 }
 
-type ActiveTab = "overview" | "git" | "backups" | "access" | "logs"
+type ActiveTab = "overview" | "git" | "files" | "backups" | "access" | "logs"
+const TAB_IDS: ActiveTab[] = ["overview", "git", "files", "backups", "access", "logs"]
+
+function parentDirOf(filePath: string): string {
+  return filePath.split("/").slice(0, -1).join("/")
+}
 
 interface DnsCheck {
   ok: boolean
@@ -89,6 +96,8 @@ export default function SiteDetailPage() {
   const { t, lang } = useTranslation()
   const params = useParams<{ id: string }>()
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { openDock } = useTerminalDock()
   const { user: me } = useCurrentUser()
   const isSuperAdmin = me?.role === "SUPER_ADMIN"
@@ -96,7 +105,14 @@ export default function SiteDetailPage() {
   const [api, setApi] = useState<ApiSite | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [activeTab, setActiveTab] = useState<ActiveTab>("overview")
+  // Sekme ve dosya durumu URL'de (?tab=files&dir=... / &file=...) — yenileme
+  // ve geri tuşu aynı yere döner, eski /files bağlantıları buraya yönlenir.
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    const tab = searchParams.get("tab") ?? ""
+    return (TAB_IDS as string[]).includes(tab) ? (tab as ActiveTab) : "overview"
+  })
+  const [filesDir, setFilesDir] = useState(() => searchParams.get("dir") ?? "")
+  const [editingFile, setEditingFile] = useState<string | null>(() => searchParams.get("file"))
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteRemoveFolder, setDeleteRemoveFolder] = useState(false)
@@ -121,6 +137,33 @@ export default function SiteDetailPage() {
   const [appSaving, setAppSaving] = useState(false)
   const [appSaveError, setAppSaveError] = useState<string | null>(null)
   const [appSaveOk, setAppSaveOk] = useState(false)
+
+  function syncUrl(next: { tab: ActiveTab; dir?: string; file?: string | null }) {
+    const qs = new URLSearchParams()
+    if (next.tab !== "overview") qs.set("tab", next.tab)
+    if (next.tab === "files") {
+      if (next.file) qs.set("file", next.file)
+      else if (next.dir) qs.set("dir", next.dir)
+    }
+    const query = qs.toString()
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
+  }
+
+  function selectTab(tab: ActiveTab) {
+    setActiveTab(tab)
+    syncUrl({ tab, dir: filesDir, file: tab === "files" ? editingFile : null })
+  }
+
+  function openFile(filePath: string) {
+    setEditingFile(filePath)
+    syncUrl({ tab: "files", file: filePath })
+  }
+
+  function openFilesDir(dir: string) {
+    setEditingFile(null)
+    setFilesDir(dir)
+    syncUrl({ tab: "files", dir })
+  }
 
   const applySite = useCallback((data: ApiSite) => {
     setApi(data)
@@ -463,20 +506,20 @@ export default function SiteDetailPage() {
 
       {/* ═══ 2. SEKMELER ═══ */}
       <div className="flex items-center gap-1.5 border-b border-border pb-px overflow-x-auto no-scrollbar">
-        <button type="button" onClick={() => setActiveTab("overview")} className={tabBtn(activeTab === "overview")}>
+        <button type="button" onClick={() => selectTab("overview")} className={tabBtn(activeTab === "overview")}>
           <Settings2 className={tabIcon(activeTab === "overview")} />
           {t("sites.tabs.overview")}
         </button>
         {gitCapable && (
-          <button type="button" onClick={() => setActiveTab("git")} className={tabBtn(activeTab === "git")}>
+          <button type="button" onClick={() => selectTab("git")} className={tabBtn(activeTab === "git")}>
             <GitBranch className={tabIcon(activeTab === "git")} />
             {t("sites.tabs.git")}
           </button>
         )}
-        <Link href={`/sites/${site.id}/files`} className={tabBtn(false)}>
-          <FolderOpen className={tabIcon(false)} />
+        <button type="button" onClick={() => selectTab("files")} className={tabBtn(activeTab === "files")}>
+          <FolderOpen className={tabIcon(activeTab === "files")} />
           {t("sites.filesBtn")}
-        </Link>
+        </button>
         <button
           type="button"
           onClick={() => openDock({ id: site.id, promptUser: isSuperAdmin ? "root" : (linuxUser ?? "root") })}
@@ -485,16 +528,16 @@ export default function SiteDetailPage() {
           <Terminal className={tabIcon(false)} />
           Terminal
         </button>
-        <button type="button" onClick={() => setActiveTab("backups")} className={tabBtn(activeTab === "backups")}>
+        <button type="button" onClick={() => selectTab("backups")} className={tabBtn(activeTab === "backups")}>
           <Database className={tabIcon(activeTab === "backups")} />
           {t("sites.tabs.backups")}
         </button>
-        <button type="button" onClick={() => setActiveTab("access")} className={tabBtn(activeTab === "access")}>
+        <button type="button" onClick={() => selectTab("access")} className={tabBtn(activeTab === "access")}>
           <Users className={tabIcon(activeTab === "access")} />
           {t("sites.tabs.access")}
         </button>
         {showLogsTab && (
-          <button type="button" onClick={() => setActiveTab("logs")} className={tabBtn(activeTab === "logs")}>
+          <button type="button" onClick={() => selectTab("logs")} className={tabBtn(activeTab === "logs")}>
             <Terminal className={tabIcon(activeTab === "logs")} />
             {t("sites.tabs.logs")}
           </button>
@@ -583,6 +626,26 @@ export default function SiteDetailPage() {
         <div className="space-y-6">
           <SiteGitCard site={api} isSuperAdmin={isSuperAdmin} onSiteUpdate={applySite} />
           <SiteDeployHookCard siteId={api.id} githubConnected={!!api.githubRepoFullName} />
+        </div>
+      )}
+
+      {/* ═══ DOSYALAR — yönetici ve editör sekmenin içinde ═══ */}
+      {activeTab === "files" && (
+        <div className="space-y-6">
+          {editingFile ? (
+            <SiteFileEditor key={editingFile} siteId={api.id} path={editingFile} onBack={() => openFilesDir(parentDirOf(editingFile))} />
+          ) : (
+            <SiteFileManager
+              key={filesDir}
+              siteId={api.id}
+              initialPath={filesDir}
+              onOpenFile={openFile}
+              onPathChange={(dir) => {
+                setFilesDir(dir)
+                syncUrl({ tab: "files", dir })
+              }}
+            />
+          )}
         </div>
       )}
 

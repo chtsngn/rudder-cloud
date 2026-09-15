@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server"
 import { execFileSync } from "node:child_process"
 import { getSession } from "@/lib/auth"
-import { APP_VERSION } from "@/lib/version"
+import { APP_VERSION, compareSemver, GITHUB_REPO, RELEASE_TAG_RE } from "@/lib/version"
 import { resolveSourceDir } from "@/lib/self-update"
 
-export const CURRENT_VERSION = APP_VERSION
-export const GITHUB_REPO = "chtsngn/rudder-cloud"
+const CURRENT_VERSION = APP_VERSION
+// GitHub'a çıkar, git çalıştırır — Node runtime.
+export const runtime = "nodejs"
 
 interface GitHubRelease {
   tag_name: string
@@ -27,35 +28,68 @@ interface VersionResponse {
   githubUrl: string
   gitInfo: { commit: string; branch: string } | null
   checkedAt: string
+  error?: string
 }
 
-let cachedRelease: {
-  data: VersionResponse
-  timestamp: number
-} | null = null
+/**
+ * Yalnızca SÜREÇ İÇİ önbellek (2026-09-15 düzeltmesi): eskiden GitHub isteği
+ * Next'in KALICI fetch önbelleğiyle (`next: { revalidate: 300 }`, diskte
+ * `.next/cache`) yapılıyordu — panel yeni sürüme geçip yeniden başlasa bile
+ * eski "latest" yanıtı 5 dakika daha servis ediliyor, arayüz v1.3.1'deyken
+ * v1.3.0'ı "yeni sürüm" diye gösteriyordu. Artık `cache: "no-store"`; bu
+ * bellek önbelleği de süreçle birlikte sıfırlanır, `?force=true` atlar.
+ */
+let cachedRelease: { data: Omit<VersionResponse, "currentVersion" | "gitInfo">; timestamp: number } | null = null
+const CACHE_TTL_MS = 5 * 60 * 1000
 
-const CACHE_TTL_MS = 5 * 60 * 1000 // 5 dakika önbellek
+function githubHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github.v3+json",
+    "User-Agent": `Rudder-Cloud-Panel/${CURRENT_VERSION.replace(/^v/, "")}`,
+  }
+  if (process.env.GITHUB_TOKEN) headers["Authorization"] = `Bearer ${process.env.GITHUB_TOKEN}`
+  return headers
+}
 
-function compareSemver(v1: string, v2: string): number {
-  const clean = (v: string) =>
-    v
-      .replace(/^v/, "")
-      .split(".")
-      .map((n) => parseInt(n, 10) || 0)
-  const [maj1 = 0, min1 = 0, pat1 = 0] = clean(v1)
-  const [maj2 = 0, min2 = 0, pat2 = 0] = clean(v2)
-  if (maj1 !== maj2) return maj1 - maj2
-  if (min1 !== min2) return min1 - min2
-  return pat1 - pat2
+/**
+ * En yüksek sürüm numaralı, taslak/ön-sürüm olmayan release. `/releases/latest`
+ * "en son OLUŞTURULAN" release'i döner ve "Latest" işareti elle değiştirilebilir
+ * — sürüm sırası için semver karşılaştırması güvenilir olan. Liste alınamazsa
+ * `/releases/latest`'e düşülür.
+ */
+async function fetchLatestRelease(): Promise<GitHubRelease | null> {
+  const headers = githubHeaders()
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=30`, {
+      headers,
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    })
+    if (res.ok) {
+      const list = (await res.json()) as GitHubRelease[]
+      const candidates = list
+        .filter((r) => !r.draft && !r.prerelease && RELEASE_TAG_RE.test(r.tag_name))
+        .sort((a, b) => compareSemver(b.tag_name, a.tag_name))
+      if (candidates[0]) return candidates[0]
+    }
+  } catch {
+    // aşağıdaki fallback
+  }
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
+    headers,
+    cache: "no-store",
+    signal: AbortSignal.timeout(8000),
+  })
+  if (!res.ok) return null
+  return (await res.json()) as GitHubRelease
 }
 
 /**
  * Kurulu kodun git bilgisi. Panel bir rsync kopyasında (.git YOK) çalıştığı
  * için cwd'de değil, KAYNAK KLONDA sorgulanır (bkz. lib/self-update.ts).
- * Kaynak klon root'a ait; git "dubious ownership" ile reddetmesin diye o
- * çağrıya özel `safe.directory` verilir. Etiket checkout'unda (detached
- * HEAD) dal adı yerine etiket gösterilir. Bulunamazsa null — arayüz "HEAD"
- * yazar; uydurma bir commit gösterilmez.
+ * Klon root'a ait; git "dubious ownership" ile reddetmesin diye o çağrıya
+ * özel `safe.directory` verilir. Etiket checkout'unda dal adı yerine etiket
+ * gösterilir. Bulunamazsa null — arayüz "HEAD" yazar, uydurma commit yok.
  */
 function getLocalGitInfo(): { commit: string; branch: string } | null {
   const sourceDir = resolveSourceDir()
@@ -81,90 +115,60 @@ function getLocalGitInfo(): { commit: string; branch: string } | null {
   }
 }
 
+function upToDateResponse(gitInfo: VersionResponse["gitInfo"], error?: string): VersionResponse {
+  return {
+    currentVersion: CURRENT_VERSION,
+    latestVersion: CURRENT_VERSION,
+    hasUpdate: false,
+    releaseName: CURRENT_VERSION,
+    releaseNotes: error ? "GitHub'a ulaşılamadı; sürüm bilgisi doğrulanamadı." : "Sistem güncel.",
+    publishedAt: new Date().toISOString(),
+    githubUrl: `https://github.com/${GITHUB_REPO}/releases`,
+    gitInfo,
+    checkedAt: new Date().toISOString(),
+    ...(error ? { error } : {}),
+  }
+}
+
 export async function GET(request: Request) {
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ error: "Oturum açmanız gerekiyor." }, { status: 401 })
   }
 
-  const { searchParams } = new URL(request.url)
-  const force = searchParams.get("force") === "true"
+  const force = new URL(request.url).searchParams.get("force") === "true"
   const now = Date.now()
-
   const gitInfo = getLocalGitInfo()
 
-  // Önbellek geçerli mi?
   if (!force && cachedRelease && now - cachedRelease.timestamp < CACHE_TTL_MS) {
-    return NextResponse.json({
-      ...cachedRelease.data,
-      currentVersion: CURRENT_VERSION,
-      gitInfo,
-    })
+    return NextResponse.json({ ...cachedRelease.data, currentVersion: CURRENT_VERSION, gitInfo })
   }
 
   try {
-    const headers: Record<string, string> = {
-      Accept: "application/vnd.github.v3+json",
-      "User-Agent": "Rudder-Cloud-Panel",
-    }
-    if (process.env.GITHUB_TOKEN) {
-      headers["Authorization"] = `Bearer ${process.env.GITHUB_TOKEN}`
+    const release = await fetchLatestRelease()
+    if (!release) {
+      return NextResponse.json(upToDateResponse(gitInfo, "GitHub sürüm listesi alınamadı."))
     }
 
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
-      headers,
-      next: { revalidate: 300 },
-    })
-
-    if (!res.ok) {
-      const fallbackData = {
-        currentVersion: CURRENT_VERSION,
-        latestVersion: CURRENT_VERSION,
-        hasUpdate: false,
-        releaseName: CURRENT_VERSION,
-        releaseNotes: "Sürüm bilgisi kontrol edildi. Sistem güncel.",
-        publishedAt: new Date().toISOString(),
-        githubUrl: `https://github.com/${GITHUB_REPO}`,
-        gitInfo,
-        checkedAt: new Date().toISOString(),
-      }
-      return NextResponse.json(fallbackData)
-    }
-
-    const release: GitHubRelease = await res.json()
-    const latestVersion = release.tag_name || CURRENT_VERSION
+    const latestVersion = release.tag_name
+    // Yalnızca DAHA YENİ bir sürüm "güncelleme"dir; eşit ya da daha eski
+    // (ör. GitHub'daki "latest" işareti eski bir sürümde kalmışsa) değildir.
     const hasUpdate = compareSemver(latestVersion, CURRENT_VERSION) > 0
 
-    const responseData: VersionResponse = {
-      currentVersion: CURRENT_VERSION,
+    const data: Omit<VersionResponse, "currentVersion" | "gitInfo"> = {
       latestVersion,
       hasUpdate,
       releaseName: release.name || release.tag_name,
       releaseNotes: release.body || "Açıklama belirtilmedi.",
       publishedAt: release.published_at,
       githubUrl: release.html_url || `https://github.com/${GITHUB_REPO}/releases`,
-      gitInfo,
       checkedAt: new Date().toISOString(),
     }
-
-    cachedRelease = {
-      data: responseData,
-      timestamp: now,
-    }
-
-    return NextResponse.json(responseData)
+    cachedRelease = { data, timestamp: now }
+    return NextResponse.json({ ...data, currentVersion: CURRENT_VERSION, gitInfo })
   } catch (error) {
-    return NextResponse.json({
-      currentVersion: CURRENT_VERSION,
-      latestVersion: CURRENT_VERSION,
-      hasUpdate: false,
-      releaseName: CURRENT_VERSION,
-      releaseNotes: "GitHub bağlantısı kurulamadı.",
-      publishedAt: new Date().toISOString(),
-      githubUrl: `https://github.com/${GITHUB_REPO}`,
-      gitInfo,
-      checkedAt: new Date().toISOString(),
-      error: error instanceof Error ? error.message : "Bilinmeyen hata",
-    })
+    return NextResponse.json(
+      upToDateResponse(gitInfo, error instanceof Error ? error.message : "GitHub bağlantısı kurulamadı.")
+    )
   }
 }

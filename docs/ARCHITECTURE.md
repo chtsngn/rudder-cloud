@@ -1093,3 +1093,25 @@ durum + upstream erişilebilirliği, compose logları, deploy hook (`?wait=1`), 
 (certbot hiç çağrılmadı), port çakışması 409 + öneri listesi, admin port/komut
 değişikliği (update-upstream + create-service), MEMBER yetki sınırları, admin terminal
 cwd. Gerçek nginx/certbot/ACL/PHP-FPM/`cleanup-site` yolları sunucuda test edilmeli.
+
+### 2026-09-15 güncellemesi (v1.3.2): sürüm kontrolü önbelleği, editör fontu, Dosyalar sekmesi
+
+- **Sürüm kontrolü** (`api/system/version`): GitHub isteği artık `cache: "no-store"` —
+  eski `next: { revalidate: 300 }` Next'in KALICI fetch önbelleğini (diskte
+  `.next/cache`) kullanıyordu; panel v1.3.1'e geçip yeniden başlasa bile bayat
+  "latest = v1.3.0" yanıtı 5 dk servis ediliyor ve modal bunu "yeni sürüm" diye
+  sunuyordu (aslında bir düşürme). Şimdi: release LİSTESİNDEN en yüksek semver
+  (taslak/ön-sürüm hariç) seçilir, `hasUpdate` yalnızca daha yeniyse, modal açılınca
+  `?force=true` ile taze kontrol yapar ve güncel durumda güncelleme butonu yerine
+  "Güncellemeleri Denetle" gösterir; `POST /api/system/update` aynı/daha eski etiketi
+  400 ile reddeder. `compareSemver`/`GITHUB_REPO` `src/lib/version.ts`'e taşındı
+  (route dosyaları yalnızca handler export etmeli).
+- **Monaco editör fontu:** `globals.css`'teki evrensel `!important` tema fontu kuralı
+  editör metnine de sızıyordu (Grenze ile kod; Monaco'nun karakter genişliği ölçümü
+  de bozuluyordu). `.monaco-editor *` kod fontu kuralına eklendi ve aynı yığın
+  (`src/lib/editor-font.ts`) editör seçeneklerinde `fontFamily` olarak verildi —
+  ikisi ayrışırsa imleç kayar.
+- **Dosyalar sekmesi:** dosya yöneticisi (`src/components/site-file-manager.tsx`) ve
+  editör (`src/components/site-file-editor.tsx`) artık site detay sayfasının
+  "Dosyalar" sekmesinin içinde; durum URL'de (`?tab=files&dir=…` / `&file=…`), eski
+  `/sites/[id]/files[/edit]` adresleri sekmeye yönlendirir. Editörde Ctrl/⌘+S kaydeder.

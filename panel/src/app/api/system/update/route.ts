@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import { isSuperAdmin } from "@/lib/permissions"
 import { logAudit } from "@/lib/audit"
+import { APP_VERSION, compareSemver } from "@/lib/version"
 import {
   DEFAULT_SOURCE_DIR,
   isUpdateUnitActive,
@@ -68,6 +69,19 @@ export async function POST(request: Request) {
     typeof body.targetVersion === "string" && body.targetVersion.trim() ? body.targetVersion.trim() : "latest"
   if (!isValidUpdateRef(ref)) {
     return NextResponse.json({ ok: false, error: `Geçersiz sürüm etiketi: ${ref}` }, { status: 400 })
+  }
+  // Aynı ya da DAHA ESKİ bir sürüme "güncelleme" başlatılmaz (2026-09-15: bayat
+  // bir sürüm kontrolü modalda v1.3.1'deyken v1.3.0'ı sunuyordu — bu, migration'ları
+  // geri alamayan bir düşürme olurdu). Bilerek geri dönmek isteyen `install.sh`'ı
+  // elle çalıştırır.
+  if (ref !== "latest") {
+    const target = ref.startsWith("v") ? ref : `v${ref}`
+    if (compareSemver(target, APP_VERSION) <= 0) {
+      return NextResponse.json(
+        { ok: false, error: `${target} mevcut sürümden (${APP_VERSION}) daha yeni değil — güncelleme başlatılmadı.` },
+        { status: 400 }
+      )
+    }
   }
 
   const sourceDir = resolveSourceDir()

@@ -277,6 +277,15 @@ small,
 .terminal-dock *,
 [data-terminal],
 [data-terminal] *,
+/* Monaco (dosya editörü): editör metni ve widget'ları her zaman kod fontunda
+ * kalır — yukarıdaki evrensel `!important` kuralı aksi halde tema fontunu
+ * (Grenze vb.) dayatıyor ve Monaco'nun karakter genişliği ölçümü bozuluyordu
+ * (imleç kayması). Aynı font yığını editör seçeneklerinde de verilir
+ * (bkz. src/lib/editor-font.ts). */
+.monaco-editor,
+.monaco-editor *,
+.monaco-editor .view-lines,
+.monaco-editor .view-lines *,
 code,
 code *,
 kbd,
