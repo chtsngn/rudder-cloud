@@ -154,7 +154,14 @@ export default function NewSitePage() {
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [selectedType, setSelectedType] = useState<SiteType | null>(null)
   const [domain, setDomain] = useState("")
-  const [useWww, setUseWww] = useState(true)
+  // Varsayılan KAPALI (bkz. docs/ARCHITECTURE.md 2026-09-15 güncellemesi):
+  // açık gelmesi, kullanıcının "www" DNS kaydını hiç eklemediği durumlarda
+  // (çoğu domain'in tek başına apex kaydı vardır) certbot'un sessizce
+  // www.<domain> için de sertifika istemesine ve bu yüzden TÜM SSL isteğinin
+  // "DNS problem: NXDOMAIN" ile başarısız olmasına yol açıyordu — apex için
+  // DNS doğruyken bile. İsteyen kullanıcı kendi www kaydını ekleyip burada
+  // açabilir.
+  const [useWww, setUseWww] = useState(false)
   const [useSsl, setUseSsl] = useState(true)
   const [sslEmail, setSslEmail] = useState("")
   const [submitting, setSubmitting] = useState(false)
