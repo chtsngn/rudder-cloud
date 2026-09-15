@@ -1,4 +1,4 @@
-export const APP_VERSION = "v1.3.1"
+export const APP_VERSION = "v1.3.2"
 
 export const GITHUB_REPO = "chtsngn/rudder-cloud"
 export const RELEASE_TAG_RE = /^v\d+\.\d+\.\d+$/
