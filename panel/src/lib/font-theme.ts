@@ -86,27 +86,30 @@ export const FONT_OPTIONS: FontOption[] = [
   },
 ]
 
+const FONT_CSS_VARS = ["--app-font", "--font-sans", "--font-heading", "--app-font-heading"] as const
+
+/** Fontu DOM'a uygular — kalıcılık YOK (applyFont ve previewFont ortak kullanır). */
+function setDocumentFont(font: FontOption) {
+  const root = document.documentElement
+  root.setAttribute("data-font", font.id)
+  for (const target of [root, document.body]) {
+    if (!target) continue
+    for (const cssVar of FONT_CSS_VARS) target.style.setProperty(cssVar, font.family)
+  }
+}
+
+function resolveFont(fontId: string | null | undefined): FontOption {
+  return FONT_OPTIONS.find((f) => f.id === fontId) ?? FONT_OPTIONS[0]
+}
+
 /**
  * Seçilen fontu DOM'a uygular, localStorage ve cookie'ye kaydeder.
  */
 export function applyFont(fontId: string) {
   if (typeof document === "undefined") return
 
-  const font = FONT_OPTIONS.find((f) => f.id === fontId) ?? FONT_OPTIONS[0]
-  const root = document.documentElement
-
-  root.setAttribute("data-font", font.id)
-  root.style.setProperty("--app-font", font.family)
-  root.style.setProperty("--font-sans", font.family)
-  root.style.setProperty("--font-heading", font.family)
-  root.style.setProperty("--app-font-heading", font.family)
-
-  if (document.body) {
-    document.body.style.setProperty("--app-font", font.family)
-    document.body.style.setProperty("--font-sans", font.family)
-    document.body.style.setProperty("--font-heading", font.family)
-    document.body.style.setProperty("--app-font-heading", font.family)
-  }
+  const font = resolveFont(fontId)
+  setDocumentFont(font)
 
   try {
     localStorage.setItem(FONT_STORAGE_KEY, font.id)
@@ -115,6 +118,17 @@ export function applyFont(fontId: string) {
 
   // Uygulama içi dinleyicileri tetikle
   window.dispatchEvent(new CustomEvent("rudder:font-change", { detail: font.id }))
+}
+
+/**
+ * GEÇİCİ önizleme (Tercihlerim → font kartı üzerine gelince): tüm arayüzü
+ * anlık olarak o fontla gösterir ama HİÇBİR ŞEY kaydetmez ve olay yaymaz —
+ * kayıtlı seçim değişmez. `null` → kayıtlı fonta geri döner. Kullanıcı
+ * "seçmeden önce nasıl görünüyor" diye bakabilsin diye (2026-09-15).
+ */
+export function previewFont(fontId: string | null) {
+  if (typeof document === "undefined") return
+  setDocumentFont(fontId ? resolveFont(fontId) : resolveFont(getSavedFont()))
 }
 
 /**
@@ -139,9 +153,14 @@ export function useFontTheme() {
   const [, startTransition] = useTransition()
 
   useEffect(() => {
-    const saved = getSavedFont()
-    setCurrentFont(saved)
-    applyFont(saved)
+    // Bir sonraki makrotaska ertelenir (projedeki diğer effect'lerle aynı
+    // disiplin — react-hooks/set-state-in-effect); SSR ile ilk render'da
+    // varsayılan font gösterilip hydration sonrası kayıtlı font uygulanır.
+    const timer = setTimeout(() => {
+      const saved = getSavedFont()
+      setCurrentFont(saved)
+      applyFont(saved)
+    }, 0)
 
     const handleFontChange = (e: Event) => {
       const customEvent = e as CustomEvent<string>
@@ -151,7 +170,10 @@ export function useFontTheme() {
     }
 
     window.addEventListener("rudder:font-change", handleFontChange)
-    return () => window.removeEventListener("rudder:font-change", handleFontChange)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener("rudder:font-change", handleFontChange)
+    }
   }, [])
 
   const setFont = (fontId: string) => {

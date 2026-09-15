@@ -298,6 +298,17 @@ html body .rudder-brand-title *,
   font-family: 'Grenze', serif !important;
 }
 
+/* 5. Font ÖNİZLEME istisnası (Tercihlerim → Yazı Fontu kartları, bkz. font-picker.tsx):
+ * yukarıdaki "her şey seçili fontta" kuralı inline `style={{fontFamily}}`'yi de
+ * eziyordu, bu yüzden bütün kartlar seçili fontta görünüyordu. `[data-font-preview]`
+ * taşıyan eleman ve altındakiler, inline verilen `--preview-font` değişkenini
+ * kullanır — inline custom property'yi hiçbir stylesheet kuralı ezemez; seçici
+ * (0,1,2) element/sınıf kurallarından daha özgül. */
+html body [data-font-preview],
+html body [data-font-preview] * {
+  font-family: var(--preview-font, var(--app-font, 'Grenze', serif)) !important;
+}
+
 /* 5. Koyu modda metin veya kenarlık olarak text-primary/border-primary kullanıldığında görünürlük garantisi */
 .dark .text-primary,
 [data-theme="dark"] .text-primary,
