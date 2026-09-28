@@ -636,7 +636,7 @@ export default function SiteDetailPage() {
             <SiteFileEditor key={editingFile} siteId={api.id} path={editingFile} onBack={() => openFilesDir(parentDirOf(editingFile))} />
           ) : (
             <SiteFileManager
-              key={filesDir}
+              key={api.id}
               siteId={api.id}
               initialPath={filesDir}
               onOpenFile={openFile}

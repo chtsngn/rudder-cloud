@@ -57,9 +57,9 @@ function toRelative(root: string, absPath: string): string {
 export async function resolveSitePath(
   site: SiteLike,
   relativePath: string
-): Promise<{ absPath: string; root: string }> {
-  const root = resolveSiteWorkdir(site)
-  if (!root) {
+): Promise<{ absPath: string; root: string; realRoot: string }> {
+  const rawRoot = resolveSiteWorkdir(site)
+  if (!rawRoot) {
     throw new SiteFsError("Bu site türü için dosya yönetimi desteklenmiyor.", 400)
   }
 
@@ -68,7 +68,11 @@ export async function resolveSitePath(
     throw new SiteFsError("Geçersiz yol.", 400)
   }
 
-  const normalized = path.normalize(path.join(root, rawRel))
+  // `root` sözcüksel (lexical) köktür — `absPath` de ondan türetilir; göreli
+  // yol hesapları ve "kökün kendisi mi" karşılaştırmaları bununla tutarlı
+  // yapılır. Symlink doğrulaması ayrıca `realRoot` ile.
+  const root = path.normalize(rawRoot).replace(/\/+$/, "") || "/"
+  const normalized = path.normalize(path.join(root, rawRel)).replace(/(.)\/+$/, "$1")
   if (normalized !== root && !normalized.startsWith(root + path.sep)) {
     throw new SiteFsError("Site dizini dışına çıkılamaz.", 400)
   }
@@ -101,7 +105,7 @@ export async function resolveSitePath(
     }
   }
 
-  return { absPath: normalized, root: realRoot }
+  return { absPath: normalized, root, realRoot }
 }
 
 function entryType(dirent: Dirent): SiteEntry["type"] {
@@ -234,51 +238,125 @@ function assertSafeName(name: string): void {
   }
 }
 
-export async function createFolder(site: SiteLike, parentRelPath: string, name: string): Promise<SiteEntry> {
-  assertSafeName(name)
-  const { absPath: parentAbs } = await resolveSitePath(site, parentRelPath)
-  const target = path.join(parentAbs, name)
-  try {
-    await fs.mkdir(target)
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code
-    if (code === "EEXIST") throw new SiteFsError("Bu isimde bir dosya/klasör zaten var.", 409)
-    if (code === "EACCES" || code === "EPERM") throw new SiteFsError("Klasör oluşturma izni yok.", 403)
-    if (code === "ENOENT") throw new SiteFsError("Üst dizin bulunamadı.", 404)
-    throw new SiteFsError("Klasör oluşturulamadı.", 500)
-  }
-  return statEntry(site, toRelative(await realRootOf(site), target))
+/**
+ * Kullanıcının yazdığı adı güvenli yol parçalarına böler. `/` ile iç içe yol
+ * verilebilir (`src/components/Button.tsx`) — her parça ayrı ayrı doğrulanır,
+ * `..`/`.`/boş parça kabul edilmez.
+ */
+export function splitRelativeName(name: string): string[] {
+  const parts = (name ?? "")
+    .replace(/\\/g, "/")
+    .split("/")
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0)
+  if (parts.length === 0) throw new SiteFsError("Geçersiz dosya/klasör adı.", 400)
+  if (parts.length > 32) throw new SiteFsError("Yol çok derin.", 400)
+  for (const part of parts) assertSafeName(part)
+  return parts
 }
 
-async function realRootOf(site: SiteLike): Promise<string> {
-  const root = resolveSiteWorkdir(site)
-  if (!root) throw new SiteFsError("Bu site türü için dosya yönetimi desteklenmiyor.", 400)
+async function pathExists(absPath: string): Promise<boolean> {
   try {
-    return await fs.realpath(root)
+    await fs.lstat(absPath)
+    return true
   } catch {
-    throw new SiteFsError("Site dizini sunucuda bulunamadı.", 404)
+    return false
   }
 }
 
+function fsErrorToSiteError(err: unknown, fallback: string): SiteFsError {
+  const code = (err as NodeJS.ErrnoException).code
+  if (code === "EEXIST") return new SiteFsError("Bu isimde bir dosya/klasör zaten var.", 409)
+  if (code === "EACCES" || code === "EPERM") return new SiteFsError("Bu işlem için dosya sistemi izni yok.", 403)
+  if (code === "ENOENT") return new SiteFsError("Kaynak veya üst dizin bulunamadı.", 404)
+  if (code === "ENOTDIR") return new SiteFsError("Yolun bir parçası klasör değil, dosya.", 400)
+  if (code === "ENOTEMPTY") return new SiteFsError("Hedef klasör boş değil.", 409)
+  return new SiteFsError(fallback, 500)
+}
+
+/**
+ * Klasör oluşturur. `name` iç içe olabilir (`a/b/c`) — eksik ara klasörler
+ * de oluşturulur; son klasör zaten varsa 409.
+ */
+export async function createFolder(site: SiteLike, parentRelPath: string, name: string): Promise<SiteEntry> {
+  const parts = splitRelativeName(name)
+  const { absPath: parentAbs, root } = await resolveSitePath(site, parentRelPath)
+  const parentRel = toRelative(root, parentAbs)
+  const { absPath: target } = await resolveSitePath(site, [parentRel, ...parts].filter(Boolean).join("/"))
+  if (await pathExists(target)) throw new SiteFsError("Bu isimde bir dosya/klasör zaten var.", 409)
+  try {
+    await fs.mkdir(target, { recursive: true })
+  } catch (err) {
+    throw fsErrorToSiteError(err, "Klasör oluşturulamadı.")
+  }
+  return statEntry(site, toRelative(root, target))
+}
+
+/**
+ * Dosya oluşturur (üzerine YAZMAZ). `name` iç içe olabilir
+ * (`config/app.json`) — eksik ara klasörler oluşturulur.
+ */
 export async function createFile(
   site: SiteLike,
   parentRelPath: string,
   name: string,
   content = ""
 ): Promise<SiteEntry> {
-  assertSafeName(name)
-  const { absPath: parentAbs } = await resolveSitePath(site, parentRelPath)
-  const target = path.join(parentAbs, name)
+  const parts = splitRelativeName(name)
+  const { absPath: parentAbs, root } = await resolveSitePath(site, parentRelPath)
+  const parentRel = toRelative(root, parentAbs)
+  const { absPath: target } = await resolveSitePath(site, [parentRel, ...parts].filter(Boolean).join("/"))
   try {
+    if (parts.length > 1) await fs.mkdir(path.dirname(target), { recursive: true })
     await fs.writeFile(target, content, { flag: "wx" }) // "wx": varsa hata ver, üzerine yazma
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code
-    if (code === "EEXIST") throw new SiteFsError("Bu isimde bir dosya zaten var.", 409)
-    if (code === "EACCES" || code === "EPERM") throw new SiteFsError("Dosya oluşturma izni yok.", 403)
-    if (code === "ENOENT") throw new SiteFsError("Üst dizin bulunamadı.", 404)
-    throw new SiteFsError("Dosya oluşturulamadı.", 500)
+    throw fsErrorToSiteError(err, "Dosya oluşturulamadı.")
   }
-  return statEntry(site, toRelative(await realRootOf(site), target))
+  return statEntry(site, toRelative(root, target))
+}
+
+/**
+ * Yeniden adlandırır / taşır (`mode: "move"`) ya da kopyalar (`"copy"`).
+ * Her iki uç da site kökü içinde doğrulanır; hedef varsa ÜZERİNE YAZILMAZ
+ * (409). Bir klasör kendi içine taşınamaz/kopyalanamaz.
+ */
+export async function transferEntry(
+  site: SiteLike,
+  fromRelPath: string,
+  toRelPath: string,
+  mode: "move" | "copy"
+): Promise<SiteEntry> {
+  const { absPath: src, root } = await resolveSitePath(site, fromRelPath)
+  const toParts = splitRelativeName(toRelPath)
+  const { absPath: dst } = await resolveSitePath(site, toParts.join("/"))
+  if (src === root) throw new SiteFsError("Site kök dizini taşınamaz/kopyalanamaz.", 400)
+  if (dst === root) throw new SiteFsError("Hedef site kök dizini olamaz.", 400)
+  if (src === dst) throw new SiteFsError("Kaynak ve hedef aynı.", 400)
+
+  let st
+  try {
+    st = await fs.lstat(src)
+  } catch {
+    throw new SiteFsError("Kaynak bulunamadı.", 404)
+  }
+  if (st.isDirectory() && dst.startsWith(src + path.sep)) {
+    throw new SiteFsError("Bir klasör kendi içine taşınamaz/kopyalanamaz.", 400)
+  }
+  if (await pathExists(dst)) throw new SiteFsError("Hedefte aynı isimde bir dosya/klasör zaten var.", 409)
+
+  try {
+    await fs.mkdir(path.dirname(dst), { recursive: true })
+    if (mode === "move") {
+      await fs.rename(src, dst)
+    } else {
+      // Symlink'ler OLDUĞU GİBİ kopyalanır (takip edilmez) — site dışına işaret
+      // eden bir link içeriği kopyalanarak içeri taşınamaz.
+      await fs.cp(src, dst, { recursive: true, errorOnExist: true, force: false, verbatimSymlinks: true })
+    }
+  } catch (err) {
+    throw fsErrorToSiteError(err, mode === "move" ? "Taşınamadı." : "Kopyalanamadı.")
+  }
+  return statEntry(site, toRelative(root, dst))
 }
 
 /** Dosya/klasörü siler (klasörler için özyinelemeli). Site kökünün kendisi silinemez. */
@@ -297,30 +375,37 @@ export async function deleteEntry(site: SiteLike, relativePath: string): Promise
   }
 }
 
-/** Yükleme hedefi bir dizin olmalı; dosya adı yalnızca basename olarak kabul edilir (yol bileşeni YOK). */
+/**
+ * Yükleme hedefi bir dizindir. `fileName` normalde yalnızca bir addır;
+ * klasör yüklemede tarayıcının verdiği göreli yol (`klasor/alt/dosya.txt`)
+ * olabilir — her parça doğrulanır, eksik ara klasörler oluşturulur.
+ * Var olan dosyanın üzerine yazılır (yükleme = "güncelle" beklentisi).
+ */
 export async function writeUploadedFile(
   site: SiteLike,
   targetDirRelPath: string,
   fileName: string,
   data: Buffer
 ): Promise<SiteEntry> {
-  const baseName = path.basename(fileName)
-  assertSafeName(baseName)
+  const parts = splitRelativeName(fileName)
   if (data.byteLength > MAX_UPLOAD_BYTES) {
     throw new SiteFsError(`Dosya çok büyük (azami ${MAX_UPLOAD_BYTES / 1024 / 1024}MB).`, 413)
   }
-  const { absPath: dirAbs } = await resolveSitePath(site, targetDirRelPath)
-  const target = path.join(dirAbs, baseName)
+  const { absPath: dirAbs, root } = await resolveSitePath(site, targetDirRelPath)
+  const dirRel = toRelative(root, dirAbs)
+  const { absPath: target } = await resolveSitePath(site, [dirRel, ...parts].filter(Boolean).join("/"))
+  const baseName = parts[parts.length - 1]
   try {
+    if (parts.length > 1) await fs.mkdir(path.dirname(target), { recursive: true })
     await fs.writeFile(target, data)
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code
     if (code === "EACCES" || code === "EPERM") throw new SiteFsError("Yükleme izni yok.", 403)
     if (code === "ENOENT") throw new SiteFsError("Hedef dizin bulunamadı.", 404)
     if (code === "EISDIR") throw new SiteFsError(`"${baseName}" bir klasörle çakışıyor.`, 409)
-    throw new SiteFsError("Dosya yüklenemedi.", 500)
+    throw fsErrorToSiteError(err, "Dosya yüklenemedi.")
   }
-  return statEntry(site, toRelative(await realRootOf(site), target))
+  return statEntry(site, toRelative(root, target))
 }
 
 /** Tek bir dosyanın ham içeriğini indirmek için bir okuma akışı döndürür. */

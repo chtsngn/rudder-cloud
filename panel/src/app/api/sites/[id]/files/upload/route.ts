@@ -11,7 +11,9 @@ interface RouteParams {
 
 /**
  * `POST /api/sites/[id]/files/upload?path=<hedef dizin>` — multipart form-data,
- * `files` alanı altında bir veya daha fazla dosya. Panel'in kendi nginx
+ * `files` alanı altında bir veya daha fazla dosya. Klasör yüklemede her
+ * dosyanın göreli yolu aynı sırayla `paths` alanında gelir
+ * (`klasor/alt/dosya.txt`); eksik ara klasörler oluşturulur. Panel'in kendi nginx
  * vhost'unda `client_max_body_size` bu sınırla eşleşecek şekilde
  * yükseltildi (bkz. install.sh).
  */
@@ -44,24 +46,28 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Yüklenecek dosya bulunamadı." }, { status: 400 })
   }
 
+  const relPaths = formData.getAll("paths").map((p) => (typeof p === "string" ? p : ""))
+  const useRelPaths = relPaths.length === files.length
+
   const uploaded: unknown[] = []
   const errors: { name: string; error: string }[] = []
 
-  for (const file of files) {
+  for (const [index, file] of files.entries()) {
+    const targetName = useRelPaths && relPaths[index] ? relPaths[index] : file.name
     if (file.size > MAX_UPLOAD_BYTES) {
       errors.push({
-        name: file.name,
+        name: targetName,
         error: `Çok büyük (azami ${MAX_UPLOAD_BYTES / 1024 / 1024}MB).`,
       })
       continue
     }
     try {
       const buf = Buffer.from(await file.arrayBuffer())
-      const entry = await writeUploadedFile(site, targetDir, file.name, buf)
+      const entry = await writeUploadedFile(site, targetDir, targetName, buf)
       uploaded.push(entry)
     } catch (error) {
       const message = error instanceof SiteFsError ? error.message : "Yüklenemedi."
-      errors.push({ name: file.name, error: message })
+      errors.push({ name: targetName, error: message })
     }
   }
 

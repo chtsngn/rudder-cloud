@@ -1115,3 +1115,25 @@ cwd. Gerçek nginx/certbot/ACL/PHP-FPM/`cleanup-site` yolları sunucuda test edi
   editör (`src/components/site-file-editor.tsx`) artık site detay sayfasının
   "Dosyalar" sekmesinin içinde; durum URL'de (`?tab=files&dir=…` / `&file=…`), eski
   `/sites/[id]/files[/edit]` adresleri sekmeye yönlendirir. Editörde Ctrl/⌘+S kaydeder.
+
+### 2026-09-28 güncellemesi: Dosyalar sekmesi — oluşturma ve dosya işlemleri
+
+- **Oluşturma diyaloğu** (`src/components/site-file-dialogs.tsx`): "Yeni Dosya" / "Yeni
+  Klasör" artık araç çubuğunda belirgin butonlar ve modal diyalog. Ad iç içe olabilir
+  (`src/utils/helper.js`) — eksik ara klasörler sunucuda oluşturulur (`splitRelativeName`
+  her parçayı ayrı doğrular). Dosyada şablon addan otomatik seçilir (`suggestTemplate`:
+  `.env`, `Dockerfile`, `docker-compose.yml`, `.gitignore`, `.php`, `.sh`… eklendi);
+  "oluşturunca aç" dosyayı editörde, klasörü listede açar. Klasör satırı menüsünde
+  "İçinde yeni dosya/klasör".
+- **Yeniden adlandır / taşı / kopyala:** `PATCH /api/sites/[id]/files` `{ from, to, mode }`
+  → `transferEntry` (EDIT_FILES). Hedef varsa üzerine yazılmaz (409); klasör kendi içine
+  taşınamaz; kopyada symlink'ler takip edilmez (`verbatimSymlinks`). Toplu seçimde "Taşı".
+- **Yükleme:** "Yükle" menüsü (dosya / klasör), kartın üzerine sürükle-bırak (klasörler
+  `webkitGetAsEntry` ile dolaşılır). İstemci 40MB / 50 dosyalık parçalar halinde gönderir
+  (`src/lib/file-upload-client.ts`); klasör yapısı `paths` alanıyla korunur.
+- Liste: sütun sıralama, klasör içi arama, tümünü seç, `..` satırı, tür ikonları, boş
+  klasör ekranı, satır menüsü (düzenle, yeniden adlandır, kopyasını oluştur, taşı, indir,
+  yolu kopyala, sil).
+- `resolveSitePath` artık sözcüksel kökü (`root`) ve gerçek kökü (`realRoot`) ayrı
+  döner; göreli yol hesapları ve "kökün kendisi mi" kontrolü sözcüksel kökle tutarlı
+  yapılır (site kökü bir symlink ise eskiden yanlış göreli yol üretebiliyordu).
