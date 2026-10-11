@@ -1223,3 +1223,40 @@ uygulamalar ve statik siteler.
   şemadan migration (STATIC/DOCKER/REVERSE_PROXY/PHP satırları); yerel panelde detay
   sayfaları, sihirbaz ve `POST /api/sites` doğrulamaları.
 
+### 2026-10-11 güncellemesi (v1.5.0): depo tarayan yeni site sihirbazı
+
+Akış: **Kaynak** (GitHub App deposu / git adresi / repo yok) → **Tür** (depo taranır,
+kartlar) → **Ayarlar** (taramanın önerileriyle dolu) → **Kurulum**. Karar kullanıcının;
+tarama yalnız öneri ve ön doldurma üretir.
+
+- **Tarama** (`POST /api/sites/scan`, SUPER_ADMIN): site oluşturulmadan ÖNCE geçici,
+  sığ, dosyasız klon (`git.ts` `cloneForScan`: `--depth 1 --no-checkout
+  --filter=blob:limit=256k`), dosya listesi `ls-tree`, içerik `cat-file` ile okunur;
+  GitHub App deposunda installation token kullanılır. SSH adresleri taranamaz (deploy
+  key site oluşunca üretiliyor) — kart elle seçilir.
+- **`repo-scan.ts`** (saf mantık, yalnız depo kökü): compose (satır taramasıyla servisler
+  ve kısa/uzun sözdizimli port eşlemeleri; DB servisleri atlanıp uygulamanın host portu
+  seçilir; `127.0.0.1` dışında yayın → uyarı), Dockerfile `EXPOSE`, `.env.example`,
+  package.json (Next `output: 'export'` → `out`, Vite → `dist` + router varsa SPA, CRA →
+  `build`, Astro/Gatsby/Nuxt generate/SvelteKit adapter-static; kilit dosyasından paket
+  yöneticisi ve derleme komutu), kökte `index.html`, Python/Node sunucu ipuçları.
+  Kartlar: `compose` / `dockerfile` / `static` / `proxy`; öneri önceliği compose >
+  Dockerfile > statik.
+- **Kurulum:** `POST /api/sites` yeni alanlar — `envFile` (Uygulama: ilk `.env`, ≤ 64 KB)
+  ve `dockerfileCompose: { containerPort }` (Rudder `build: .` + `127.0.0.1:<port>:<c>` +
+  isteğe bağlı `env_file` içeren bir compose yazar). Dosyalar provisioning'den sonra,
+  depo klonlanmadan önce yazılır; ilk klon var olan dosyalara dokunmaz. Sonra GitHub App
+  için `github-connect`, HTTPS adres için `PATCH repoUrl` + `deploy`; SSH adres için
+  yalnız `PATCH` ve "deploy key'i ekleyip Deploy Et" notu.
+- **Düzeltme (`gitPullOrClone`):** ilk klonun `rsync -a`'sı geçici klasörün 0700
+  `panel:panel` kökünü site klasörüne taşıyordu — setgid grubu ve site kullanıcısının
+  erişimi (üye terminali) kayboluyordu. Artık `--no-perms --no-group`: klasör izinleri ve
+  grubu korunur, yeni dosyalar site grubunu devralır.
+- Doğrulama: tarayıcı birim testleri (Kairo benzeri compose, 4 boşluk girinti, uzun
+  sözdizimi, Vite SPA/pnpm, Next export/sunucu, Express ± Dockerfile, düz HTML, Python,
+  boş depo); gerçek depolarla tarama (Spoon-Knife, dockersamples/example-voting-app, SSH
+  ve olmayan branch hataları); Debian konteynerinde panel + gerçek provision betiği +
+  sudo kuralı + nginx ile sihirbazdan statik site (yayın, 404/403 kontrolleri), SPA
+  açma, Dockerfile kartı dosyaları, örnek compose, compose kartı + klon (`.env` korunur),
+  klon sonrası izinler.
+

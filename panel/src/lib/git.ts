@@ -159,7 +159,10 @@ export async function gitPullOrClone(
           { timeout: GIT_TIMEOUT_MS, env }
         )
         await execFileAsync("mkdir", ["-p", workdir])
-        const rsyncArgs = repoChanged ? ["-a", "--delete", `${tmp}/`, `${workdir}/`] : ["-a", `${tmp}/`, `${workdir}/`]
+        // --no-perms/--no-group: geçici klonun 0700 panel:panel kökü hedefe
+        // taşınmasın — site klasörünün setgid grubu (site kullanıcısı) ve izinleri
+        // korunur, yeni dosyalar o grubu devralır (üye terminali erişebilsin).
+        const rsyncArgs = ["-a", "--no-perms", "--no-group", ...(repoChanged ? ["--delete"] : []), `${tmp}/`, `${workdir}/`]
         await execFileAsync("rsync", rsyncArgs, { timeout: GIT_TIMEOUT_MS })
       } finally {
         await rm(tmp, { recursive: true, force: true })
@@ -175,3 +178,100 @@ export async function gitPullOrClone(
   const after = await currentCommit(workdir)
   return { changed: before !== after, commit: after ?? "" }
 }
+
+export interface ScanCheckout {
+  dir: string
+  /** Tembel blob indirmesi (partial clone) için her git çağrısına eklenecek kimlik argümanları. */
+  authArgs: string[]
+  env: NodeJS.ProcessEnv
+  cleanup: () => Promise<void>
+}
+
+const SCAN_TIMEOUT_MS = 60_000
+
+/**
+ * Site oluşturulmadan ÖNCE depoyu taramak için (bkz. src/lib/repo-scan.ts)
+ * geçici, sığ ve dosyasız bir klon: `--depth 1 --no-checkout` + büyük blob'lar
+ * hiç inmez (`--filter=blob:limit=256k`). Dosya listesi `ls-tree`, içerik
+ * `cat-file` ile okunur. SSH adresleri taranamaz: deploy key site başına,
+ * site oluşunca üretiliyor. Çağıran `cleanup()`'ı her durumda çağırmalı.
+ */
+export async function cloneForScan(params: {
+  repoUrl: string
+  branch: string
+  githubInstallationId?: string | null
+}): Promise<ScanCheckout> {
+  if (!isValidRepoUrl(params.repoUrl)) throw new GitError(`Geçersiz repo adresi: ${params.repoUrl}`)
+  if (!isValidGitBranch(params.branch)) throw new GitError(`Geçersiz git branch: ${params.branch}`)
+  if (!params.repoUrl.startsWith("https://")) {
+    throw new GitError("SSH adresli depolar site oluşturulmadan taranamaz (deploy key site oluşunca üretilir).")
+  }
+
+  const env: NodeJS.ProcessEnv = { ...process.env, GIT_TERMINAL_PROMPT: "0" }
+  const authArgs = await githubAppAuthArgs(params.githubInstallationId)
+  const dir = await mkdtemp(join(tmpdir(), "site-scan-"))
+  const cleanup = () => rm(dir, { recursive: true, force: true })
+  try {
+    await execFileAsync(
+      "git",
+      [
+        ...authArgs,
+        "clone",
+        "--depth",
+        "1",
+        "--single-branch",
+        "--branch",
+        params.branch,
+        "--filter=blob:limit=256k",
+        "--no-checkout",
+        params.repoUrl,
+        dir,
+      ],
+      { timeout: SCAN_TIMEOUT_MS, env }
+    )
+  } catch (error) {
+    await cleanup()
+    const err = error as NodeJS.ErrnoException & { stderr?: string; killed?: boolean }
+    if (err.killed) throw new GitError("Depo taraması zaman aşımına uğradı.")
+    const detail = (err.stderr?.toString() ?? "")
+      .split("\n")
+      .filter((line) => line.trim() && !line.startsWith("Cloning into"))
+      .join("\n")
+    throw new GitError(detail || err.message || "Depo klonlanamadı.")
+  }
+  return { dir, authArgs, env, cleanup }
+}
+
+/** Taranan klonun dosya listesi (yol + bayt), `git ls-tree -r -l HEAD`. */
+export async function listScanFiles(checkout: ScanCheckout): Promise<{ path: string; size: number }[]> {
+  const { stdout } = await execFileAsync("git", ["-C", checkout.dir, "ls-tree", "-r", "-l", "-z", "HEAD"], {
+    timeout: SCAN_TIMEOUT_MS,
+    env: checkout.env,
+    maxBuffer: 32 * 1024 * 1024,
+  })
+  const files: { path: string; size: number }[] = []
+  for (const entry of stdout.split("\0")) {
+    // "<mode> blob <sha> <size>\t<path>"
+    const tab = entry.indexOf("\t")
+    if (tab === -1) continue
+    const meta = entry.slice(0, tab).trim().split(/\s+/)
+    if (meta[1] !== "blob") continue
+    files.push({ path: entry.slice(tab + 1), size: Number.parseInt(meta[3], 10) || 0 })
+  }
+  return files
+}
+
+/** Taranan klondan tek bir dosyanın içeriği (UTF-8), yoksa null. */
+export async function readScanFile(checkout: ScanCheckout, path: string): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync(
+      "git",
+      ["-C", checkout.dir, ...checkout.authArgs, "cat-file", "blob", `HEAD:${path}`],
+      { timeout: SCAN_TIMEOUT_MS, env: checkout.env, maxBuffer: 1024 * 1024 }
+    )
+    return stdout
+  } catch {
+    return null
+  }
+}
+

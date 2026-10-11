@@ -13,7 +13,10 @@ and installs itself onto a plain Ubuntu/Debian box with a single script.
 
 - **Site wizard** — two site types: **Application** (Nginx reverse proxy to a port,
   usually a Docker Compose project) and **Static** (manual upload or Git + build).
-  Handles the Nginx vhost, SSL (via Certbot) and the site's own Linux user.
+  Pick a source (GitHub App repository, any git address, or none): the repository is
+  scanned before the site exists (compose file, Dockerfile, framework, `.env.example`)
+  and the matching option is recommended with pre-filled settings. Handles the Nginx
+  vhost, SSL (via Certbot) and the site's own Linux user.
 - **Port viewer** — see every listening TCP port on the server (plus Docker container
   ports when Docker is present), matched against the sites you manage, with free-port
   suggestions for new deployments.

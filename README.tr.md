@@ -13,8 +13,10 @@ gelir ve düz bir Ubuntu/Debian sunucusuna tek bir script ile kendini kurar.
 
 - **Site sihirbazı** — iki site türü: **Uygulama** (bir porta Nginx reverse proxy,
   çoğunlukla bir Docker Compose projesi) ve **Statik** (elle yükleme ya da Git +
-  derleme). Nginx vhost, SSL (Certbot ile) ve sitenin kendi Linux kullanıcısı
-  otomatik oluşturulur.
+  derleme). Kaynak seçilir (GitHub App deposu, herhangi bir git adresi ya da yok);
+  depo site oluşmadan taranır (compose, Dockerfile, framework, `.env.example`) ve uygun
+  seçenek ön doldurulmuş ayarlarla önerilir. Nginx vhost, SSL (Certbot ile) ve sitenin
+  kendi Linux kullanıcısı otomatik oluşturulur.
 - **Port görüntüleyici** — sunucudaki tüm dinleyen TCP portlarını (Docker varsa
   container portlarını da) yönettiğiniz sitelerle eşleştirerek gösterir, yeni
   dağıtımlar için boş port önerir.

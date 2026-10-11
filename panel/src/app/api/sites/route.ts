@@ -20,6 +20,7 @@ import {
   ProvisionError,
   requestSsl,
 } from "@/lib/provision"
+import { writeTextFile } from "@/lib/site-fs"
 import { normalizePublishDir } from "@/lib/site-paths"
 
 const VALID_TYPES = new Set<string>(Object.values(SiteType))
@@ -165,6 +166,28 @@ async function findPortConflict(plan: ProvisionPlan, domain: string): Promise<st
   return null
 }
 
+const MAX_ENV_FILE_BYTES = 64 * 1024
+
+/**
+ * Sihirbazın Dockerfile kartı (v1.5.0): depoda compose yoksa Rudder site
+ * klasörüne küçük bir compose yazar — image depodaki Dockerfile'dan derlenir,
+ * yalnız 127.0.0.1'de yayınlanır. Depo sonra kendi compose dosyasını eklerse
+ * pull onu getirir (`git reset --hard` izlenmeyen dosyanın üzerine yazar).
+ */
+function dockerfileComposeYaml(hostPort: number, containerPort: number, withEnv: boolean): string {
+  return [
+    "# Rudder: depodaki Dockerfile için üretildi (yeni site sihirbazı).",
+    "services:",
+    "  app:",
+    "    build: .",
+    "    ports:",
+    `      - "127.0.0.1:${hostPort}:${containerPort}"`,
+    ...(withEnv ? ["    env_file: .env"] : []),
+    "    restart: unless-stopped",
+    "",
+  ].join("\n")
+}
+
 async function runProvisioning(domain: string, www: boolean, plan: ProvisionPlan): Promise<void> {
   switch (plan.type) {
     case "STATIC":
@@ -204,7 +227,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 })
   }
 
-  const { domain, type, sslEnabled, config, deployCommand, processManager, skipDockerBootstrap } = (body ?? {}) as {
+  const { domain, type, sslEnabled, config, deployCommand, processManager, skipDockerBootstrap, envFile, dockerfileCompose } = (body ?? {}) as {
     domain?: unknown
     type?: unknown
     sslEnabled?: unknown
@@ -212,6 +235,10 @@ export async function POST(request: Request) {
     deployCommand?: unknown
     processManager?: unknown
     skipDockerBootstrap?: unknown
+    /** Uygulama: site klasörüne yazılacak ilk `.env` içeriği (sihirbaz, .env.example'dan). */
+    envFile?: unknown
+    /** Uygulama: depoda yalnız Dockerfile varsa Rudder'ın yazacağı compose için konteyner portu. */
+    dockerfileCompose?: unknown
   }
 
   const domainValue = typeof domain === "string" ? domain.trim().toLowerCase() : ""
@@ -250,6 +277,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Geçersiz process manager." }, { status: 400 })
     }
     processManagerValue = processManager
+  }
+
+  const envFileValue = typeof envFile === "string" && envFile.length > 0 ? envFile : null
+  if (envFileValue !== null && (plan.type !== "REVERSE_PROXY" || Buffer.byteLength(envFileValue) > MAX_ENV_FILE_BYTES || envFileValue.includes("\0"))) {
+    return NextResponse.json({ error: "Geçersiz .env içeriği (yalnız Uygulama, en fazla 64 KB)." }, { status: 400 })
+  }
+  let composeContainerPort: number | null = null
+  if (dockerfileCompose && typeof dockerfileCompose === "object") {
+    const port = toPort((dockerfileCompose as Record<string, unknown>).containerPort)
+    const hostPort = plan.type === "REVERSE_PROXY" ? sitePortOf({ type: plan.type, config: { upstreamUrl: plan.upstreamUrl } }) : null
+    if (plan.type !== "REVERSE_PROXY" || !port || !isValidPort(port) || !hostPort) {
+      return NextResponse.json({ error: "Dockerfile compose'u için geçerli bir konteyner portu ve yerel hedef port gereklidir." }, { status: 400 })
+    }
+    composeContainerPort = port
   }
 
   const conflict = await findPortConflict(plan, domainValue)
@@ -294,6 +335,22 @@ export async function POST(request: Request) {
   const finalConfig: Record<string, unknown> = { ...initialConfig }
   if (status === "FAILED") finalConfig.provisionError = provisionError
 
+  // Sihirbazın hazırladığı dosyalar: depo klonlanmadan ÖNCE yazılır (ilk klon
+  // var olan dosyalara dokunmaz). Başarısızlık siteyi bozmaz, uyarı olarak döner.
+  const setupWarnings: string[] = []
+  if (status === "ACTIVE" && plan.type === "REVERSE_PROXY" && (envFileValue !== null || composeContainerPort)) {
+    const siteLike = { domain: domainValue, type: plan.type, config: initialConfig }
+    try {
+      if (envFileValue !== null) await writeTextFile(siteLike, ".env", envFileValue)
+      if (composeContainerPort) {
+        const hostPort = sitePortOf({ type: plan.type, config: { upstreamUrl: plan.upstreamUrl } })!
+        await writeTextFile(siteLike, "docker-compose.yml", dockerfileComposeYaml(hostPort, composeContainerPort, envFileValue !== null))
+      }
+    } catch (error) {
+      setupWarnings.push(`Başlangıç dosyaları yazılamadı: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
   let sslStatus: "none" | "active" | "error" = "none"
   let sslLastError: string | null = null
   if (status === "ACTIVE" && sslEnabledBool) {
@@ -326,5 +383,5 @@ export async function POST(request: Request) {
     detail: `${domainValue} (${type}) → ${status}`,
   })
 
-  return NextResponse.json(updated, { status: 201 })
+  return NextResponse.json({ ...updated, setupWarnings }, { status: 201 })
 }
