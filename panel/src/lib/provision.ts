@@ -16,7 +16,6 @@ const PROVISION_SCRIPT =
   process.env.PROVISION_SCRIPT_PATH ?? "/opt/sunucu-paneli/scripts/provision-site.sh"
 
 const DEFAULT_TIMEOUT_MS = 30_000
-const WORDPRESS_TIMEOUT_MS = 120_000 // WordPress indirme daha uzun sürebilir
 const SSL_TIMEOUT_MS = 60_000 // certbot ağ erişimi gerektirir
 const DOCKER_TIMEOUT_MS = 180_000 // ilk `compose up` image çekebilir
 const CLEANUP_TIMEOUT_MS = 180_000 // compose down + rm -rf büyük klasörlerde sürebilir
@@ -26,11 +25,7 @@ const CLEANUP_TIMEOUT_MS = 180_000 // compose down + rm -rf büyük klasörlerde
 // ------------------------------------------------------------
 const DOMAIN_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/
 const USERNAME_RE = /^[a-z][a-z0-9_-]{0,31}$/
-const DB_IDENT_RE = /^[A-Za-z0-9_]{1,64}$/
-const DB_PASSWORD_RE = /^[A-Za-z0-9!@#%^*_+=.-]{8,64}$/
-const START_CMD_RE = /^[A-Za-z0-9_./:@%=, $-]{1,200}$/
 const ABS_PATH_RE = /^\/[A-Za-z0-9_./-]+$/
-const PHP_VERSION_RE = /^[0-9]{1,2}\.[0-9]{1,2}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const UPSTREAM_URL_RE = /^https?:\/\/[A-Za-z0-9.-]+(:[0-9]{1,5})?(\/[A-Za-z0-9._~%/-]*)?$/
 
@@ -46,28 +41,12 @@ export function isValidPort(port: number): boolean {
   return Number.isInteger(port) && port >= 1 && port <= 65535
 }
 
-export function isValidPhpVersion(version: string): boolean {
-  return typeof version === "string" && PHP_VERSION_RE.test(version)
-}
-
 export function isValidUpstreamUrl(url: string): boolean {
   return typeof url === "string" && url.length <= 2048 && UPSTREAM_URL_RE.test(url)
 }
 
 export function isValidLinuxUsername(user: string): boolean {
   return typeof user === "string" && USERNAME_RE.test(user)
-}
-
-export function isValidDbIdentifier(value: string): boolean {
-  return typeof value === "string" && DB_IDENT_RE.test(value)
-}
-
-export function isValidDbPassword(value: string): boolean {
-  return typeof value === "string" && DB_PASSWORD_RE.test(value)
-}
-
-export function isValidStartCommand(value: string): boolean {
-  return typeof value === "string" && START_CMD_RE.test(value)
 }
 
 export function isValidAbsolutePath(value: string): boolean {
@@ -90,7 +69,7 @@ export function isValidDeployCommand(value: string): boolean {
   return typeof value === "string" && value.length >= 1 && value.length <= 500 && !/[\0\r]/.test(value)
 }
 
-/** `example.com` -> `example-com`, the same transform `provision-site.sh` uses for systemd unit names. */
+/** `example.com` -> `example-com` (PM2 süreç adı varsayılanı). */
 export function domainToSlug(domain: string): string {
   return domain.replace(/\./g, "-")
 }
@@ -148,34 +127,8 @@ export interface CreateVhostStaticParams {
   www: boolean
   siteRoot: string
   linuxUser?: string
-}
-
-export interface CreateVhostPhpParams {
-  domain: string
-  type: "PHP"
-  www: boolean
-  phpVersion: string
-  siteRoot: string
-  linuxUser?: string
-}
-
-export interface CreateVhostWordpressParams {
-  domain: string
-  type: "WORDPRESS"
-  www: boolean
-  phpVersion: string
-  siteRoot: string
-  dbName: string
-  dbUser: string
-  dbPassword: string
-  linuxUser?: string
-}
-
-export interface CreateVhostNodePythonParams {
-  domain: string
-  type: "NODEJS" | "PYTHON"
-  www: boolean
-  port: number
+  /** Bulunamayan yol index.html'e düşsün (istemci tarafı yönlendirmeli SPA). */
+  spa?: boolean
 }
 
 export interface CreateVhostReverseProxyParams {
@@ -184,28 +137,12 @@ export interface CreateVhostReverseProxyParams {
   www: boolean
   upstreamUrl: string
   linuxUser?: string
+  /** Verilirse site klasörüne bu portu yayınlayan örnek bir docker-compose.yml
+   * yazılıp ayağa kaldırılır (depo bağlanmadan Docker Compose seçildiğinde). */
+  composePort?: number
 }
 
-export interface CreateVhostDockerParams {
-  domain: string
-  type: "DOCKER"
-  www: boolean
-  port: number
-  workingDir: string
-  composeService?: string
-  linuxUser?: string
-  /** false: örnek docker-compose.yml yazma ve otomatik `up` yapma (sihirbazda
-   * bir depo seçildi, gerçek compose dosyası klonlanacak). Varsayılan true. */
-  bootstrap?: boolean
-}
-
-export type CreateVhostParams =
-  | CreateVhostStaticParams
-  | CreateVhostPhpParams
-  | CreateVhostWordpressParams
-  | CreateVhostNodePythonParams
-  | CreateVhostReverseProxyParams
-  | CreateVhostDockerParams
+export type CreateVhostParams = CreateVhostStaticParams | CreateVhostReverseProxyParams
 
 function requireDomain(domain: string) {
   if (!isValidDomain(domain)) throw new ProvisionError(`Geçersiz alan adı: ${domain}`)
@@ -230,77 +167,7 @@ export async function createVhost(params: CreateVhostParams): Promise<void> {
         www,
         params.siteRoot,
         params.linuxUser ?? "",
-      ])
-      return
-    }
-    case "PHP": {
-      if (!isValidPhpVersion(params.phpVersion)) {
-        throw new ProvisionError(`Geçersiz PHP sürümü: ${params.phpVersion}`)
-      }
-      if (!isValidSiteRoot(params.siteRoot)) {
-        throw new ProvisionError(`Geçersiz site kök dizini: ${params.siteRoot}`)
-      }
-      if (params.linuxUser && !isValidLinuxUsername(params.linuxUser)) {
-        throw new ProvisionError(`Geçersiz linux kullanıcı adı: ${params.linuxUser}`)
-      }
-      await runProvisionScript([
-        "create-vhost",
-        params.domain,
-        "PHP",
-        www,
-        params.phpVersion,
-        params.siteRoot,
-        params.linuxUser ?? "",
-      ])
-      return
-    }
-    case "WORDPRESS": {
-      if (!isValidPhpVersion(params.phpVersion)) {
-        throw new ProvisionError(`Geçersiz PHP sürümü: ${params.phpVersion}`)
-      }
-      if (!isValidSiteRoot(params.siteRoot)) {
-        throw new ProvisionError(`Geçersiz site kök dizini: ${params.siteRoot}`)
-      }
-      if (!isValidDbIdentifier(params.dbName)) {
-        throw new ProvisionError(`Geçersiz veritabanı adı: ${params.dbName}`)
-      }
-      if (!isValidDbIdentifier(params.dbUser)) {
-        throw new ProvisionError(`Geçersiz veritabanı kullanıcısı: ${params.dbUser}`)
-      }
-      if (!isValidDbPassword(params.dbPassword)) {
-        throw new ProvisionError("Geçersiz veritabanı şifresi (8-64 karakter olmalı).")
-      }
-      if (params.linuxUser && !isValidLinuxUsername(params.linuxUser)) {
-        throw new ProvisionError(`Geçersiz linux kullanıcı adı: ${params.linuxUser}`)
-      }
-      await runProvisionScript(
-        [
-          "create-vhost",
-          params.domain,
-          "WORDPRESS",
-          www,
-          params.phpVersion,
-          params.siteRoot,
-          params.dbName,
-          params.dbUser,
-          params.dbPassword,
-          params.linuxUser ?? "",
-        ],
-        WORDPRESS_TIMEOUT_MS
-      )
-      return
-    }
-    case "NODEJS":
-    case "PYTHON": {
-      if (!isValidPort(params.port)) {
-        throw new ProvisionError(`Geçersiz port: ${params.port}`)
-      }
-      await runProvisionScript([
-        "create-vhost",
-        params.domain,
-        params.type,
-        www,
-        String(params.port),
+        params.spa ? "true" : "false",
       ])
       return
     }
@@ -311,39 +178,20 @@ export async function createVhost(params: CreateVhostParams): Promise<void> {
       if (params.linuxUser && !isValidLinuxUsername(params.linuxUser)) {
         throw new ProvisionError(`Geçersiz linux kullanıcı adı: ${params.linuxUser}`)
       }
-      await runProvisionScript([
-        "create-vhost",
-        params.domain,
-        "REVERSE_PROXY",
-        www,
-        params.upstreamUrl,
-        params.linuxUser ?? "",
-      ])
-      return
-    }
-    case "DOCKER": {
-      if (!isValidPort(params.port)) {
-        throw new ProvisionError(`Geçersiz port: ${params.port}`)
-      }
-      if (params.linuxUser && !isValidLinuxUsername(params.linuxUser)) {
-        throw new ProvisionError(`Geçersiz linux kullanıcı adı: ${params.linuxUser}`)
-      }
-      if (!isValidAbsolutePath(params.workingDir)) {
-        throw new ProvisionError(`Geçersiz çalışma dizini: ${params.workingDir}`)
+      if (params.composePort !== undefined && !isValidPort(params.composePort)) {
+        throw new ProvisionError(`Geçersiz port: ${params.composePort}`)
       }
       await runProvisionScript(
         [
           "create-vhost",
           params.domain,
-          "DOCKER",
+          "REVERSE_PROXY",
           www,
-          String(params.port),
-          params.workingDir,
-          params.composeService ?? "",
+          params.upstreamUrl,
           params.linuxUser ?? "",
-          params.bootstrap === false ? "false" : "true",
+          params.composePort !== undefined ? String(params.composePort) : "",
         ],
-        DOCKER_TIMEOUT_MS
+        params.composePort !== undefined ? DOCKER_TIMEOUT_MS : DEFAULT_TIMEOUT_MS
       )
       return
     }
@@ -353,6 +201,16 @@ export async function createVhost(params: CreateVhostParams): Promise<void> {
 export async function removeVhost(domain: string): Promise<void> {
   requireDomain(domain)
   await runProvisionScript(["remove-vhost", domain])
+}
+
+/**
+ * Statik sitenin yönlendirmesi (SPA modu) — vhost'un yalnızca `location /`
+ * satırını değiştirir, SSL bloğunu korur (bkz. provision-site.sh
+ * `cmd_update_static_routing`).
+ */
+export async function updateStaticRouting(domain: string, spa: boolean): Promise<void> {
+  requireDomain(domain)
+  await runProvisionScript(["update-static-routing", domain, spa ? "true" : "false"])
 }
 
 /**
@@ -403,58 +261,22 @@ export async function removePanelDomain(): Promise<void> {
 }
 
 // ------------------------------------------------------------
-// systemd servis yönetimi (nodejs / python)
-// ------------------------------------------------------------
-export async function createService(params: {
-  domain: string
-  workingDir: string
-  startCommand: string
-  port: number
-  linuxUser?: string
-}): Promise<void> {
-  requireDomain(params.domain)
-  if (!isValidAbsolutePath(params.workingDir)) {
-    throw new ProvisionError(`Geçersiz çalışma dizini: ${params.workingDir}`)
-  }
-  if (!isValidStartCommand(params.startCommand)) {
-    throw new ProvisionError(`Geçersiz başlatma komutu: ${params.startCommand}`)
-  }
-  if (!isValidPort(params.port)) {
-    throw new ProvisionError(`Geçersiz port: ${params.port}`)
-  }
-  if (params.linuxUser && !isValidLinuxUsername(params.linuxUser)) {
-    throw new ProvisionError(`Geçersiz linux kullanıcı adı: ${params.linuxUser}`)
-  }
-  await runProvisionScript([
-    "create-service",
-    params.domain,
-    params.workingDir,
-    params.startCommand,
-    String(params.port),
-    params.linuxUser ?? "",
-  ])
-}
-
-// ------------------------------------------------------------
-// Paylaşımlı-süreç tiplerinde (Node.js/Python/Ters Proxy/Docker) sonradan
-// terminal izolasyonu kurmak için — yeni site oluşturmadaki OTOMATİK
+// Uygulama sitelerinde sonradan terminal izolasyonu kurmak için — yeni site oluşturmadaki OTOMATİK
 // çağrının aynısı, ama var olan (bu değişiklikten ÖNCE oluşturulmuş) bir
 // site için elle/geriye dönük tetiklenebilir (bkz. /api/sites/[id]/ensure-terminal-user).
 // ------------------------------------------------------------
 export type SiteUserModel = "shared" | "owned"
 
 /**
- * `model`: "shared" — Node.js/Python/Ters Proxy/Docker (klasör panel'de, grup
- * erişimi); "owned" — Static/PHP/WordPress (klasör kullanıcıya ait, panel/nginx
- * ACL ile; `phpVersion` verilirse site başına PHP-FPM havuzu da kurulur ve
- * vhost o sokete çevrilir — bkz. provision-site.sh cmd_ensure_site_user).
+ * `model`: "shared" — Uygulama (klasör panel'de, grup erişimi); "owned" —
+ * Statik (klasör kullanıcıya ait, panel/nginx ACL ile — bkz. provision-site.sh
+ * cmd_ensure_site_user).
  */
 export async function ensureSiteUser(
   domain: string,
   workdir: string,
   linuxUser: string,
-  model: SiteUserModel = "shared",
-  phpVersion?: string
+  model: SiteUserModel = "shared"
 ): Promise<void> {
   requireDomain(domain)
   if (!isValidAbsolutePath(workdir)) {
@@ -463,19 +285,14 @@ export async function ensureSiteUser(
   if (!isValidLinuxUsername(linuxUser)) {
     throw new ProvisionError(`Geçersiz linux kullanıcı adı: ${linuxUser}`)
   }
-  if (phpVersion && !isValidPhpVersion(phpVersion)) {
-    throw new ProvisionError(`Geçersiz PHP sürümü: ${phpVersion}`)
-  }
-  const args = ["ensure-site-user", domain, workdir, linuxUser, model]
-  if (phpVersion) args.push(phpVersion)
-  await runProvisionScript(args, DEFAULT_TIMEOUT_MS * 2)
+  await runProvisionScript(["ensure-site-user", domain, workdir, linuxUser, model], DEFAULT_TIMEOUT_MS * 2)
 }
 
 /**
  * Site silinirken artıkları kaldırır (2026-09-15 denetimi: eskiden yalnızca
  * vhost + systemd birimi kaldırılıyor; klasör, dedicated kullanıcı, compose
  * konteynerleri — dolayısıyla meşgul portlar — geride kalıyordu). Compose
- * konteynerleri ve PHP-FPM havuzu her zaman kaldırılır; klasör ve kullanıcı
+ * konteynerleri her zaman kaldırılır; klasör ve kullanıcı
  * seçeneğe bağlı (bkz. DELETE /api/sites/[id]).
  */
 export async function cleanupSite(params: {
@@ -526,65 +343,11 @@ export async function refreshCloudflareIps(): Promise<void> {
   await runProvisionScript(["refresh-cloudflare-ips"], 60_000)
 }
 
-/** `site_<slug>` — Node.js/Python/Ters Proxy/Docker siteleri için otomatik
- * üretilen dedicated kullanıcı adı (STATIC/PHP/WORDPRESS'in aksine bu
- * tiplerde sihirbazda elle bir kullanıcı adı girme alanı YOK — terminal
- * izolasyonunun her zaman kurulu olması için otomatik üretiliyor).
+/** `site_<slug>` — sitenin otomatik üretilen dedicated kullanıcı adı
+ * (Statik'te sihirbazda elle de verilebilir; terminal izolasyonunun her zaman
+ * kurulu olması için boşsa bu üretilir).
  * `USERNAME_RE` ile uyumlu: küçük harfle başlar, azami 32 karakter. */
 export function autoLinuxUserFor(domain: string): string {
   const slug = domain.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "site"
   return `site_${slug}`.slice(0, 32)
-}
-
-export async function removeService(domain: string): Promise<void> {
-  requireDomain(domain)
-  await runProvisionScript(["remove-service", domain])
-}
-
-export type ServiceAction = "start" | "stop" | "restart"
-
-export async function serviceAction(domain: string, action: ServiceAction): Promise<void> {
-  requireDomain(domain)
-  if (action !== "start" && action !== "stop" && action !== "restart") {
-    throw new ProvisionError(`Geçersiz eylem: ${action}`)
-  }
-  await runProvisionScript(["service-action", domain, action])
-}
-
-export async function serviceStatus(domain: string): Promise<string> {
-  requireDomain(domain)
-  const { stdout } = await runProvisionScript(["service-status", domain])
-  return stdout.trim() || "unknown"
-}
-
-export async function serviceLogs(domain: string, lines: number): Promise<string> {
-  requireDomain(domain)
-  const safeLines = Number.isInteger(lines) && lines >= 1 && lines <= 2000 ? lines : 200
-  const { stdout } = await runProvisionScript(["service-logs", domain, String(safeLines)])
-  return stdout
-}
-
-// ------------------------------------------------------------
-// WordPress veritabanı
-// ------------------------------------------------------------
-export async function createWpDb(params: {
-  domain: string
-  dbName: string
-  dbUser: string
-  dbPassword: string
-}): Promise<void> {
-  requireDomain(params.domain)
-  if (!isValidDbIdentifier(params.dbName)) {
-    throw new ProvisionError(`Geçersiz veritabanı adı: ${params.dbName}`)
-  }
-  if (!isValidDbIdentifier(params.dbUser)) {
-    throw new ProvisionError(`Geçersiz veritabanı kullanıcısı: ${params.dbUser}`)
-  }
-  if (!isValidDbPassword(params.dbPassword)) {
-    throw new ProvisionError("Geçersiz veritabanı şifresi (8-64 karakter olmalı).")
-  }
-  await runProvisionScript(
-    ["create-wp-db", params.domain, params.dbName, params.dbUser, params.dbPassword],
-    WORDPRESS_TIMEOUT_MS
-  )
 }

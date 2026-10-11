@@ -3,29 +3,9 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  CheckCircle2,
-  Loader2,
-  XCircle,
-  Globe,
-  Code2,
-  Layers,
-  Server,
-  Sparkles,
-  Box,
-} from "lucide-react"
+import { ArrowLeft, ArrowRight, Box, Check, CheckCircle2, Globe, Loader2, XCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -45,75 +25,53 @@ function portValue(id: string): number | undefined {
   return Number.isInteger(n) ? n : undefined
 }
 
+function checkboxValue(id: string): boolean {
+  const el = document.getElementById(id) as HTMLInputElement | null
+  return !!el?.checked
+}
+
 function buildConfig(type: SiteType, useWww: boolean, useSsl: boolean, sslEmail: string) {
   const config: Record<string, unknown> = { www: useWww }
   if (useSsl && sslEmail) config.sslEmail = sslEmail
 
   switch (type) {
-    case "nodejs":
-    case "python":
-      config.startCommand = fieldValue("start-cmd")
-      config.port = portValue("port")
-      break
-    case "wordpress":
-      config.phpVersion = fieldValue("php-version")
-      config.siteRoot = fieldValue("site-root")
-      config.linuxUser = fieldValue("linux-user")
-      config.dbName = fieldValue("db-name")
-      config.dbUser = fieldValue("db-user")
-      config.dbPassword = fieldValue("db-password")
-      break
-    case "php":
-      config.phpVersion = fieldValue("php-version")
-      config.siteRoot = fieldValue("site-root")
-      config.linuxUser = fieldValue("linux-user")
-      break
     case "static":
       config.siteRoot = fieldValue("site-root")
       config.linuxUser = fieldValue("linux-user")
       config.publishDir = fieldValue("publish-dir")
+      config.spa = checkboxValue("spa")
       break
-    case "proxy":
-      config.upstreamUrl = fieldValue("target-url")
+    case "proxy": {
+      // Tam hedef adres verildiyse o, yoksa port -> http://127.0.0.1:<port>.
+      const target = fieldValue("target-url")
+      if (target) config.upstreamUrl = target
+      else config.port = portValue("app-port")
       break
-    case "docker":
-      config.port = portValue("docker-port")
-      config.composeService = fieldValue("docker-service")
-      config.workingDir = fieldValue("docker-workdir")
-      break
+    }
   }
 
   return config
 }
 
-function typeChecklist(type: SiteType, managed: boolean, hasSsl: boolean, lang: "tr" | "en", connectingRepo: boolean): string[] {
+function typeChecklist(type: SiteType, hasSsl: boolean, lang: "tr" | "en", connectingRepo: boolean, compose: boolean): string[] {
   const items: string[] = []
-  if (type === "wordpress") {
-    items.push(
-      lang === "en" ? "Creating database" : "Veritabanı oluşturuluyor",
-      lang === "en" ? "Downloading WordPress" : "WordPress indiriliyor"
-    )
-  }
-  if (type === "docker") {
-    items.push(lang === "en" ? "Creating working directory" : "Çalışma dizini oluşturuluyor")
-    if (!connectingRepo) {
+  if (type === "proxy") {
+    items.push(lang === "en" ? "Creating the app folder" : "Uygulama klasörü oluşturuluyor")
+    if (compose && !connectingRepo) {
       items.push(
-        lang === "en" ? "Writing example docker-compose.yml (if missing)" : "Örnek docker-compose.yml yazılıyor (yoksa)",
+        lang === "en" ? "Writing example docker-compose.yml" : "Örnek docker-compose.yml yazılıyor",
         lang === "en" ? "Starting Docker Compose" : "Docker Compose başlatılıyor"
       )
     }
   }
   items.push(lang === "en" ? "Writing Nginx configuration" : "Nginx yapılandırması yazılıyor")
-  if (managed && type !== "docker") {
-    items.push(lang === "en" ? "Creating and starting systemd service" : "systemd servisi oluşturuluyor ve başlatılıyor")
-  }
   if (hasSsl) {
     items.push(lang === "en" ? "Checking DNS and requesting SSL certificate (Let's Encrypt)" : "DNS kontrol ediliyor ve SSL sertifikası isteniyor (Let's Encrypt)")
   }
   if (connectingRepo && type === "static") {
     items.push(lang === "en" ? "Connecting repository, cloning, building and publishing" : "Depo bağlanıyor, klonlanıp derleniyor ve yayınlanıyor")
   } else if (connectingRepo) {
-    items.push(lang === "en" ? "Connecting repository, cloning and deploying into site root" : "Depo bağlanıyor, site köküne klonlanıp deploy ediliyor")
+    items.push(lang === "en" ? "Connecting repository, cloning and deploying" : "Depo bağlanıyor, klonlanıp deploy ediliyor")
   }
   return items
 }
@@ -130,27 +88,11 @@ interface InstalledRepoOption {
   installationId: string
 }
 
-/** Sihirbazda opsiyonel repo bağlama yalnızca git-pull desteklenen tipler için
- * (bkz. src/lib/git.ts GIT_PULL_TYPES) — PHP/WORDPRESS'te kod doğrudan web
- * kökünde çalıştığı için hâlâ yok. */
+/** Sihirbazda opsiyonel repo bağlama (bkz. src/lib/git.ts GIT_PULL_TYPES) — v1.4.0'da iki türde de. */
 const GIT_CONNECTABLE_TYPES: SiteType[] = GIT_CAPABLE_UI_TYPES
 
 function getTypeIcon(type: SiteType) {
-  switch (type) {
-    case "wordpress":
-    case "php":
-      return Globe
-    case "nodejs":
-      return Code2
-    case "python":
-      return Layers
-    case "proxy":
-      return Server
-    case "docker":
-      return Box
-    default:
-      return Globe
-  }
+  return type === "proxy" ? Box : Globe
 }
 
 export default function NewSitePage() {
@@ -171,6 +113,9 @@ export default function NewSitePage() {
   const [sslEmail, setSslEmail] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<ProvisionResult | null>(null)
+  // Uygulama: süreç yöneticisi (Docker Compose varsayılan). Repo yoksa Compose
+  // seçiliyken örnek bir compose ile hemen ayağa kalkar.
+  const [processManager, setProcessManager] = useState<"DOCKER_COMPOSE" | "NONE">("DOCKER_COMPOSE")
 
   // Opsiyonel: sihirbazda GitHub App'e bağlı bir depo seçilebilir (yalnızca
   // git-pull desteklenen tipler için) — site oluşturulur oluşturulmaz
@@ -227,9 +172,10 @@ export default function NewSitePage() {
           sslEnabled: useSsl,
           config: buildConfig(selectedType, useWww, useSsl, sslEmail),
           deployCommand: fieldValue("deploy-cmd") || undefined,
+          processManager: selectedType === "proxy" ? processManager : undefined,
           // Depo seçildiyse örnek compose + otomatik `up` atlanır; gerçek
           // compose dosyası klonlanıp deploy hattı onu ayağa kaldırır.
-          skipDockerBootstrap: selectedType === "docker" && !!(canConnectRepo && selectedRepoFullName),
+          skipDockerBootstrap: selectedType === "proxy" && !!(canConnectRepo && selectedRepoFullName),
         }),
       })
       const data = (await res.json().catch(() => null)) as (ApiSite & { error?: string }) | null
@@ -337,7 +283,7 @@ export default function NewSitePage() {
       {/* ═══ 2. ADIM 1: TÜR SEÇİMİ ═══ */}
       {step === 1 && (
         <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             {SITE_TYPES.map((tItem) => {
               const TypeIcon = getTypeIcon(tItem.type)
               const isSelected = selectedType === tItem.type
@@ -464,7 +410,15 @@ export default function NewSitePage() {
                 </div>
               )}
 
-              <TypeSpecificFields type={typeInfo.type} domain={domain} t={t} lang={lang} suggestedPort={suggestedPort} />
+              <TypeSpecificFields
+                type={typeInfo.type}
+                domain={domain}
+                t={t}
+                lang={lang}
+                suggestedPort={suggestedPort}
+                processManager={processManager}
+                onProcessManagerChange={setProcessManager}
+              />
 
               {canConnectRepo && (
                 <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-[#16223f]">
@@ -491,8 +445,8 @@ export default function NewSitePage() {
                         ? "The repo is cloned into the site's repo/ folder; after the optional build, the publish folder is copied to public/."
                         : "Depo sitenin repo/ klasörüne klonlanır; isteğe bağlı derlemeden sonra yayın klasörü public/'e kopyalanır."
                       : lang === "en"
-                        ? "As soon as the site's folder exists, this repo is cloned straight into it."
-                        : "Sitenin klasörü oluşur oluşmaz bu depo doğrudan içine klonlanır."}
+                        ? "As soon as the site's folder exists, this repo is cloned into it; with Docker Compose the repo's own compose file is started."
+                        : "Sitenin klasörü oluşur oluşmaz bu depo içine klonlanır; Docker Compose seçiliyse deponun kendi compose dosyası ayağa kaldırılır."}
                   </p>
                   {selectedType === "static" && selectedRepoFullName && <StaticBuildFields lang={lang} />}
                 </div>
@@ -557,7 +511,7 @@ export default function NewSitePage() {
 
           {result === null ? (
             <div className="space-y-3 py-4">
-              {typeChecklist(typeInfo.type, typeInfo.managed, useSsl, lang, canConnectRepo && !!selectedRepoFullName).map((item, index) => (
+              {typeChecklist(typeInfo.type, useSsl, lang, canConnectRepo && !!selectedRepoFullName, processManager === "DOCKER_COMPOSE").map((item, index) => (
                 <div key={index} className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-300 font-medium">
                   <span className="size-2 rounded-full bg-[#580619] dark:bg-blue-300 animate-pulse" />
                   {item}
@@ -607,20 +561,17 @@ export default function NewSitePage() {
   )
 }
 
-function DeployCommandField({ type, lang }: { type: SiteType; lang: "tr" | "en" }) {
-  const placeholder =
-    type === "nodejs" ? "npm ci && npm run build" : type === "python" ? "pip install -r requirements.txt" : lang === "en" ? "optional, e.g. npm ci && npm run build" : "isteğe bağlı, örn. npm ci && npm run build"
-  const defaultValue = type === "nodejs" ? "npm ci" : type === "python" ? "pip install -r requirements.txt" : ""
+function DeployCommandField({ lang }: { lang: "tr" | "en" }) {
   return (
     <div className="space-y-2 sm:col-span-2">
       <Label htmlFor="deploy-cmd" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-        {lang === "en" ? "Deploy command (after each pull, before restart)" : "Deploy komutu (her pull sonrası, yeniden başlatmadan önce)"}
+        {lang === "en" ? "Deploy command (optional, after each pull)" : "Deploy komutu (isteğe bağlı, her pull sonrası)"}
       </Label>
-      <Input id="deploy-cmd" defaultValue={defaultValue} placeholder={placeholder} className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
+      <Input id="deploy-cmd" placeholder={lang === "en" ? "usually empty with Docker Compose" : "Docker Compose'da genelde boş"} className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
       <p className="text-[11px] text-slate-500 dark:text-slate-400">
         {lang === "en"
-          ? "Runs in the site folder (e.g. install dependencies / build). Leave empty for Docker — compose builds the image itself."
-          : "Site klasöründe çalışır (bağımlılık kurma / build). Docker'da boş bırakılabilir — image'ı compose kendisi build eder."}
+          ? "Runs in the app folder before the restart. With Docker Compose the image is built by compose itself."
+          : "Yeniden başlatmadan önce uygulama klasöründe çalışır. Docker Compose'da image'ı compose kendisi derler."}
       </p>
     </div>
   )
@@ -660,7 +611,7 @@ function LinuxUserField({ domain, lang }: { domain: string; lang: "tr" | "en" })
       </Label>
       <Input id="linux-user" placeholder={auto} className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
       <p className="text-[11px] text-slate-500 dark:text-slate-400">
-        {lang === "en" ? "Files and PHP run as this dedicated user (auto-generated when empty)." : "Dosyalar ve PHP bu dedicated kullanıcı olarak çalışır (boşsa otomatik üretilir)."}
+        {lang === "en" ? "Site files belong to this dedicated user (auto-generated when empty)." : "Site dosyaları bu dedicated kullanıcıya ait olur (boşsa otomatik üretilir)."}
       </p>
     </div>
   )
@@ -672,176 +623,85 @@ function TypeSpecificFields({
   t,
   lang,
   suggestedPort,
+  processManager,
+  onProcessManagerChange,
 }: {
   type: SiteType
   domain: string
   t: (key: string) => string
   lang: "tr" | "en"
   suggestedPort: number | null
+  processManager: "DOCKER_COMPOSE" | "NONE"
+  onProcessManagerChange: (value: "DOCKER_COMPOSE" | "NONE") => void
 }) {
   const rootPlaceholder = `/var/www/${domain || (lang === "en" ? "example.com" : "ornek.com")}`
   const portDefault = suggestedPort !== null ? String(suggestedPort) : undefined
+  const inputCls = "font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
 
-  switch (type) {
-    case "nodejs":
-      return (
-        <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-[#16223f]">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="start-cmd" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.startCommand")}</Label>
-              <Input id="start-cmd" defaultValue="npm run start" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="port" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.appPort")}</Label>
-              <Input key={portDefault ?? "p"} id="port" type="number" defaultValue={portDefault ?? "3000"} className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
-              <BusyPortsHint />
-            </div>
-            <DeployCommandField type="nodejs" lang={lang} />
-          </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-sans">
-            {t("sites.wizard.codeStoredIn").replace("{path}", rootPlaceholder)} {lang === "en" ? "Uses the server's Node.js (systemd, PORT env)." : "Sunucudaki Node.js kullanılır (systemd, PORT ortam değişkeni)."}
+  if (type === "static") {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-slate-100 dark:border-[#16223f]">
+        <div className="space-y-2">
+          <Label htmlFor="site-root" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.siteRoot")}</Label>
+          <Input id="site-root" placeholder={rootPlaceholder} className={inputCls} />
+        </div>
+        <LinuxUserField domain={domain} lang={lang} />
+        <label className="sm:col-span-2 flex items-start gap-2.5 rounded-xl border border-slate-200 dark:border-[#16223f] p-3 text-xs cursor-pointer">
+          <input id="spa" type="checkbox" className="size-4 mt-0.5" />
+          <span>
+            <span className="font-bold text-slate-800 dark:text-slate-200">{lang === "en" ? "Single-page app (SPA) mode" : "Tek sayfa uygulama (SPA) modu"}</span>
+            <span className="block text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              {lang === "en"
+                ? "Unknown paths serve index.html (React/Vue router). Can be changed later."
+                : "Bulunamayan yollar index.html'e düşer (React/Vue yönlendirmesi). Sonra değiştirilebilir."}
+            </span>
+          </span>
+        </label>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-[#16223f]">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="app-port" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.appPort")}</Label>
+          <Input key={portDefault ?? "p"} id="app-port" type="number" defaultValue={portDefault ?? "3000"} className={inputCls} />
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            {lang === "en"
+              ? "Nginx proxies to 127.0.0.1:<port> — your compose file must publish the app on this port."
+              : "Nginx 127.0.0.1:<port>'a yönlendirir — compose dosyanız uygulamayı bu portta yayınlamalı."}
+          </p>
+          <BusyPortsHint />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">{lang === "en" ? "Process manager" : "Süreç yöneticisi"}</Label>
+          <select
+            value={processManager}
+            onChange={(e) => onProcessManagerChange(e.target.value as "DOCKER_COMPOSE" | "NONE")}
+            className="w-full h-10 px-3 rounded-xl text-xs bg-white dark:bg-[#060a17] border border-slate-200 dark:border-[#16223f] text-slate-900 dark:text-slate-100 outline-none"
+          >
+            <option value="DOCKER_COMPOSE">Docker Compose</option>
+            <option value="NONE">{lang === "en" ? "None — I run the app myself" : "Yok — uygulamayı kendim çalıştırıyorum"}</option>
+          </select>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            {processManager === "DOCKER_COMPOSE"
+              ? lang === "en"
+                ? "Without a repository an example compose (nginx:alpine) is started so the site answers right away."
+                : "Repo seçilmezse site hemen yanıt versin diye örnek bir compose (nginx:alpine) başlatılır."
+              : lang === "en"
+                ? "PM2 and custom scripts can be chosen later on the Git & Deployment tab."
+                : "PM2 ve özel betik sonra Git & Dağıtım sekmesinden seçilebilir."}
           </p>
         </div>
-      )
-    case "python":
-      return (
-        <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-[#16223f]">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="start-cmd" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.startCommand")}</Label>
-              <Input id="start-cmd" defaultValue="gunicorn app:app --bind 127.0.0.1:$PORT" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="port" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.appPort")}</Label>
-              <Input key={portDefault ?? "p"} id="port" type="number" defaultValue={portDefault ?? "8000"} className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
-              <BusyPortsHint />
-            </div>
-            <DeployCommandField type="python" lang={lang} />
-          </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="target-url" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+            {lang === "en" ? "Full target address (optional, instead of the port)" : "Tam hedef adres (isteğe bağlı, port yerine)"}
+          </Label>
+          <Input id="target-url" placeholder="http://10.0.0.5:8080" className={inputCls} />
         </div>
-      )
-    case "wordpress":
-      return (
-        <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-slate-100 dark:border-[#16223f]">
-          <div className="space-y-2">
-            <Label htmlFor="php-version" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.phpVersion")}</Label>
-            <Input id="php-version" defaultValue="8.3" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="site-root" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.siteRoot")}</Label>
-            <Input id="site-root" placeholder={rootPlaceholder} className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="db-name" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.dbName")}</Label>
-            <Input id="db-name" placeholder={domain.replace(/[^a-zA-Z0-9]/g, "_") || "wp_db"} className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="db-user" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.dbUser")}</Label>
-            <Input id="db-user" placeholder="wp_user" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="db-password" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.dbPassword")}</Label>
-            <Input id="db-password" type="password" placeholder={t("sites.wizard.dbPasswordPlaceholder")} className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
-          </div>
-          <LinuxUserField domain={domain} lang={lang} />
-        </div>
-      )
-    case "php":
-      return (
-        <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-slate-100 dark:border-[#16223f]">
-          <div className="space-y-2">
-            <Label htmlFor="php-version" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.phpVersion")}</Label>
-            <Input id="php-version" defaultValue="8.3" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="site-root" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.siteRoot")}</Label>
-            <Input id="site-root" placeholder={rootPlaceholder} className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
-          </div>
-          <LinuxUserField domain={domain} lang={lang} />
-        </div>
-      )
-    case "static":
-      return (
-        <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-slate-100 dark:border-[#16223f]">
-          <div className="space-y-2">
-            <Label htmlFor="site-root" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.siteRoot")}</Label>
-            <Input id="site-root" placeholder={rootPlaceholder} className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
-          </div>
-          <LinuxUserField domain={domain} lang={lang} />
-        </div>
-      )
-    case "proxy":
-      return (
-        <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-[#16223f]">
-          <div className="space-y-2">
-            <Label htmlFor="target-url" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.wizard.upstreamUrl")}</Label>
-            <Input key={portDefault ?? "u"} id="target-url" defaultValue={portDefault ? `http://127.0.0.1:${portDefault}` : undefined} placeholder="http://127.0.0.1:8080" className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100" />
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              {lang === "en" ? "Pre-filled with a free port; you can change the target later from the site page once your app is running." : "Boş bir portla ön-dolu; uygulamanız ayağa kalkınca hedefi site sayfasından değiştirebilirsiniz."}
-            </p>
-            <BusyPortsHint />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <DeployCommandField type="proxy" lang={lang} />
-          </div>
-        </div>
-      )
-    case "docker":
-      return (
-        <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-[#16223f]">
-          <div className="rounded-xl border border-blue-200/60 dark:border-[#1e3568] bg-blue-50/50 dark:bg-[#060d1f] p-3 text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-            {lang === "en"
-              ? "Panel will create the working directory, write an example docker-compose.yml (if none exists), and start the containers. You can update the compose file from the File Manager."
-              : "Panel çalışma dizinini oluşturacak, örnek docker-compose.yml yazacak (yoksa) ve konteynerleri başlatacak. Compose dosyasını Dosya Yöneticisi'nden güncelleyebilirsin."}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="docker-port" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                {lang === "en" ? "Container Port" : "Konteyner Portu"}
-              </Label>
-              <Input
-                key={portDefault ?? "d"}
-                id="docker-port"
-                type="number"
-                defaultValue={portDefault ?? "8080"}
-                placeholder="8080"
-                className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
-              />
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {lang === "en" ? "Port the container exposes (nginx proxies to this)." : "Konteynerin yayınladığı port (nginx bu porta proxy yapar)."}
-              </p>
-              <BusyPortsHint />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="docker-service" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                {lang === "en" ? "Compose Service (optional)" : "Compose Servis Adı (opsiyonel)"}
-              </Label>
-              <Input
-                id="docker-service"
-                placeholder={lang === "en" ? "e.g. app" : "örn. app"}
-                className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
-              />
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {lang === "en" ? "Service name in docker-compose.yml. Leave empty for all services." : "docker-compose.yml'deki servis adı. Boş bırakırsan tüm servisler başlatılır."}
-              </p>
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="docker-workdir" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                {lang === "en" ? "Working Directory" : "Çalışma Dizini"}
-              </Label>
-              <Input
-                id="docker-workdir"
-                defaultValue={rootPlaceholder}
-                placeholder={rootPlaceholder}
-                className="font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
-              />
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {lang === "en" ? "Directory where docker-compose.yml lives." : "docker-compose.yml'nin bulunduğu dizin."}
-              </p>
-            </div>
-            <DeployCommandField type="docker" lang={lang} />
-          </div>
-        </div>
-      )
-  }
+        <DeployCommandField lang={lang} />
+      </div>
+    </div>
+  )
 }

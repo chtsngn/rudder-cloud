@@ -180,12 +180,8 @@ export default function SitesListPage() {
             onChange={setTypeFilter}
             options={[
               { value: "all", label: t("sites.allTypes") },
-              { value: "wordpress", label: "WordPress" },
-              { value: "nodejs", label: "Node.js" },
-              { value: "python", label: "Python" },
-              { value: "php", label: "PHP" },
-              { value: "proxy", label: "Proxy" },
-              { value: "static", label: "Static" },
+              { value: "proxy", label: t("sites.types.proxy.label") },
+              { value: "static", label: t("sites.types.static.label") },
             ]}
             className="min-w-[130px]"
           />

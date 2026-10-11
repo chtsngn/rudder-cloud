@@ -187,8 +187,7 @@ function fromLaravelStyle(env: Record<string, string>, sourceLabel: string): Det
  * bunlar yoksa — WordPress'in `wp-config.php`'sinden veritabanı bağlantısını
  * algılamayı dener. WordPress kimlik bilgilerini `.env` DEĞİL doğrudan PHP
  * `define()` sabitleriyle `wp-config.php` içinde tuttuğu için bu ayrı bir
- * yol olarak gerekiyor — panelin WORDPRESS site tipini gerçekten kapsaması
- * için şart.
+ * yol olarak gerekiyor (ör. Docker Compose ile çalışan bir WordPress).
  */
 export async function detectSiteDatabase(site: SiteLike): Promise<DetectedDatabase | null> {
   const detected = await detectRaw(site)

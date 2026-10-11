@@ -1,15 +1,11 @@
 /**
  * Manuel/otomatik `git pull` — panel süreci (`panel` kullanıcısı) doğrudan,
- * hiçbir sudo/privileged script olmadan çalıştırır. Bu yüzden yalnızca
- * panelin zaten yazma izni olduğu dizinlerde çalışır: NODEJS/PYTHON (systemd
- * birimleri `User=panel`), REVERSE_PROXY ve DOCKER (klasör panel tarafından
- * oluşturulur — CloudPanel-tarzı "reverse-proxy + git clone + Docker Compose
- * ile ayağa kaldır" akışı tam olarak bunu gerektiriyor) ve STATIC (2026-10-11):
- * site klasörü dedicated kullanıcıya ait ama panel ACL ile yazabiliyor (bkz.
- * provision-site.sh apply_owned_site_access); depo `<siteRoot>/repo`'ya
- * klonlanır, `public`'e yayın adımı aynalar (bkz. src/lib/static-publish.ts).
- * PHP/WORDPRESS'te git-pull hâlâ DESTEKLENMİYOR (kod doğrudan web kökünde
- * çalışır, sahiplik/yazma modeli farklı).
+ * hiçbir sudo/privileged script olmadan çalıştırır; panelin yazma izni olan
+ * iki türde: Uygulama/REVERSE_PROXY (klasör panel'e ait — "git clone + Docker
+ * Compose ile ayağa kaldır" akışı) ve STATIC (2026-10-11: site klasörü
+ * dedicated kullanıcıya ait ama panel ACL ile yazabiliyor, bkz.
+ * provision-site.sh apply_owned_site_access; depo `<siteRoot>/repo`'ya
+ * klonlanır, `public`'e yayın adımı aynalar — src/lib/static-publish.ts).
  *
  * Kimlik doğrulama: site bir GitHub App kurulumuna bağlıysa kısa ömürlü
  * installation token (HTTPS); SSH adresli manuel depolarda sitenin kendi
@@ -49,14 +45,14 @@ export class GitError extends Error {
   }
 }
 
-const GIT_PULL_TYPES = new Set(["STATIC", "NODEJS", "PYTHON", "REVERSE_PROXY", "DOCKER"])
+const GIT_PULL_TYPES = new Set(["STATIC", "REVERSE_PROXY"])
 
 export function isGitPullSupported(siteType: string): boolean {
   return GIT_PULL_TYPES.has(siteType)
 }
 
 export const GIT_PULL_UNSUPPORTED_MESSAGE =
-  "Bu site türü için git bağlama desteklenmiyor (yalnızca Statik/Node.js/Python/Ters Proxy/Docker)."
+  "Bu site türü için git bağlama desteklenmiyor (yalnızca Statik ve Uygulama)."
 
 async function pathExists(path: string): Promise<boolean> {
   try {

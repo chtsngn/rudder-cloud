@@ -8,14 +8,11 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Check,
-  Code2,
   Database,
   FolderOpen,
   GitBranch,
   Globe,
-  Layers,
   Loader2,
-  Server,
   Settings2,
   ShieldAlert,
   Terminal,
@@ -26,7 +23,7 @@ import {
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { BusyPortsHint } from "@/components/busy-ports-hint"
 import { SiteAccessCard } from "@/components/site-access-card"
 import { SiteBackupCard } from "@/components/site-backup-card"
@@ -37,7 +34,7 @@ import { SiteFileEditor } from "@/components/site-file-editor"
 import { SiteFileManager, type SiteFileManagerHandle } from "@/components/site-file-manager"
 import { SiteDropUpload } from "@/components/site-drop-upload"
 import { SITE_TYPES, type Site, type SiteType } from "@/lib/mock-data"
-import { apiSiteToUiSite, GIT_CAPABLE_DB_TYPES, sitePortFromConfig, type ApiSite } from "@/lib/site-adapter"
+import { apiSiteToUiSite, GIT_CAPABLE_DB_TYPES, type ApiSite } from "@/lib/site-adapter"
 import { useTranslation } from "@/components/language-provider"
 import { useTerminalDock } from "@/components/terminal-dock-context"
 import { useCurrentUser } from "@/hooks/use-current-user"
@@ -69,18 +66,7 @@ interface DnsCheck {
 
 function renderTypeIcon(type: SiteType) {
   const cls = "size-6"
-  switch (type) {
-    case "nodejs":
-      return <Code2 className={cls} />
-    case "python":
-      return <Layers className={cls} />
-    case "proxy":
-      return <Server className={cls} />
-    case "docker":
-      return <Box className={cls} />
-    default:
-      return <Globe className={cls} />
-  }
+  return type === "proxy" ? <Box className={cls} /> : <Globe className={cls} />
 }
 
 const tabBtn = (active: boolean) =>
@@ -135,11 +121,8 @@ export default function SiteDetailPage() {
   const [upstreamSaveError, setUpstreamSaveError] = useState<string | null>(null)
   const [upstreamSaveOk, setUpstreamSaveOk] = useState(false)
 
-  const [appPort, setAppPort] = useState("")
-  const [appStart, setAppStart] = useState("")
-  const [appSaving, setAppSaving] = useState(false)
-  const [appSaveError, setAppSaveError] = useState<string | null>(null)
-  const [appSaveOk, setAppSaveOk] = useState(false)
+  const [spaSaving, setSpaSaving] = useState(false)
+  const [spaError, setSpaError] = useState<string | null>(null)
 
   function syncUrl(next: { tab: ActiveTab; dir?: string; file?: string | null }) {
     const qs = new URLSearchParams()
@@ -172,8 +155,6 @@ export default function SiteDetailPage() {
     setApi(data)
     const cfg = (data.config ?? {}) as Record<string, unknown>
     setUpstreamUrl(typeof cfg.upstreamUrl === "string" ? cfg.upstreamUrl : "")
-    setAppPort(sitePortFromConfig(cfg) !== null ? String(sitePortFromConfig(cfg)) : "")
-    setAppStart(typeof cfg.startCommand === "string" ? cfg.startCommand : "")
   }, [])
 
   useEffect(() => {
@@ -202,22 +183,18 @@ export default function SiteDetailPage() {
 
   const site = api ? apiSiteToUiSite(api) : null
   const config = (api?.config ?? {}) as Record<string, unknown>
-  const hasSystemd = api?.type === "NODEJS" || api?.type === "PYTHON"
   const isProxy = api?.type === "REVERSE_PROXY"
-  const isDocker = api?.type === "DOCKER"
   const isStatic = api?.type === "STATIC"
   const gitCapable = !!api && (GIT_CAPABLE_DB_TYPES as string[]).includes(api.type)
   const isCompose = api?.processManager === "DOCKER_COMPOSE"
-  const showLogsTab = hasSystemd || isCompose
-  const logsSource: "journal" | "compose" = isCompose ? "compose" : "journal"
+  const showLogsTab = isCompose
 
   const loadLogs = useCallback(async () => {
     if (!api || !showLogsTab) return
     setLogsLoading(true)
     setLogsError(null)
     try {
-      const endpoint = logsSource === "compose" ? "docker-logs" : "logs"
-      const res = await fetch(`/api/sites/${api.id}/${endpoint}?lines=200`, { cache: "no-store" })
+      const res = await fetch(`/api/sites/${api.id}/docker-logs?lines=200`, { cache: "no-store" })
       const data = (await res.json().catch(() => null)) as { logs?: string; error?: string } | null
       if (!res.ok || !data) {
         setLogsError(data?.error ?? "Loglar alınamadı.")
@@ -229,7 +206,7 @@ export default function SiteDetailPage() {
     } finally {
       setLogsLoading(false)
     }
-  }, [api, showLogsTab, logsSource])
+  }, [api, showLogsTab])
 
   useEffect(() => {
     if (activeTab !== "logs") return
@@ -238,7 +215,7 @@ export default function SiteDetailPage() {
     }, 0)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, api?.id, logsSource])
+  }, [activeTab, api?.id])
 
   useEffect(() => {
     if (!api || api.sslStatus !== "error") return
@@ -284,30 +261,26 @@ export default function SiteDetailPage() {
     }
   }
 
-  async function handleAppSettingsSave() {
+  async function handleSpaToggle(spa: boolean) {
     if (!api) return
-    setAppSaving(true)
-    setAppSaveError(null)
-    setAppSaveOk(false)
+    setSpaSaving(true)
+    setSpaError(null)
     try {
-      const payload: Record<string, unknown> = { port: Number(appPort) }
-      if (hasSystemd) payload.startCommand = appStart.trim()
       const res = await fetch(`/api/sites/${api.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ spa }),
       })
       const data = (await res.json().catch(() => null)) as (ApiSite & { error?: string }) | null
       if (!res.ok || !data) {
-        setAppSaveError(data?.error ?? "Kaydedilemedi.")
+        setSpaError(data?.error ?? "Kaydedilemedi.")
         return
       }
       applySite(data)
-      setAppSaveOk(true)
     } catch {
-      setAppSaveError("Sunucuya bağlanılamadı.")
+      setSpaError("Sunucuya bağlanılamadı.")
     } finally {
-      setAppSaving(false)
+      setSpaSaving(false)
     }
   }
 
@@ -400,8 +373,6 @@ export default function SiteDetailPage() {
 
   const configRows: Array<{ label: string; value: string }> = [
     { label: t("sites.detail.domainLabel"), value: site.domain },
-    ...(hasSystemd || isDocker ? [{ label: t("sites.detail.appPortLabel"), value: String(sitePortFromConfig(config) ?? "-") }] : []),
-    ...(hasSystemd ? [{ label: t("sites.detail.startCmdLabel"), value: String(config.startCommand ?? "-") }] : []),
     ...(isProxy ? [{ label: t("sites.detail.upstreamLabel"), value: String(config.upstreamUrl ?? "-") }] : []),
     { label: gitCapable ? (lang === "en" ? "Site folder" : "Site klasörü") : t("sites.detail.siteRootLabel"), value: workdir },
     ...(isStatic && api.repoUrl
@@ -418,7 +389,6 @@ export default function SiteDetailPage() {
             ? t("sites.detail.sslErrorPending")
             : t("sites.detail.sslPending"),
     },
-    ...(hasSystemd ? [{ label: t("sites.detail.systemdUnitLabel"), value: `site-${site.domain.replace(/\./g, "-")}.service` }] : []),
   ]
 
   return (
@@ -467,6 +437,14 @@ export default function SiteDetailPage() {
             )}
           </div>
         </div>
+
+        {typeof config.legacyType === "string" && (
+          <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 p-3 text-xs text-amber-800 dark:text-amber-300">
+            {lang === "en"
+              ? `This site was a ${config.legacyType} site before v1.4.0. That type was removed: its Nginx config, PHP-FPM pool or systemd service stay as they are on the server, but the panel no longer manages them. Move the app to Docker Compose to manage it here.`
+              : `Bu site v1.4.0 öncesi ${config.legacyType} türündeydi. Bu tür kaldırıldı: sunucudaki Nginx yapılandırması, PHP-FPM havuzu ya da systemd servisi olduğu gibi duruyor ama panel artık onları yönetmiyor. Buradan yönetmek için uygulamayı Docker Compose'a taşıyın.`}
+          </div>
+        )}
 
         {api.status === "FAILED" && typeof config.provisionError === "string" && (
           <div className="rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 p-3 text-xs text-red-700 dark:text-red-300 font-mono">
@@ -580,37 +558,23 @@ export default function SiteDetailPage() {
             </div>
           )}
 
-          {(hasSystemd || isDocker) && isSuperAdmin && (
+          {isStatic && (
             <div className={panelCls}>
-              <div>
-                <h3 className="font-heading font-bold text-slate-900 dark:text-slate-100 text-sm">{lang === "en" ? "Application settings" : "Uygulama ayarları"}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  {hasSystemd
-                    ? (lang === "en" ? "Changing the port rewrites the Nginx upstream and the systemd unit, then restarts the service." : "Port değişince Nginx hedefi ve systemd birimi yeniden yazılır, servis yeniden başlatılır.")
-                    : (lang === "en" ? "The port Nginx proxies to — must match the port your compose file publishes on 127.0.0.1." : "Nginx'in yönlendirdiği port — compose dosyanızın 127.0.0.1'de yayınladığı portla aynı olmalı.")}
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
-                <div className="space-y-1.5">
-                  <Label htmlFor="appPort" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.detail.appPortLabel")}</Label>
-                  <Input id="appPort" type="number" value={appPort} onChange={(e) => setAppPort(e.target.value)} className={inputCls} />
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="font-heading font-bold text-slate-900 dark:text-slate-100 text-sm">{lang === "en" ? "Single-page app (SPA) mode" : "Tek sayfa uygulama (SPA) modu"}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    {lang === "en"
+                      ? "Unknown paths serve index.html so client-side routing (React Router, Vue Router…) survives a page refresh. Extensionless addresses (/about → about.html) work either way."
+                      : "Bulunamayan yollar index.html'e düşer; istemci tarafı yönlendirme (React Router, Vue Router…) sayfa yenilenince de çalışır. Uzantısız adresler (/hakkimizda → hakkimizda.html) her iki durumda çalışır."}
+                  </p>
                 </div>
-                {hasSystemd && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="appStart" className="text-xs font-bold text-slate-700 dark:text-slate-300">{t("sites.detail.startCmdLabel")}</Label>
-                    <Input id="appStart" value={appStart} onChange={(e) => setAppStart(e.target.value)} className={inputCls} />
-                  </div>
-                )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {spaSaving && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+                  <Switch checked={config.spa === true} disabled={spaSaving} onCheckedChange={handleSpaToggle} />
+                </div>
               </div>
-              <BusyPortsHint />
-              <div className="flex flex-wrap items-center gap-3">
-                <Button type="button" onClick={handleAppSettingsSave} disabled={appSaving || !appPort} className={primaryBtn}>
-                  {appSaving && <Loader2 className="size-3.5 animate-spin mr-1" />}
-                  {t("common.save")}
-                </Button>
-                {appSaveOk && !appSaveError && <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">{lang === "en" ? "Saved and applied." : "Kaydedildi ve uygulandı."}</span>}
-              </div>
-              {appSaveError && <p className="text-xs text-red-600 dark:text-red-400 font-mono">{appSaveError}</p>}
+              {spaError && <p className="text-xs text-red-600 dark:text-red-400 font-mono">{spaError}</p>}
             </div>
           )}
 
@@ -676,7 +640,7 @@ export default function SiteDetailPage() {
             <div>
               <h3 className="font-heading font-bold text-slate-900 dark:text-slate-100 text-base">{t("sites.detail.liveLogsTitle")}</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {logsSource === "compose" ? "docker compose logs --tail 200" : t("sites.detail.liveLogsDesc")}
+                docker compose logs --tail 200
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={() => loadLogs()} disabled={logsLoading} className="h-8 px-3 rounded-xl border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#060a17] text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer dark:hover:bg-[#111f40]">
@@ -718,8 +682,8 @@ export default function SiteDetailPage() {
               <h3 className="font-heading font-bold text-base">{t("sites.deleteSiteBtn")}: {site.domain}</h3>
               <p className="text-xs text-slate-600 dark:text-slate-400">
                 {lang === "en"
-                  ? "The Nginx vhost, systemd unit, PHP-FPM pool and running compose containers are removed. Choose whether to also delete the files and the dedicated Linux user."
-                  : "Nginx vhost, systemd birimi, PHP-FPM havuzu ve çalışan compose konteynerleri kaldırılır. Dosyaların ve dedicated Linux kullanıcısının da silinip silinmeyeceğini seçin."}
+                  ? "The Nginx vhost and running compose containers are removed. Choose whether to also delete the files and the dedicated Linux user."
+                  : "Nginx vhost'u ve çalışan compose konteynerleri kaldırılır. Dosyaların ve dedicated Linux kullanıcısının da silinip silinmeyeceğini seçin."}
               </p>
               <label className="flex items-start gap-2.5 rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50/60 dark:bg-red-950/20 p-3 text-xs cursor-pointer">
                 <input type="checkbox" checked={deleteRemoveFolder} onChange={(e) => setDeleteRemoveFolder(e.target.checked)} className="size-4 mt-0.5 rounded border-input" />

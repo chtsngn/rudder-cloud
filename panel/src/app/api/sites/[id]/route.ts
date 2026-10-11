@@ -10,17 +10,14 @@ import { isPortListening, sitePortOf } from "@/lib/ports"
 import { prisma } from "@/lib/prisma"
 import {
   cleanupSite,
-  createService,
   defaultSiteRoot,
   isValidAbsolutePath,
   isValidDeployCommand,
   isValidPm2Name,
-  isValidPort,
-  isValidStartCommand,
   isValidUpstreamUrl,
   ProvisionError,
-  removeService,
   removeVhost,
+  updateStaticRouting,
   updateUpstream,
 } from "@/lib/provision"
 import { normalizePublishDir, resolveSiteWorkdir } from "@/lib/site-paths"
@@ -29,9 +26,6 @@ interface RouteParams {
   params: Promise<{ id: string }>
 }
 
-/** Node.js/Python: systemd tarafından yönetilen, panelin ayrıca bir servis birimi yarattığı tipler. */
-const MANAGED_TYPES = new Set(["NODEJS", "PYTHON"])
-const OWNED_TYPES = new Set(["STATIC", "PHP", "WORDPRESS"])
 
 export async function GET(_request: Request, { params }: RouteParams) {
   const session = await getSession()
@@ -50,20 +44,20 @@ export async function GET(_request: Request, { params }: RouteParams) {
   return NextResponse.json(site)
 }
 
-const VALID_PROCESS_MANAGERS = new Set(["SYSTEMD", "DOCKER_COMPOSE", "PM2", "CUSTOM_SCRIPT", "NONE"])
+const VALID_PROCESS_MANAGERS = new Set(["DOCKER_COMPOSE", "PM2", "CUSTOM_SCRIPT", "NONE"])
 
 /**
  * Yürütmeyle ilgili alanlar SADECE SUPER_ADMIN (2026-09-15): `panel`
  * kullanıcısının root kabuğa sudo'su olduğu için panel olarak çalışan her
- * komut (özel betik, deploy komutu, systemd başlatma komutu) fiilen root
+ * komut (özel betik, deploy komutu) fiilen root
  * yetkisindedir — EDIT_FILES'lı bir MEMBER dosya yöneticisiyle betik yazıp
  * bunlardan birine bağlayarak root'a çıkabilirdi.
  */
-const ADMIN_ONLY_FIELDS = ["processManager", "customRestartCommand", "deployCommand", "pm2ProcessName", "port", "startCommand"]
+const ADMIN_ONLY_FIELDS = ["processManager", "customRestartCommand", "deployCommand", "pm2ProcessName"]
 
 /**
- * `PATCH /api/sites/[id]` — git/deploy/restart ayarları, ters proxy hedefi,
- * Node.js/Python port + başlatma komutu. Yalnızca gönderilen alanlar değişir;
+ * `PATCH /api/sites/[id]` — git/deploy/restart ayarları, Uygulama hedefi,
+ * Statik yayın klasörü ve SPA modu. Yalnızca gönderilen alanlar değişir;
  * site tipi/domain burada DEĞİŞTİRİLEMEZ.
  */
 export async function PATCH(request: Request, { params }: RouteParams) {
@@ -93,7 +87,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const admin = await isSuperAdmin(session.userId)
   if (touchesAdminField && !admin) {
     return NextResponse.json(
-      { error: "Süreç yöneticisi, deploy/restart komutları ve port/başlatma komutu yalnızca süper admin tarafından değiştirilebilir." },
+      { error: "Süreç yöneticisi ve deploy/restart komutları yalnızca süper admin tarafından değiştirilebilir." },
       { status: 403 }
     )
   }
@@ -147,8 +141,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (typeof value !== "string" || !VALID_PROCESS_MANAGERS.has(value)) {
       return NextResponse.json({ error: "Geçersiz process manager." }, { status: 400 })
     }
-    if (value === "SYSTEMD" && !MANAGED_TYPES.has(site.type)) {
-      return NextResponse.json({ error: "systemd yalnızca Node.js/Python sitelerinde kullanılabilir." }, { status: 400 })
+    if (site.type === "STATIC" && value !== "NONE") {
+      return NextResponse.json({ error: "Statik sitede süreç yöneticisi yok." }, { status: 400 })
     }
     data.processManager = value
     changed.push("processManager")
@@ -222,6 +216,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (typeof value !== "string" || !isValidUpstreamUrl(value.trim())) {
       return NextResponse.json({ error: "Geçersiz hedef adres." }, { status: 400 })
     }
+    const newPort = sitePortOf({ type: site.type, config: { upstreamUrl: value.trim() } })
+    if (newPort && newPort !== sitePortOf(site)) {
+      const others = await prisma.site.findMany({ where: { id: { not: id } }, select: { domain: true, type: true, config: true } })
+      const clash = others.find((s) => sitePortOf(s) === newPort)
+      if (clash) {
+        return NextResponse.json({ error: `Port ${newPort} zaten "${clash.domain}" sitesi tarafından kullanılıyor.` }, { status: 409 })
+      }
+    }
     try {
       await updateUpstream(site.domain, value.trim())
     } catch (error) {
@@ -235,67 +237,24 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   /**
-   * Port / başlatma komutu (Node.js/Python; port ayrıca Docker) — 2026-09-15:
-   * eskiden oluşturma sonrası hiç değiştirilemiyordu. Port değişince vhost'un
-   * proxy_pass satırı güncellenir (SSL bloğu korunur), Node.js/Python'da
-   * systemd birimi yeniden yazılıp servis yeniden başlatılır.
+   * SPA modu — yalnızca STATIC: bulunamayan yol index.html'e düşer. Vhost'un
+   * yalnızca `location /` satırı değişir (SSL bloğu korunur).
    */
-  if ("port" in input || "startCommand" in input) {
-    const portEditable = MANAGED_TYPES.has(site.type) || site.type === "DOCKER"
-    if (!portEditable) {
-      return NextResponse.json({ error: "Port/başlatma komutu yalnızca Node.js, Python ve Docker sitelerinde değiştirilebilir." }, { status: 400 })
+  if ("spa" in input) {
+    if (site.type !== "STATIC") {
+      return NextResponse.json({ error: "SPA modu yalnızca statik siteler için ayarlanabilir." }, { status: 400 })
     }
-    if ("startCommand" in input && !MANAGED_TYPES.has(site.type)) {
-      return NextResponse.json({ error: "Başlatma komutu yalnızca Node.js/Python sitelerinde değiştirilebilir." }, { status: 400 })
-    }
-    const currentPort = sitePortOf(site) ?? 0
-    const rawPort = input.port
-    const newPort =
-      "port" in input
-        ? typeof rawPort === "number"
-          ? rawPort
-          : typeof rawPort === "string"
-            ? parseInt(rawPort, 10)
-            : NaN
-        : currentPort
-    if (!isValidPort(newPort)) {
-      return NextResponse.json({ error: "Geçerli bir port numarası gereklidir (1-65535)." }, { status: 400 })
-    }
-    const newStart = "startCommand" in input ? (typeof input.startCommand === "string" ? input.startCommand.trim() : "") : String(currentConfig.startCommand ?? "")
-    if (MANAGED_TYPES.has(site.type) && (!newStart || !isValidStartCommand(newStart))) {
-      return NextResponse.json({ error: "Geçerli bir başlatma komutu gereklidir." }, { status: 400 })
-    }
-
-    if (newPort !== currentPort) {
-      const others = await prisma.site.findMany({ where: { id: { not: id } }, select: { domain: true, type: true, config: true } })
-      const clash = others.find((s) => sitePortOf(s) === newPort)
-      if (clash) {
-        return NextResponse.json({ error: `Port ${newPort} zaten "${clash.domain}" sitesi tarafından kullanılıyor.` }, { status: 409 })
-      }
-      if (await isPortListening(newPort)) {
-        return NextResponse.json({ error: `Port ${newPort} sunucuda şu an başka bir süreç tarafından dinleniyor.` }, { status: 409 })
-      }
-    }
-
+    const spa = input.spa === true
     try {
-      if (newPort !== currentPort) {
-        await updateUpstream(site.domain, `http://127.0.0.1:${newPort}`)
-      }
-      if (MANAGED_TYPES.has(site.type)) {
-        const workingDir = resolveSiteWorkdir(site) ?? defaultSiteRoot(site.domain)
-        const linuxUser = typeof currentConfig.linuxUser === "string" ? currentConfig.linuxUser : undefined
-        await createService({ domain: site.domain, workingDir, startCommand: newStart, port: newPort, linuxUser })
-      }
+      await updateStaticRouting(site.domain, spa)
     } catch (error) {
       return NextResponse.json(
-        { error: error instanceof ProvisionError ? error.message : "Port/başlatma komutu uygulanamadı." },
+        { error: error instanceof ProvisionError ? error.message : "Yönlendirme güncellenemedi." },
         { status: 500 }
       )
     }
-    nextConfig = { ...(nextConfig ?? currentConfig), port: newPort }
-    if (MANAGED_TYPES.has(site.type)) nextConfig.startCommand = newStart
-    if ("port" in input) changed.push("port")
-    if ("startCommand" in input) changed.push("startCommand")
+    nextConfig = { ...(nextConfig ?? currentConfig), spa }
+    changed.push("spa")
   }
 
   if (nextConfig) data.config = nextConfig as Prisma.InputJsonValue
@@ -316,9 +275,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 }
 
 /**
- * Siteyi siler. Nginx vhost + (varsa) systemd birimi her zaman; ayrıca
- * (2026-09-15) compose konteynerleri her zaman durdurulur (portu tutmasın),
- * PHP-FPM havuzu kaldırılır, deploy key silinir. Klasör ve dedicated
+ * Siteyi siler. Nginx vhost her zaman; ayrıca (2026-09-15) compose
+ * konteynerleri her zaman durdurulur (portu tutmasın), deploy key silinir. Klasör ve dedicated
  * kullanıcı YALNIZCA `?removeFolder=true` / `?removeUser=true` ile — veri
  * silme kullanıcının açık kararı. Adımlar best-effort: biri başarısız olsa
  * bile DB satırı silinir (bozuk bir kayıt her zaman listeden kaldırılabilmeli).
@@ -340,14 +298,6 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   const removeUser = url.searchParams.get("removeUser") === "true"
   const warnings: string[] = []
 
-  if (MANAGED_TYPES.has(site.type)) {
-    try {
-      await removeService(site.domain)
-    } catch (error) {
-      warnings.push(`systemd birimi kaldırılamadı: ${error instanceof Error ? error.message : String(error)}`)
-    }
-  }
-
   try {
     await removeVhost(site.domain)
   } catch (error) {
@@ -355,7 +305,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   }
 
   const cfg = (site.config ?? {}) as Record<string, unknown>
-  const cleanupDir = OWNED_TYPES.has(site.type)
+  const cleanupDir = site.type === "STATIC"
     ? (typeof cfg.siteRoot === "string" && cfg.siteRoot ? cfg.siteRoot : defaultSiteRoot(site.domain))
     : (resolveSiteWorkdir(site) ?? defaultSiteRoot(site.domain))
   try {

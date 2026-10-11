@@ -11,24 +11,22 @@ gelir ve düz bir Ubuntu/Debian sunucusuna tek bir script ile kendini kurar.
 
 ## Özellikler
 
-- **Site sihirbazı** — WordPress, PHP, Node.js, statik, Python veya reverse-proxy
-  siteleri, yönlendirmeli bir form üzerinden kurar. Nginx vhost, SSL (Certbot ile),
-  sitenin kendi Linux kullanıcısı ve — Node.js/Python için — ayrı bir systemd
-  servisi otomatik oluşturulur.
-- **Process yönetimi** — Node.js ve Python sitelerini başlat/durdur/yeniden başlat;
-  çökme sonrası otomatik yeniden başlatma ve arayüzden canlı log takibi
-  (`journalctl`).
+- **Site sihirbazı** — iki site türü: **Uygulama** (bir porta Nginx reverse proxy,
+  çoğunlukla bir Docker Compose projesi) ve **Statik** (elle yükleme ya da Git +
+  derleme). Nginx vhost, SSL (Certbot ile) ve sitenin kendi Linux kullanıcısı
+  otomatik oluşturulur.
 - **Port görüntüleyici** — sunucudaki tüm dinleyen TCP portlarını (Docker varsa
   container portlarını da) yönettiğiniz sitelerle eşleştirerek gösterir, yeni
   dağıtımlar için boş port önerir.
-- **Deploy hattı** — bir Node.js/Python/ters proxy/Docker sitesini bir depoya
-  bağlayın (GitHub App ya da site başına SSH deploy key ile herhangi bir git adresi);
-  panel `pull → deploy komutu → yeniden başlatma` zincirini çalıştırır: deploy komutu
-  sizin (örn. `npm ci && npm run build`), yeniden başlatma systemd, `docker compose
-  up -d --build`, PM2 (root daemon'ı) ya da özel betik. Elle, periyodik kontrolle, site
+- **Deploy hattı** — bir siteyi bir depoya bağlayın (GitHub App ya da site başına SSH
+  deploy key ile herhangi bir git adresi); panel `pull → deploy komutu → yeniden
+  başlatma` (uygulamalarda `docker compose up -d --build`, PM2 ya da özel betik) ya
+  da `pull → derleme → yayın` (statik sitelerde yayın klasörü, ör. `dist`, web
+  köküne aynalanır; `.git`, kaynak kod ve nokta dosyaları yayına çıkmaz) zincirini
+  çalıştırır. Elle, periyodik kontrolle, site
   başına **deploy hook URL'i** (herhangi bir CI'dan tek `POST`) ya da GitHub App'in
   **push webhook'u** ile anında tetiklenir.
-- **Gerçek süreç durumu** — systemd / `docker compose ps` / pm2 durumu, bellek
+- **Gerçek süreç durumu** — `docker compose ps` / pm2 durumu, bellek
   kullanımı ve proxy hedefinde gerçekten bir şeyin dinleyip dinlemediği (ziyaretçi
   502 görürken "Aktif" yazmaz). Compose siteleri up/down/restart/rebuild/pull
   kontrolleri ve canlı `docker compose logs` alır.
@@ -36,8 +34,8 @@ gelir ve düz bir Ubuntu/Debian sunucusuna tek bir script ile kendini kurar.
   editör), yükleyin/indirin, zip'leyin; `.env.example`'dan tek tıkla `.env`
   oluşturun. Path traversal ve symlink ile kaçış girişimleri dosya sistemi
   katmanında engellenir.
-- **Veritabanı yedekleme** — PostgreSQL, MySQL/MariaDB (WordPress'in
-  `wp-config.php`'si dahil) ve MongoDB'yi otomatik algılar; zamanlanmış, sıkıştırılmış
+- **Veritabanı yedekleme** — PostgreSQL, MySQL/MariaDB (bir WordPress
+  `wp-config.php`'si dahil) ve MongoDB'yi otomatik algılar (Docker Compose içinde de); zamanlanmış, sıkıştırılmış
   yedekler alır, saklama süresi ayarlanabilir ve isteğe bağlı olarak S3 uyumlu bir
   depoya yükler.
 - **DNS ön kontrollü SSL** — certbot çağrılmadan önce alan adı çözümlenir ve bu
@@ -55,16 +53,12 @@ gelir ve düz bir Ubuntu/Debian sunucusuna tek bir script ile kendini kurar.
 
 | Tip | Ne kurulur |
 |---|---|
-| WordPress | Nginx vhost, PHP-FPM, MySQL/MariaDB veritabanı, WordPress kurulumu |
-| PHP | Nginx vhost, PHP-FPM |
-| Node.js | Nginx reverse proxy, ayrı systemd servisi |
-| Python | Nginx reverse proxy, ayrı systemd servisi |
-| Statik | Bir dizini sunan Nginx vhost |
-| Reverse proxy | İstediğiniz bir upstream URL'e Nginx reverse proxy (+ git/compose için site klasörü) |
-| Docker | Site klasöründeki Docker Compose projesinin yayınladığı porta Nginx reverse proxy |
+| Uygulama | `127.0.0.1:<port>`'a (ya da herhangi bir adrese) Nginx reverse proxy + git ve Docker Compose için site klasörü; depo bağlanmazsa örnek bir compose başlatılır |
+| Statik | `<site>/public`'i sunan Nginx vhost; uzantısız adresler (`/hakkimizda` → `hakkimizda.html`) ve isteğe bağlı SPA modu (bilinmeyen yol → `index.html`) |
 
-Tüm tipler isteğe bağlı olarak bir domain, `www` alias'ı ve Certbot ile SSL
-sertifikası alabilir.
+İki tür de isteğe bağlı olarak bir domain, `www` alias'ı ve Certbot ile SSL
+sertifikası alabilir. WordPress/PHP/Node.js/Python türleri v1.4.0'da kaldırıldı —
+bu uygulamaları Docker Compose ile bir Uygulama sitesi olarak çalıştırın.
 
 ## Gereksinimler
 
@@ -72,9 +66,9 @@ sertifikası alabilir.
 - Root erişimi (kurulum script'i kullanmadan önce onay ister)
 - Giden internet erişimi (paket kurulumu ve kullanılıyorsa GitHub/S3 için)
 
-Geri kalan her şey — Node.js 20+, PostgreSQL, Nginx, Certbot, MySQL/MariaDB,
-PHP-FPM, `node-pty` için derleme araçları — `doctor.sh` tarafından otomatik
-kontrol edilip kurulur.
+Geri kalan her şey — Node.js 20+, PostgreSQL, Nginx, Certbot, `node-pty` için
+derleme araçları (ve istenirse Docker) — `doctor.sh` tarafından otomatik kontrol
+edilip kurulur.
 
 ## Hızlı kurulum
 

@@ -12,7 +12,7 @@ interface RouteParams {
 
 /**
  * `GET /api/sites/[id]/process-status` — sitenin GERÇEK durumu: süreç
- * yöneticisine göre (systemd is-active / docker compose ps / pm2) + proxy
+ * yöneticisine göre (docker compose ps / pm2) + proxy
  * hedefinde bir şey dinliyor mu (TCP). DB'deki iyimser `status` alanı DEĞİL.
  */
 export async function GET(_request: Request, { params }: RouteParams) {

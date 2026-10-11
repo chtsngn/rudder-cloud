@@ -126,33 +126,13 @@ export const tr = {
     httpOnlyLabel: "HTTP",
     siteSuffix: "sitesi",
     types: {
-      wordpress: {
-        label: "WordPress",
-        description: "PHP + MySQL ile hazır WordPress kurulumu.",
-      },
-      php: {
-        label: "PHP",
-        description: "Genel amaçlı PHP uygulaması (Laravel, Symfony vb.).",
-      },
-      nodejs: {
-        label: "Node.js",
-        description: "systemd ile yönetilen Node.js servisi.",
+      proxy: {
+        label: "Uygulama",
+        description: "Nginx bir porta yönlendirir; uygulama Docker Compose ile ya da kendi yönteminle çalışır.",
       },
       static: {
         label: "Statik Site",
-        description: "Yalnızca HTML/CSS/JS dosyalarından oluşan statik site.",
-      },
-      python: {
-        label: "Python",
-        description: "systemd ile yönetilen Python (WSGI/ASGI) servisi.",
-      },
-      proxy: {
-        label: "Ters Proxy",
-        description: "Harici bir adrese yönlendiren Nginx ters proxy.",
-      },
-      docker: {
-        label: "Docker",
-        description: "Docker Compose ile yönetilen konteyner uygulaması.",
+        description: "HTML/CSS/JS dosyaları — elle yükleme ya da Git + derleme.",
       },
     },
     tabs: {

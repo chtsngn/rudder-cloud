@@ -10,7 +10,7 @@ import { prisma } from "@/lib/prisma"
  * `unrestricted: true` döner (mevcut davranış: sınırsız kök kabuk, site
  * seçimi gerekmez). MEMBER için yalnızca (a) `UserSiteAccess`'te AÇIKÇA
  * `TERMINAL` izni verilmiş VE (b) dedicated bir linux kullanıcısı olan
- * (`config.linuxUser`, yalnızca STATIC/PHP/WORDPRESS'te mümkün) siteler
+ * (`config.linuxUser`) siteler
  * listelenir — gerçek yetkilendirme kararı zaten `server.mjs`'in kendi
  * `resolveTerminalAuthorization`'ında TAZE veriliyor, bu uç nokta yalnızca
  * UI'ın hangi seçenekleri göstereceğini belirliyor.

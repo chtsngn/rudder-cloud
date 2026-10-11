@@ -44,7 +44,7 @@ interface ProcessStatusResponse {
 }
 
 type ComposeAction = "up" | "down" | "restart" | "rebuild" | "pull"
-type ServiceAction = "start" | "stop" | "restart"
+type ServiceAction = "restart"
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
@@ -88,7 +88,6 @@ export function SiteProcessCard({
   const [pending, setPending] = useState<string | null>(null)
   const [message, setMessage] = useState<{ ok: boolean; text: string; output?: string } | null>(null)
 
-  const hasSystemd = (site.type === "NODEJS" || site.type === "PYTHON") && site.processManager === "SYSTEMD"
   const isCompose = site.processManager === "DOCKER_COMPOSE"
   const isNone = site.processManager === "NONE"
 
@@ -272,22 +271,6 @@ export function SiteProcessCard({
       )}
 
       <div className="flex flex-wrap items-center gap-2 pt-1">
-        {hasSystemd && (
-          <>
-            <Button variant="outline" size="sm" disabled={pending !== null} onClick={() => runServiceAction("start")} className={cn(btnBase, "text-emerald-700 dark:text-emerald-400")}>
-              {pending === "start" ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Play className="size-3.5 mr-1" />}
-              {lang === "en" ? "Start" : "Başlat"}
-            </Button>
-            <Button variant="outline" size="sm" disabled={pending !== null} onClick={() => runServiceAction("stop")} className={btnBase}>
-              {pending === "stop" ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Square className="size-3.5 mr-1" />}
-              {lang === "en" ? "Stop" : "Durdur"}
-            </Button>
-            <Button variant="outline" size="sm" disabled={pending !== null} onClick={() => runServiceAction("restart")} className={btnBase}>
-              {pending === "restart" ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <RotateCw className="size-3.5 mr-1" />}
-              {lang === "en" ? "Restart" : "Yeniden Başlat"}
-            </Button>
-          </>
-        )}
         {isCompose && (
           <>
             <Button variant="outline" size="sm" disabled={pending !== null} onClick={() => runCompose("up")} className={cn(btnBase, "text-emerald-700 dark:text-emerald-400")}>
@@ -312,7 +295,7 @@ export function SiteProcessCard({
             </Button>
           </>
         )}
-        {!hasSystemd && !isCompose && !isNone && (
+        {!isCompose && !isNone && (
           <Button variant="outline" size="sm" disabled={pending !== null} onClick={() => runServiceAction("restart")} className={btnBase}>
             {pending === "restart" ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <RotateCw className="size-3.5 mr-1" />}
             {lang === "en" ? "Restart" : "Yeniden Başlat"}

@@ -1,6 +1,6 @@
 /**
- * "Proxy hedefinde gerçekten bir şey dinliyor mu?" — REVERSE_PROXY/NODEJS/
- * PYTHON/DOCKER sitelerinde nginx ayakta olsa bile uygulama kapalıysa
+ * "Proxy hedefinde gerçekten bir şey dinliyor mu?" — Uygulama (REVERSE_PROXY)
+ * sitelerinde nginx ayakta olsa bile uygulama kapalıysa
  * ziyaretçi 502 görür; DB'deki `status` bunu bilmez. Basit bir TCP bağlantı
  * denemesi (HTTP isteği DEĞİL — uygulama ne döndürürse döndürsün "dinliyor"
  * bilgisi yeterli, ayrıca yan etkisi yok).
@@ -28,12 +28,6 @@ export function upstreamTargetOf(site: { type: string; config: unknown }): { hos
     } catch {
       return null
     }
-  }
-  if (site.type === "NODEJS" || site.type === "PYTHON" || site.type === "DOCKER") {
-    const raw = cfg.port
-    const port = typeof raw === "number" ? raw : typeof raw === "string" ? Number.parseInt(raw, 10) : NaN
-    if (!Number.isInteger(port)) return null
-    return { host: "127.0.0.1", port, target: `http://127.0.0.1:${port}` }
   }
   return null
 }

@@ -128,33 +128,13 @@ export const en: TranslationDict = {
     httpOnlyLabel: "HTTP",
     siteSuffix: "site",
     types: {
-      wordpress: {
-        label: "WordPress",
-        description: "Ready-to-use WordPress installation with PHP + MySQL.",
-      },
-      php: {
-        label: "PHP",
-        description: "General-purpose PHP application (Laravel, Symfony, etc.).",
-      },
-      nodejs: {
-        label: "Node.js",
-        description: "Node.js service managed with systemd.",
+      proxy: {
+        label: "Application",
+        description: "Nginx proxies to a port; the app runs with Docker Compose or your own method.",
       },
       static: {
         label: "Static Site",
-        description: "Static website consisting solely of HTML/CSS/JS files.",
-      },
-      python: {
-        label: "Python",
-        description: "Python (WSGI/ASGI) service managed with systemd.",
-      },
-      proxy: {
-        label: "Reverse Proxy",
-        description: "Nginx reverse proxy pointing to an external or local address.",
-      },
-      docker: {
-        label: "Docker",
-        description: "Container application managed with Docker Compose.",
+        description: "HTML/CSS/JS files — manual upload or Git + build.",
       },
     },
     tabs: {

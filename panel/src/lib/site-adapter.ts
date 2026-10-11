@@ -10,29 +10,19 @@ import { SITE_TYPES, type Site, type SiteType } from "@/lib/mock-data"
 
 /** Mirrors the Prisma `SiteType` enum values (plain strings — `@prisma/client`
  * must never be bundled into client components). */
-export type DbSiteType = "WORDPRESS" | "PHP" | "NODEJS" | "STATIC" | "PYTHON" | "REVERSE_PROXY" | "DOCKER"
+export type DbSiteType = "STATIC" | "REVERSE_PROXY"
 
 /** Mirrors the Prisma `SiteStatus` enum values. */
 export type DbSiteStatus = "ACTIVE" | "PROVISIONING" | "STOPPED" | "FAILED"
 
 const UI_TO_DB_TYPE: Record<SiteType, DbSiteType> = {
-  wordpress: "WORDPRESS",
-  php: "PHP",
-  nodejs: "NODEJS",
   static: "STATIC",
-  python: "PYTHON",
   proxy: "REVERSE_PROXY",
-  docker: "DOCKER",
 }
 
 const DB_TO_UI_TYPE: Record<DbSiteType, SiteType> = {
-  WORDPRESS: "wordpress",
-  PHP: "php",
-  NODEJS: "nodejs",
   STATIC: "static",
-  PYTHON: "python",
   REVERSE_PROXY: "proxy",
-  DOCKER: "docker",
 }
 
 export function uiTypeToDbType(type: SiteType): DbSiteType {
@@ -43,11 +33,9 @@ export function dbTypeToUiType(type: string): SiteType {
   return DB_TO_UI_TYPE[type as DbSiteType] ?? "static"
 }
 
-/** Git bağlanabilen / deploy hattı olan tipler (bkz. src/lib/git.ts GIT_PULL_TYPES). */
-export const GIT_CAPABLE_DB_TYPES: DbSiteType[] = ["STATIC", "NODEJS", "PYTHON", "REVERSE_PROXY", "DOCKER"]
-export const GIT_CAPABLE_UI_TYPES: SiteType[] = ["static", "nodejs", "python", "proxy", "docker"]
-/** Panelin kendi systemd birimi olan tipler. */
-export const SYSTEMD_DB_TYPES: DbSiteType[] = ["NODEJS", "PYTHON"]
+/** Git bağlanabilen / deploy hattı olan tipler (bkz. src/lib/git.ts GIT_PULL_TYPES) — v1.4.0'da ikisi de. */
+export const GIT_CAPABLE_DB_TYPES: DbSiteType[] = ["STATIC", "REVERSE_PROXY"]
+export const GIT_CAPABLE_UI_TYPES: SiteType[] = ["static", "proxy"]
 
 export function dbStatusToUiStatus(status: string, managed: boolean): Site["status"] {
   switch (status as DbSiteStatus) {
@@ -64,11 +52,10 @@ export function dbStatusToUiStatus(status: string, managed: boolean): Site["stat
 }
 
 /** Mirrors the Prisma `ProcessManager` enum values. */
-export type DbProcessManager = "SYSTEMD" | "DOCKER_COMPOSE" | "PM2" | "CUSTOM_SCRIPT" | "NONE"
+export type DbProcessManager = "DOCKER_COMPOSE" | "PM2" | "CUSTOM_SCRIPT" | "NONE"
 
 export const PROCESS_MANAGER_LABELS: Record<DbProcessManager, { tr: string; en: string }> = {
   NONE: { tr: "Yok (panel süreci yönetmiyor)", en: "None (panel does not manage the process)" },
-  SYSTEMD: { tr: "systemd (panel yönetiyor)", en: "systemd (managed by panel)" },
   DOCKER_COMPOSE: { tr: "Docker Compose (up -d --build)", en: "Docker Compose (up -d --build)" },
   PM2: { tr: "PM2 (root pm2 daemon'ı)", en: "PM2 (root pm2 daemon)" },
   CUSTOM_SCRIPT: { tr: "Özel betik", en: "Custom script" },
@@ -124,8 +111,11 @@ export function apiSiteToUiSite(api: ApiSite): Site {
   }
 }
 
+/** Uygulamanın yerel hedef portu (`upstreamUrl` http://127.0.0.1:<port> ise), yoksa null. */
 export function sitePortFromConfig(config: Record<string, unknown> | null | undefined): number | null {
-  const raw = config?.port
-  const port = typeof raw === "number" ? raw : typeof raw === "string" ? Number.parseInt(raw, 10) : NaN
+  const upstream = typeof config?.upstreamUrl === "string" ? config.upstreamUrl : ""
+  const m = upstream.match(/^https?:\/\/(?:127\.0\.0\.1|localhost)(?::(\d{1,5}))?(?:\/|$)/)
+  if (!m) return null
+  const port = m[1] ? Number.parseInt(m[1], 10) : upstream.startsWith("https") ? 443 : 80
   return Number.isInteger(port) ? port : null
 }

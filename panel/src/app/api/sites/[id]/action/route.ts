@@ -4,30 +4,18 @@ import { logAudit } from "@/lib/audit"
 import { getSession } from "@/lib/auth"
 import { canManageSite } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
-import { ProvisionError, serviceAction, serviceStatus } from "@/lib/provision"
 import { getProcessStatus, restartSite, RestartError } from "@/lib/restart"
 
 interface RouteParams {
   params: Promise<{ id: string }>
 }
 
-/** systemd tarafından yönetilebilen tipler — start/stop yalnızca bunlarda ve
- * yalnızca processManager SYSTEMD iken anlamlı. */
-const MANAGED_TYPES = new Set(["NODEJS", "PYTHON"])
-const VALID_ACTIONS = new Set(["start", "stop", "restart"])
-
-function systemdStatusToDbStatus(status: string): "ACTIVE" | "STOPPED" | "FAILED" {
-  if (status === "active") return "ACTIVE"
-  if (status === "failed") return "FAILED"
-  return "STOPPED"
-}
-
 /**
- * `POST /api/sites/[id]/action` — body: { action: "start" | "stop" | "restart" }.
- * `start`/`stop`: yalnızca Node.js/Python + SYSTEMD. `restart`: her tip ve her
- * süreç yöneticisi için `restartSite()` (PM2 → root pm2, CUSTOM_SCRIPT → betik,
- * DOCKER_COMPOSE → compose restart, NONE → hiçbir şey). (2026-09-15: eskiden
- * Ters Proxy/Docker sitelerinde restart hiç mümkün değildi.)
+ * `POST /api/sites/[id]/action` — body: { action: "restart" }. Süreç
+ * yöneticisine göre `restartSite()` (PM2 → root pm2, CUSTOM_SCRIPT → betik,
+ * DOCKER_COMPOSE → compose restart). Compose'da başlat/durdur
+ * `/api/sites/[id]/docker-compose` üzerinden. (v1.4.0: systemd'li
+ * Node.js/Python türleriyle birlikte start/stop kaldırıldı.)
  */
 export async function POST(request: Request, { params }: RouteParams) {
   const session = await getSession()
@@ -51,47 +39,27 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 })
   }
   const { action } = (body ?? {}) as { action?: unknown }
-  if (typeof action !== "string" || !VALID_ACTIONS.has(action)) {
-    return NextResponse.json({ error: "Geçerli bir eylem gereklidir (start, stop, restart)." }, { status: 400 })
-  }
-
-  const systemdManaged = MANAGED_TYPES.has(site.type) && site.processManager === "SYSTEMD"
-  if (action !== "restart" && !systemdManaged) {
+  if (action !== "restart") {
     return NextResponse.json(
-      { error: "start/stop yalnızca panelin kendi yönettiği (systemd) Node.js/Python süreçlerinde desteklenir — bu site için restart ya da Docker Compose kontrollerini kullanın." },
+      { error: "Yalnızca restart desteklenir — Docker Compose'da başlat/durdur için compose kontrollerini kullanın." },
       { status: 400 }
     )
   }
-  if (action === "restart" && site.processManager === "NONE") {
+  if (site.processManager === "NONE") {
     return NextResponse.json(
-      { error: "Bu sitenin süreç yöneticisi 'Yok' — Git & Dağıtım sekmesinden bir yöntem seçin (Docker Compose, PM2, systemd, özel betik)." },
+      { error: "Bu sitenin süreç yöneticisi 'Yok' — Git & Dağıtım sekmesinden bir yöntem seçin (Docker Compose, PM2, özel betik)." },
       { status: 400 }
     )
   }
 
-  let dbStatus: "ACTIVE" | "STOPPED" | "FAILED" = "ACTIVE"
-  if (systemdManaged) {
-    try {
-      await serviceAction(site.domain, action as "start" | "stop" | "restart")
-    } catch (error) {
-      const message = error instanceof ProvisionError ? error.message : "Servis eylemi çalıştırılamadı."
-      return NextResponse.json({ error: message }, { status: 500 })
-    }
-    try {
-      dbStatus = systemdStatusToDbStatus(await serviceStatus(site.domain))
-    } catch (error) {
-      console.error(`Servis durumu okunamadı (${site.domain}):`, error)
-    }
-  } else {
-    try {
-      await restartSite(site)
-    } catch (error) {
-      const message = error instanceof RestartError ? error.message : "Yeniden başlatma başarısız."
-      return NextResponse.json({ error: message }, { status: 500 })
-    }
-    const status = await getProcessStatus(site)
-    dbStatus = status.state === "failed" ? "FAILED" : status.state === "stopped" ? "STOPPED" : "ACTIVE"
+  try {
+    await restartSite(site)
+  } catch (error) {
+    const message = error instanceof RestartError ? error.message : "Yeniden başlatma başarısız."
+    return NextResponse.json({ error: message }, { status: 500 })
   }
+  const status = await getProcessStatus(site)
+  const dbStatus = status.state === "failed" ? "FAILED" : status.state === "stopped" ? "STOPPED" : "ACTIVE"
 
   const updated = await prisma.site.update({ where: { id }, data: { status: dbStatus } })
   await logAudit({

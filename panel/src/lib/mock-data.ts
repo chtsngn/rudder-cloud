@@ -1,11 +1,4 @@
-export type SiteType =
-  | "wordpress"
-  | "php"
-  | "nodejs"
-  | "static"
-  | "python"
-  | "proxy"
-  | "docker"
+export type SiteType = "static" | "proxy"
 
 export interface SiteTypeInfo {
   type: SiteType
@@ -13,59 +6,25 @@ export interface SiteTypeInfo {
   /** Short mono abbreviation used for the neutral type badge (never a status color). */
   abbr: string
   description: string
-  /** Only nodejs/python sites get a panel-managed systemd process. Everything else is Nginx-only. */
+  /** Süreci olan tür (durum "Çalışıyor" gösterilir); statik site yalnızca Nginx. */
   managed: boolean
 }
 
+/** v1.4.0: yalnızca iki tür — Uygulama (ters proxy, çoğunlukla Docker Compose) ve Statik. */
 export const SITE_TYPES: SiteTypeInfo[] = [
   {
-    type: "wordpress",
-    label: "WordPress",
-    abbr: "WP",
-    description: "PHP + MySQL ile hazır WordPress kurulumu.",
-    managed: false,
-  },
-  {
-    type: "php",
-    label: "PHP",
-    abbr: "PHP",
-    description: "Genel amaçlı PHP uygulaması (Laravel, Symfony vb.).",
-    managed: false,
-  },
-  {
-    type: "nodejs",
-    label: "Node.js",
-    abbr: "JS",
-    description: "systemd ile yönetilen Node.js servisi.",
+    type: "proxy",
+    label: "Uygulama",
+    abbr: "APP",
+    description: "Nginx bir porta yönlendirir; uygulama Docker Compose ile ya da kendi yönteminle çalışır.",
     managed: true,
   },
   {
     type: "static",
     label: "Statik Site",
     abbr: "HTML",
-    description: "Yalnızca HTML/CSS/JS dosyalarından oluşan statik site.",
+    description: "HTML/CSS/JS dosyaları — elle yükleme ya da Git + derleme.",
     managed: false,
-  },
-  {
-    type: "python",
-    label: "Python",
-    abbr: "PY",
-    description: "systemd ile yönetilen Python (WSGI/ASGI) servisi.",
-    managed: true,
-  },
-  {
-    type: "proxy",
-    label: "Ters Proxy",
-    abbr: "RP",
-    description: "Harici bir adrese yönlendiren Nginx ters proxy.",
-    managed: false,
-  },
-  {
-    type: "docker",
-    label: "Docker",
-    abbr: "🐳",
-    description: "Docker Compose ile yönetilen konteyner uygulaması.",
-    managed: true,
   },
 ]
 
@@ -81,24 +40,6 @@ export interface Site {
 }
 
 export const MOCK_SITES: Site[] = [
-  { id: "1", domain: "blog.example.com", type: "wordpress", status: "active" },
-  { id: "2", domain: "app.example.com", type: "php", status: "active" },
-  {
-    id: "3",
-    domain: "api.example.com",
-    type: "nodejs",
-    status: "running",
-    cpu: 12,
-    ram: 34,
-  },
-  { id: "4", domain: "docs.example.com", type: "static", status: "active" },
-  {
-    id: "5",
-    domain: "worker.example.com",
-    type: "python",
-    status: "stopped",
-    cpu: 0,
-    ram: 0,
-  },
-  { id: "6", domain: "old.example.com", type: "proxy", status: "active" },
+  { id: "1", domain: "app.example.com", type: "proxy", status: "running" },
+  { id: "2", domain: "docs.example.com", type: "static", status: "active" },
 ]

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowUpRight, Globe, ShieldCheck, Settings2, Layers, Code2, Server, Box } from "lucide-react"
+import { ArrowUpRight, Globe, ShieldCheck, Settings2, Box } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "@/components/language-provider"
@@ -41,16 +41,7 @@ const STATUS_CONFIG: Record<
 
 function getTypeIcon(type: SiteType) {
   switch (type) {
-    case "wordpress":
-    case "php":
-      return Globe
-    case "nodejs":
-      return Code2
-    case "python":
-      return Layers
     case "proxy":
-      return Server
-    case "docker":
       return Box
     default:
       return Globe
@@ -97,7 +88,7 @@ export function SiteCard({ site }: { site: Site }) {
                 {t(`sites.types.${site.type}.label`) || typeInfo.label}
               </span>
               <span className="text-[10.5px] text-slate-400 dark:text-slate-500 font-mono">
-                {site.type === "nodejs" || site.type === "python" ? "systemd" : site.type === "docker" ? "Docker" : "Nginx"}
+                {site.type === "proxy" ? "Nginx → app" : "Nginx"}
               </span>
             </div>
           </div>

@@ -6,14 +6,13 @@ datasource db {
   provider = "postgresql"
 }
 
+// v1.4.0 (2026-10-11): yalnızca iki tür. REVERSE_PROXY arayüzde "Uygulama":
+// nginx bir porta/adrese yönlendirir, süreci (çoğunlukla Docker Compose)
+// `processManager` belirler. PHP/WordPress/Node.js/Python ve ayrı DOCKER türü
+// kaldırıldı (bkz. migrations/20261011000000_two_site_types).
 enum SiteType {
-  WORDPRESS
-  PHP
-  NODEJS
   STATIC
-  PYTHON
   REVERSE_PROXY
-  DOCKER
 }
 
 enum SiteStatus {
@@ -23,12 +22,12 @@ enum SiteStatus {
   FAILED
 }
 
-// Bir sitenin uygulama sürecini kim ayakta tutuyor. SYSTEMD (varsayılan):
-// panelin kendi provision-site.sh'ının oluşturduğu systemd birimi. Diğerleri:
+// Bir Uygulama sitesinin sürecini kim ayakta tutuyor. DOCKER_COMPOSE: panel
+// site klasöründe compose'u yönetir (deploy'da `up -d --build`). Diğerleri:
 // kullanıcı süreci kendi seçtiği araçla yönetiyor, panel yalnızca restart
-// tetikler/proxy eder — bkz. docs/ARCHITECTURE.md → Aşama B.
+// tetikler/proxy eder — bkz. docs/ARCHITECTURE.md → Aşama B. (SYSTEMD v1.4.0'da
+// Node.js/Python türleriyle birlikte kaldırıldı.)
 enum ProcessManager {
-  SYSTEMD
   DOCKER_COMPOSE
   PM2
   CUSTOM_SCRIPT
@@ -113,7 +112,7 @@ model Site {
   lastPullError           String?
 
   // Proje restart (Aşama B) — yalnızca NODEJS/PYTHON/REVERSE_PROXY/DOCKER için anlamlı.
-  processManager       ProcessManager @default(SYSTEMD)
+  processManager       ProcessManager @default(NONE)
   customRestartCommand String?
   // Deploy hattı (2026-09-15): pull sonrası, yeniden başlatmadan ÖNCE sitenin
   // kök dizininde `panel` kullanıcısı olarak çalıştırılan isteğe bağlı komut

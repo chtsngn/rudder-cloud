@@ -13,6 +13,12 @@
  * izin ve klasör zamanı AKTARMAZ: `public`'in kendisi site kullanıcısına ait,
  * onun üzerinde chmod/chgrp/utime panelde hata verirdi. Yeni dosyalar
  * `public`'in varsayılan ACL'ini (www-data okuma) devralır.
+ *
+ * Yayına hiç çıkmayanlar (v1.4.0): nokta dosyaları (`.git`, `.env`…;
+ * `.well-known` hariç) her zaman; yayın klasörü depo köküyse (düz HTML)
+ * ayrıca kaynak ve araç dosyaları (`ROOT_PUBLISH_EXCLUDES`) — CloudPanel'deki
+ * "site.com/src/config.ts indirilebiliyor" açığı sınıfı. `--delete-excluded`
+ * daha önce yayınlanmış böyle dosyaları da `public`'ten siler.
  */
 import { execFile } from "node:child_process"
 import { realpath, stat } from "node:fs/promises"
@@ -23,6 +29,33 @@ import { resolveGitWorkdir, resolveSiteWorkdir, sitePublishDir, type SiteLike } 
 
 const execFileAsync = promisify(execFile)
 const PUBLISH_TIMEOUT_MS = 5 * 60_000
+
+/** Depo kökü yayınlanırken dışarıda kalanlar (rsync desenleri; `/` ile başlayan yalnız kökte). */
+export const ROOT_PUBLISH_EXCLUDES = [
+  "node_modules",
+  "/package.json",
+  "/package-lock.json",
+  "/npm-shrinkwrap.json",
+  "/pnpm-lock.yaml",
+  "/pnpm-workspace.yaml",
+  "/yarn.lock",
+  "/bun.lock",
+  "/bun.lockb",
+  "/Dockerfile*",
+  "/docker-compose*",
+  "/compose.yml",
+  "/compose.yaml",
+  "/tsconfig*.json",
+  "/*.config.js",
+  "/*.config.cjs",
+  "/*.config.mjs",
+  "/*.config.ts",
+  "*.ts",
+  "*.tsx",
+  "*.mts",
+  "*.cts",
+  "*.md",
+]
 
 export class PublishError extends Error {
   constructor(message: string) {
@@ -80,7 +113,11 @@ export async function publishStaticSite(site: SiteLike): Promise<PublishResult> 
         "--no-perms",
         "--no-owner",
         "--no-group",
-        "--exclude=.git",
+        "--delete-excluded",
+        // `.well-known` (ACME, assetlinks…) dışındaki nokta dosyaları hiç yayınlanmaz.
+        "--include=/.well-known/***",
+        "--exclude=.*",
+        ...(publishDir === "" ? ROOT_PUBLISH_EXCLUDES.map((p) => `--exclude=${p}`) : []),
         `${source}/`,
         `${target}/`,
       ],

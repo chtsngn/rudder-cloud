@@ -91,11 +91,9 @@ export async function getDockerPorts(): Promise<DockerPort[]> {
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]", "0.0.0.0", "host.docker.internal"])
 
 /**
- * Bir site kaydının "kendi" portu: NODEJS/PYTHON/DOCKER için `config.port`
- * (sayı YA DA string — sihirbaz string gönderiyordu, eski kayıtlar öyle
- * kalmış olabilir), REVERSE_PROXY için yerel bir upstream'in portu
- * (`http://127.0.0.1:7000` -> 7000; uzak bir host'a proxy ise null —
- * o port bu sunucuda değil).
+ * Bir site kaydının "kendi" portu: Uygulama (REVERSE_PROXY) sitesinde yerel
+ * bir upstream'in portu (`http://127.0.0.1:7000` -> 7000; uzak bir host'a
+ * proxy ise null — o port bu sunucuda değil). Statik sitede null.
  */
 export function sitePortOf(site: { type: string; config: unknown }): number | null {
   const cfg = site.config && typeof site.config === "object" ? (site.config as Record<string, unknown>) : {}
@@ -111,9 +109,7 @@ export function sitePortOf(site: { type: string; config: unknown }): number | nu
       return null
     }
   }
-  const raw = cfg.port
-  const port = typeof raw === "number" ? raw : typeof raw === "string" ? Number.parseInt(raw, 10) : NaN
-  return Number.isInteger(port) && port >= 1 && port <= 65535 ? port : null
+  return null
 }
 
 export async function isPortListening(port: number): Promise<boolean> {

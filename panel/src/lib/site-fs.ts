@@ -7,9 +7,9 @@
  * hedefin site kökü İÇİNDE kaldığını doğrular.
  *
  * Bu modül panel süreci (`panel` kullanıcısı) altında, sudo OLMADAN çalışır
- * — bkz. git.ts/restart.ts'teki aynı kısıt. STATIC/PHP/WORDPRESS siteleri
- * isteğe bağlı "dedicated linux user" ile provision edilmiş olabilir (bkz.
- * provision-site.sh `ensure_linux_user`); böyle bir sitede panelin yazma
+ * — bkz. git.ts/restart.ts'teki aynı kısıt. STATIC siteleri dedicated linux
+ * user'a ait (panel ACL ile yazar, bkz. provision-site.sh
+ * `apply_owned_site_access`); ACL kurulamamış eski bir sitede panelin yazma
  * izni olmayabilir — bu durumda işlemler net bir `SiteFsError` ile
  * (ENOACCES/EPERM) başarısız olur, sessizce yutulmaz.
  */

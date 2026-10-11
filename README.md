@@ -11,30 +11,28 @@ and installs itself onto a plain Ubuntu/Debian box with a single script.
 
 ## Features
 
-- **Site wizard** — provision WordPress, PHP, Node.js, static, Python, or reverse-proxy
-  sites through a guided form. Handles the Nginx vhost, SSL (via Certbot), the site's
-  own Linux user, and — for Node.js/Python — a dedicated systemd service.
-- **Process management** — start/stop/restart Node.js and Python sites, with automatic
-  restart on crash and live log tailing (`journalctl`) in the UI.
+- **Site wizard** — two site types: **Application** (Nginx reverse proxy to a port,
+  usually a Docker Compose project) and **Static** (manual upload or Git + build).
+  Handles the Nginx vhost, SSL (via Certbot) and the site's own Linux user.
 - **Port viewer** — see every listening TCP port on the server (plus Docker container
   ports when Docker is present), matched against the sites you manage, with free-port
   suggestions for new deployments.
-- **Deploy pipeline** — connect a Node.js/Python/reverse-proxy/Docker site to a
-  repository (GitHub App, or any git address with a per-site SSH deploy key) and the
-  panel runs `pull → deploy command → restart`: the deploy command is yours (e.g.
-  `npm ci && npm run build`), the restart is systemd, `docker compose up -d --build`,
-  PM2 (root daemon) or a custom script. Triggered manually, by polling, by a per-site
+- **Deploy pipeline** — connect a site to a repository (GitHub App, or any git address
+  with a per-site SSH deploy key) and the panel runs `pull → deploy command → restart`
+  (applications: `docker compose up -d --build`, PM2 or a custom script) or
+  `pull → build → publish` (static sites: the publish folder, e.g. `dist`, is mirrored
+  into the web root; `.git`, sources and dotfiles never go live). Triggered manually, by polling, by a per-site
   **deploy hook URL** (one `POST` from any CI) or instantly by the GitHub App's
   **push webhook**.
-- **Real process status** — systemd / `docker compose ps` / pm2 state, memory usage,
+- **Real process status** — `docker compose ps` / pm2 state, memory usage,
   and whether anything is actually listening on the proxy target (no more "Active"
   while visitors get a 502). Compose sites get up/down/restart/rebuild/pull controls
   and live `docker compose logs`.
 - **File manager** — browse, edit (Monaco editor), upload/download, zip, and manage a
   site's own directory, plus one-click `.env` setup from `.env.example`. Path
   traversal and symlink escapes are blocked at the filesystem layer.
-- **Database backups** — detects PostgreSQL, MySQL/MariaDB (including WordPress'
-  `wp-config.php`), and MongoDB automatically; runs scheduled, compressed dumps with
+- **Database backups** — detects PostgreSQL, MySQL/MariaDB (including a WordPress
+  `wp-config.php`), and MongoDB automatically (also inside Docker Compose); runs scheduled, compressed dumps with
   configurable retention and optional upload to S3-compatible storage.
 - **SSL with a DNS pre-check** — before calling certbot the panel resolves the domain
   and tells you whether it points at this server (Cloudflare proxying is recognised),
@@ -51,15 +49,12 @@ and installs itself onto a plain Ubuntu/Debian box with a single script.
 
 | Type | What it provisions |
 |---|---|
-| WordPress | Nginx vhost, PHP-FPM, MySQL/MariaDB database, WordPress install |
-| PHP | Nginx vhost, PHP-FPM |
-| Node.js | Nginx reverse proxy, dedicated systemd service |
-| Python | Nginx reverse proxy, dedicated systemd service |
-| Static | Nginx vhost serving a directory |
-| Reverse proxy | Nginx reverse proxy to an arbitrary upstream URL (+ site folder for git/compose) |
-| Docker | Nginx reverse proxy to a port published by a Docker Compose project in the site folder |
+| Application | Nginx reverse proxy to `127.0.0.1:<port>` (or any URL) + a site folder for git and Docker Compose; an example compose is started when no repository is connected |
+| Static | Nginx vhost serving `<site>/public`; extensionless URLs (`/about` → `about.html`) and an optional SPA mode (unknown paths → `index.html`) |
 
-All types optionally get a domain, `www` alias, and SSL certificate via Certbot.
+Both types optionally get a domain, `www` alias, and SSL certificate via Certbot.
+WordPress/PHP/Node.js/Python types were removed in v1.4.0 — run those apps with
+Docker Compose as an Application site.
 
 ## Requirements
 
@@ -67,8 +62,8 @@ All types optionally get a domain, `www` alias, and SSL certificate via Certbot.
 - Root access (the installer asks for confirmation before using it)
 - Outbound internet access (for package installation and, if used, GitHub/S3)
 
-Everything else — Node.js 20+, PostgreSQL, Nginx, Certbot, MySQL/MariaDB, PHP-FPM,
-build tools for `node-pty` — is checked and installed automatically by `doctor.sh`.
+Everything else — Node.js 20+, PostgreSQL, Nginx, Certbot, build tools for `node-pty`
+(and, on request, Docker) — is checked and installed automatically by `doctor.sh`.
 
 ## Quick install
 

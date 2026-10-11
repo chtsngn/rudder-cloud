@@ -1184,3 +1184,42 @@ cwd. Gerçek nginx/certbot/ACL/PHP-FPM/`cleanup-site` yolları sunucuda test edi
   `dist`, olmayan klasör ve `/etc`'ye symlink senaryoları; yerelde panel arayüzünden
   manuel HTTPS depo ile bağla → deploy.
 
+### 2026-10-11 güncellemesi (v1.4.0): iki site türü — Uygulama ve Statik
+
+Karar (Cihat): CloudPanel mantığından çıkılıyor; gerçek kullanım zaten Docker'lı
+uygulamalar ve statik siteler.
+
+- **Kaldırılanlar:** WordPress, PHP, Node.js, Python türleri; ayrı DOCKER türü; SYSTEMD
+  süreç yöneticisi. provision-site.sh'tan `create-service`/`remove-service`/
+  `service-*`/`create-wp-db`, PHP-FPM havuzu yardımcıları, PHP|WORDPRESS, NODEJS|PYTHON
+  ve DOCKER vhost dalları; `/api/sites/[id]/logs` (journalctl); doctor.sh'tan MariaDB ve
+  PHP-FPM kurulumu. `action` ucu yalnız `restart`.
+- **Uygulama = REVERSE_PROXY** (enum adı korunur, arayüzde "Uygulama"): tek doğruluk
+  kaynağı `config.upstreamUrl` (sihirbaz yalnız port verirse `http://127.0.0.1:<port>`).
+  Süreç yöneticisi varsayılanı Docker Compose. Repo bağlanmadan Compose seçilirse
+  `create-vhost ... REVERSE_PROXY <upstream> <user> <compose_port>` site klasörüne
+  örnek bir `docker-compose.yml` (nginx:alpine) yazıp ayağa kaldırır (eski DOCKER
+  bootstrap'ı). Hedef adres değişince başka bir site kaydıyla port çakışması 409.
+- **Statik:** vhost `location /` artık `try_files $uri $uri.html $uri/ =404` (uzantısız
+  adresler: Next.js export, Astro). `config.spa` ile `... /index.html` (SPA).
+  `update-static-routing <domain> <true|false>` yalnız bu satırı değiştirir (SSL bloğu
+  korunur; v1.3.x'in eski satırını da günceller); `nginx -t` başarısızsa geri alır.
+  `PATCH /api/sites/[id]` `{ spa }`.
+- **Yayın koruması** (`static-publish.ts`): nokta dosyaları (`.well-known` hariç) hiç
+  yayınlanmaz; yayın klasörü depo köküyse `ROOT_PUBLISH_EXCLUDES` (node_modules,
+  package.json/kilit dosyaları, Dockerfile/compose, tsconfig, `*.config.*`, `.ts/.tsx`,
+  `.md`) da dışarıda; `--delete-excluded` daha önce yayınlanmışları siler. SPA modunda
+  bile `/src/config.ts` dosyayı değil `index.html`'i döndürür (dosya `public`'te yok).
+- **Migration `20261011000000_two_site_types`:** DOCKER → REVERSE_PROXY
+  (`upstreamUrl = http://127.0.0.1:<port>`), SYSTEMD → NONE, enum'lar yeniden
+  oluşturulur, `processManager` varsayılanı NONE. Kaldırılan türde satır kalmışsa
+  migration DURMAZ (başarısız migration Prisma'da kayıt olarak kalıp sonraki her
+  güncellemeyi kilitlerdi): satır Uygulama'ya çevrilir, eski tür `config.legacyType`'ta
+  saklanır, süreç yönetimi NONE; sunucudaki vhost/PHP-FPM/systemd olduğu gibi kalır ve
+  detay sayfası uyarır.
+- Doğrulama: Debian konteynerinde nginx + ACL ile `create-vhost` (STATIC/REVERSE_PROXY,
+  eski türler reddediliyor), `update-static-routing` (SPA aç/kapa, eski satır, proxy
+  vhost'unda red), depo kökü yayınında dışlamalar ve HTTP kodları; Postgres'te eski
+  şemadan migration (STATIC/DOCKER/REVERSE_PROXY/PHP satırları); yerel panelde detay
+  sayfaları, sihirbaz ve `POST /api/sites` doğrulamaları.
+

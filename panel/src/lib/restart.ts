@@ -1,7 +1,6 @@
 /**
  * "Proje yeniden başlatma" — sitenin `processManager` alanına göre doğru yolu
- * seçer. SYSTEMD ve PM2 kök gerektirdiği için provision-site.sh üzerinden
- * (sudo) gider; DOCKER_COMPOSE ve CUSTOM_SCRIPT panel süreci tarafından
+ * seçer. PM2 kök gerektirdiği için provision-site.sh üzerinden (sudo) gider; DOCKER_COMPOSE ve CUSTOM_SCRIPT panel süreci tarafından
  * doğrudan çalıştırılır (panel docker grubunda olmalı — bkz. doctor.sh).
  *
  * 2026-09-15 denetimi: DOCKER_COMPOSE'da "deploy sonrası yeniden başlatma"
@@ -20,8 +19,6 @@ import {
   isValidAbsolutePath,
   pm2Action,
   ProvisionError,
-  serviceAction,
-  serviceStatus,
 } from "@/lib/provision"
 import { resolveSiteWorkdir, type SiteLike } from "@/lib/site-paths"
 
@@ -93,17 +90,6 @@ export async function restartSite(site: RestartableSite, opts: { deploy?: boolea
   switch (site.processManager) {
     case "NONE":
       return
-
-    case "SYSTEMD": {
-      try {
-        await serviceAction(site.domain, "restart")
-      } catch (error) {
-        throw new RestartError(
-          error instanceof ProvisionError ? error.message : "Servis yeniden başlatılamadı."
-        )
-      }
-      return
-    }
 
     case "DOCKER_COMPOSE": {
       await dockerComposeControl(site, opts.deploy ? "rebuild" : "restart")
@@ -209,22 +195,8 @@ export interface ProcessStatus {
   state: "running" | "stopped" | "partial" | "failed" | "unknown" | "not-applicable"
   detail: string
   containers?: ContainerStatus[]
-  /** Gerçek bellek kullanımı (systemd cgroup ya da docker stats), bilinmiyorsa null. */
+  /** Gerçek bellek kullanımı (docker stats), bilinmiyorsa null. */
   memoryBytes?: number | null
-}
-
-async function systemdMemoryBytes(domain: string): Promise<number | null> {
-  try {
-    const { stdout } = await execFileAsync(
-      "systemctl",
-      ["show", `site-${domainToSlug(domain)}.service`, "-p", "MemoryCurrent", "--value"],
-      { timeout: 5000 }
-    )
-    const n = Number(stdout.trim())
-    return Number.isFinite(n) && n > 0 && n < Number.MAX_SAFE_INTEGER ? n : null
-  } catch {
-    return null
-  }
 }
 
 function parseDockerMem(raw: string): number | null {
@@ -288,19 +260,6 @@ function parseComposePs(stdout: string): ContainerStatus[] {
 /** Sitenin GERÇEK süreç durumu (DB'deki iyimser `status` alanı DEĞİL). */
 export async function getProcessStatus(site: RestartableSite): Promise<ProcessStatus> {
   switch (site.processManager) {
-    case "SYSTEMD": {
-      try {
-        const s = await serviceStatus(site.domain)
-        return {
-          manager: "SYSTEMD",
-          state: s === "active" ? "running" : s === "failed" ? "failed" : s === "unknown" ? "unknown" : "stopped",
-          detail: `systemd: ${s}`,
-          memoryBytes: s === "active" ? await systemdMemoryBytes(site.domain) : null,
-        }
-      } catch (error) {
-        return { manager: "SYSTEMD", state: "unknown", detail: error instanceof Error ? error.message : String(error) }
-      }
-    }
     case "DOCKER_COMPOSE": {
       const workdir = resolveSiteWorkdir(site)
       if (!workdir) return { manager: "DOCKER_COMPOSE", state: "unknown", detail: "Çalışma dizini belirlenemedi." }

@@ -5,7 +5,7 @@
  * başlar (kabul edilebilir: 15sn gibi kısa aralıklar için önemsiz).
  *
  * Her TICK_MS'de bir: `autoPullEnabled = true` olan ve git desteklenen
- * (NODEJS/PYTHON/REVERSE_PROXY/DOCKER) siteleri okur, süresi dolanlar için
+ * (Statik/Uygulama) siteleri okur, süresi dolanlar için
  * deploy hattını (`deploySite`, bkz. src/lib/deploy.ts) çalıştırır — HEAD
  * değiştiyse deployCommand + yeniden başlatma da oradan tetiklenir. Aynı site
  * için bir deploy hâlâ sürüyorsa (yavaş build/ağ) o site atlanır.

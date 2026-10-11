@@ -101,7 +101,7 @@ check_cmd curl "curl"
 check_cmd rsync "rsync"
 check_cmd unzip "unzip"
 check_cmd nginx "nginx"
-check_cmd setfacl "acl (setfacl — Static/PHP/WordPress site dosyalarında panel/nginx erişimi için)"
+check_cmd setfacl "acl (setfacl — Statik site dosyalarında panel/nginx erişimi için)"
 
 hr
 info "Node.js kontrol ediliyor..."
@@ -142,38 +142,6 @@ else
   warn "PostgreSQL servisi (systemd birimi) bulunamadı"
   MISSING+=("postgresql")
   MISSING_LABEL+=("PostgreSQL (server)")
-fi
-
-hr
-info "MySQL/MariaDB kontrol ediliyor (WordPress siteleri için gerekli)..."
-if command -v mysql >/dev/null 2>&1; then
-  msg "MySQL/MariaDB (client): kurulu ($(command -v mysql))"
-else
-  warn "MySQL/MariaDB (client): bulunamadı"
-fi
-if systemctl list-unit-files 2>/dev/null | grep -Eq '^(mysql|mariadb)\.service'; then
-  msg "MySQL/MariaDB servisi: kurulu"
-else
-  warn "MySQL/MariaDB servisi (systemd birimi) bulunamadı"
-  MISSING+=("mariadb")
-  MISSING_LABEL+=("MySQL/MariaDB (server) — WordPress site tipi için")
-fi
-
-hr
-info "PHP-FPM kontrol ediliyor (PHP ve WordPress site tipleri için gerekli)..."
-PHP_VERSIONS_NEEDED=("8.3" "8.2")
-PHP_MISSING_VERSIONS=()
-for pv in "${PHP_VERSIONS_NEEDED[@]}"; do
-  if systemctl list-unit-files 2>/dev/null | grep -q "^php${pv}-fpm\.service"; then
-    msg "PHP ${pv}-FPM: kurulu"
-  else
-    warn "PHP ${pv}-FPM: bulunamadı"
-    PHP_MISSING_VERSIONS+=("$pv")
-  fi
-done
-if [[ "${#PHP_MISSING_VERSIONS[@]}" -gt 0 ]]; then
-  MISSING+=("php-fpm")
-  MISSING_LABEL+=("PHP-FPM (${PHP_MISSING_VERSIONS[*]}) — PHP/WordPress site tipleri için")
 fi
 
 hr
@@ -240,45 +208,6 @@ if [[ "${#MISSING[@]}" -gt 0 ]]; then
         DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql postgresql-contrib
         systemctl enable --now postgresql
         msg "PostgreSQL kuruldu ve başlatıldı."
-        ;;
-      mariadb)
-        apt_update_once
-        info "MariaDB (MySQL uyumlu) kuruluyor..."
-        DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server mariadb-client
-        systemctl enable --now mariadb
-        msg "MariaDB kuruldu ve başlatıldı."
-        ;;
-      php-fpm)
-        info "PHP-FPM kuruluyor (${PHP_MISSING_VERSIONS[*]})..."
-        apt_update_once
-        # NOT (düzeltme): eskiden yalnızca php8.3-fpm'in varsayılan depoda olup
-        # olmadığına bakılıyordu — Ubuntu 24.04'te 8.3 varsayılan depoda VAR ama
-        # 8.2 YOK, bu yüzden PPA hiç eklenmiyor ve 8.2 kurulumu "paket bulunamadı"
-        # ile başarısız olup (set -euo pipefail yüzünden) TÜM kurulumu
-        # durduruyordu. Artık istenen HER sürüm ayrı ayrı kontrol ediliyor.
-        NEEDS_PPA=0
-        for pv in "${PHP_MISSING_VERSIONS[@]}"; do
-          apt-cache show "php${pv}-fpm" >/dev/null 2>&1 || { NEEDS_PPA=1; break; }
-        done
-        if [[ "${NEEDS_PPA}" -eq 1 ]]; then
-          info "İstenen PHP sürüm(ler)i varsayılan apt deposunda yok, ondrej/php PPA ekleniyor..."
-          DEBIAN_FRONTEND=noninteractive apt-get install -y software-properties-common
-          add-apt-repository -y ppa:ondrej/php
-          PKG_UPDATE_DONE=0
-          apt_update_once
-        fi
-        for pv in "${PHP_MISSING_VERSIONS[@]}"; do
-          if ! apt-cache show "php${pv}-fpm" >/dev/null 2>&1; then
-            warn "php${pv}-fpm apt deposunda (PPA eklendikten sonra bile) bulunamadı — atlanıyor, kurulum durdurulmuyor."
-            continue
-          fi
-          info "php${pv}-fpm kuruluyor..."
-          DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            "php${pv}-fpm" "php${pv}-mysql" "php${pv}-curl" "php${pv}-gd" \
-            "php${pv}-mbstring" "php${pv}-xml" "php${pv}-zip"
-          systemctl enable --now "php${pv}-fpm"
-          msg "php${pv}-fpm kuruldu ve başlatıldı."
-        done
         ;;
       certbot)
         info "certbot kuruluyor..."
@@ -358,7 +287,7 @@ fi
 # 6) Panel sudoers — provision-site.sh + web terminali için şifresiz sudo
 #
 # Güvenlik modeli: panel süreci root olarak ÇALIŞMIYOR (User=panel).
-# nginx/systemd/certbot/mysql gibi kök yetkisi gerektiren TÜM otomatik
+# nginx/certbot/kullanıcı yönetimi gibi kök yetkisi gerektiren TÜM otomatik
 # provisioning işlemleri TEK bir betik üzerinden yapılır (SUDOERS_LINE).
 #
 # İKİNCİ satır (TERMINAL_SUDOERS_LINE) BİLİNÇLİ bir istisna: panelin web
@@ -373,7 +302,7 @@ fi
 #
 # ÜÇÜNCÜ satır (SITE_USER_TERMINAL_SUDOERS_LINE, Aşama I): bir MEMBER'a
 # yalnızca kendisine `TERMINAL` izniyle açıkça verilmiş, dedicated bir linux
-# kullanıcısı olan (STATIC/PHP/WORDPRESS) bir sitenin terminaline erişim
+# kullanıcısı olan bir sitenin terminaline erişim
 # verir — root DEĞİL, doğrudan o sitenin kendi kullanıcısı olarak (bkz.
 # server.mjs resolveTerminalCommand). Bunun GERÇEK bir izolasyon olması için
 # `panel`'e "ANY user" değil, yalnızca `siteusers` GRUBUNDAKİ kullanıcılar
@@ -408,7 +337,7 @@ else
 # değişiklikler doctor.sh'ın bir sonraki çalıştırmasında algılanmayabilir.
 #
 # 1) ${PANEL_USER} kullanıcısına aşağıdaki TEK betiği şifresiz (NOPASSWD)
-#    çalıştırma izni verir — nginx/systemd/certbot/mysql gibi kök gerektiren
+#    çalıştırma izni verir — nginx/certbot/kullanıcı yönetimi gibi kök gerektiren
 #    OTOMATİK provisioning işlemleri buradan geçer, betiğin kendi argüman
 #    doğrulamasından geçmek zorundadır (bkz. panel/scripts/provision-site.sh).
 ${SUDOERS_LINE}

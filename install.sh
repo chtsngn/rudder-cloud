@@ -247,7 +247,7 @@ Restart=on-failure
 RestartSec=3
 # Panelin oluşturduğu dosyalar (dosya yöneticisi, git clone) grup-yazılabilir
 # olsun: site klasörleri setgid ile sitenin kendi grubunu taşır, dedicated
-# kullanıcı (PHP-FPM havuzu / üye terminali) bu dosyaları düzenleyebilsin.
+# kullanıcı (üye terminali) bu dosyaları düzenleyebilsin.
 UMask=0002
 
 [Install]

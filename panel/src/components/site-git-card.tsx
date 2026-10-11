@@ -34,10 +34,7 @@ interface DeployResponse extends Partial<ApiSite> {
 
 const DEPLOY_COMMAND_PLACEHOLDER: Record<string, string> = {
   STATIC: "düz HTML için boş — örn. npm ci && npm run build",
-  NODEJS: "npm ci && npm run build",
-  PYTHON: "pip install -r requirements.txt",
-  REVERSE_PROXY: "örn. npm ci && npm run build",
-  DOCKER: "(compose build ediyor — genelde boş)",
+  REVERSE_PROXY: "Docker Compose'da genelde boş (image'ı compose derler)",
 }
 
 function isSshUrl(url: string): boolean {
@@ -62,7 +59,6 @@ export function SiteGitCard({
   onSiteUpdate: (site: ApiSite) => void
 }) {
   const { t, lang } = useTranslation()
-  const hasSystemdOption = site.type === "NODEJS" || site.type === "PYTHON"
   const isStatic = site.type === "STATIC"
   const en = lang === "en"
   const publishDirOf = (s: ApiSite) => {
@@ -284,7 +280,7 @@ export function SiteGitCard({
   }
 
   const processOptions: Array<{ value: DbProcessManager; label: string }> = (
-    ["NONE", ...(hasSystemdOption ? (["SYSTEMD"] as DbProcessManager[]) : []), "DOCKER_COMPOSE", "PM2", "CUSTOM_SCRIPT"] as DbProcessManager[]
+    ["DOCKER_COMPOSE", "PM2", "CUSTOM_SCRIPT", "NONE"] as DbProcessManager[]
   ).map((value) => ({ value, label: PROCESS_MANAGER_LABELS[value][lang === "en" ? "en" : "tr"] }))
 
   const manualSsh = !site.githubRepoFullName && isSshUrl(form.repoUrl.trim())

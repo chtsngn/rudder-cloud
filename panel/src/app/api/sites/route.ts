@@ -9,20 +9,13 @@ import { isPortListening, sitePortOf } from "@/lib/ports"
 import { prisma } from "@/lib/prisma"
 import {
   autoLinuxUserFor,
-  createService,
   createVhost,
-  createWpDb,
   defaultSiteRoot,
-  isValidAbsolutePath,
-  isValidDbIdentifier,
-  isValidDbPassword,
   isValidDeployCommand,
   isValidEmail,
   isValidLinuxUsername,
-  isValidPhpVersion,
   isValidPort,
   isValidSiteRoot,
-  isValidStartCommand,
   isValidUpstreamUrl,
   ProvisionError,
   requestSsl,
@@ -30,7 +23,7 @@ import {
 import { normalizePublishDir } from "@/lib/site-paths"
 
 const VALID_TYPES = new Set<string>(Object.values(SiteType))
-const VALID_PROCESS_MANAGERS = new Set(["SYSTEMD", "DOCKER_COMPOSE", "PM2", "CUSTOM_SCRIPT", "NONE"])
+const VALID_PROCESS_MANAGERS = new Set(["DOCKER_COMPOSE", "PM2", "CUSTOM_SCRIPT", "NONE"])
 
 /**
  * SUPER_ADMIN tüm siteleri görür. MEMBER yalnızca kendisine `VIEW` izni
@@ -70,185 +63,103 @@ function toPort(value: unknown): number | null {
  * derlenir; kalıcı `config` de YALNIZCA bu alanlardan üretilir (2026-09-15:
  * eskiden istemcinin gönderdiği her anahtar olduğu gibi saklanıyordu —
  * `workingDir` gibi yol alanları doğrulanmadan dosya yöneticisi/klon kökü
- * olabiliyordu).
+ * olabiliyordu). v1.4.0: yalnızca iki tür — Statik ve Uygulama (REVERSE_PROXY).
  */
 type ProvisionPlan =
-  | { type: "STATIC"; siteRoot: string; linuxUser: string; publishDir: string }
-  | { type: "PHP"; phpVersion: string; siteRoot: string; linuxUser: string }
+  | { type: "STATIC"; siteRoot: string; linuxUser: string; publishDir: string; spa: boolean }
   | {
-      type: "WORDPRESS"
-      phpVersion: string
-      siteRoot: string
+      type: "REVERSE_PROXY"
+      upstreamUrl: string
+      workingDir: string
       linuxUser: string
-      dbName: string
-      dbUser: string
-      dbPassword: string
+      /** Repo bağlanmadan Docker Compose seçildiyse: örnek compose bu portu yayınlar. */
+      composePort: number | null
     }
-  | { type: "NODEJS" | "PYTHON"; port: number; startCommand: string; workingDir: string; linuxUser: string }
-  | { type: "REVERSE_PROXY"; upstreamUrl: string; workingDir: string; linuxUser: string }
-  | { type: "DOCKER"; port: number; workingDir: string; composeService: string; linuxUser: string; bootstrap: boolean }
 
 function buildPlan(
   type: string,
   domain: string,
   cfg: Record<string, unknown>,
-  skipDockerBootstrap: boolean
+  bootstrapCompose: boolean
 ): { plan: ProvisionPlan } | { error: string } {
-  // STATIC/PHP/WORDPRESS: dedicated kullanıcı artık her zaman var (elle ad
-  // verilmezse otomatik `site_<slug>`) — dosyalar root'ta kalmasın, PHP/
-  // WordPress yazabilsin, MEMBER terminali mümkün olsun (bkz. provision-site.sh
-  // apply_owned_site_access).
-  const ownedUser = (): string | { error: string } => {
-    const linuxUser = toStr(cfg.linuxUser) || autoLinuxUserFor(domain)
-    if (!isValidLinuxUsername(linuxUser)) return { error: "Geçersiz linux kullanıcı adı (küçük harfle başlamalı, en fazla 32 karakter)." }
-    return linuxUser
-  }
-
   switch (type) {
     case "STATIC": {
       const siteRoot = toStr(cfg.siteRoot) || defaultSiteRoot(domain)
       if (!isValidSiteRoot(siteRoot)) return { error: "Geçerli bir site kök dizini gereklidir (/var/www/... altında)." }
-      const linuxUser = ownedUser()
-      if (typeof linuxUser !== "string") return linuxUser
+      // Dedicated kullanıcı her zaman var (elle ad verilmezse otomatik
+      // `site_<slug>`) — dosyalar root'ta kalmasın, MEMBER terminali mümkün olsun.
+      const linuxUser = toStr(cfg.linuxUser) || autoLinuxUserFor(domain)
+      if (!isValidLinuxUsername(linuxUser)) {
+        return { error: "Geçersiz linux kullanıcı adı (küçük harfle başlamalı, en fazla 32 karakter)." }
+      }
       // Yalnızca depo bağlanırsa kullanılır (bkz. src/lib/static-publish.ts).
       const publishDir = normalizePublishDir(cfg.publishDir)
       if (publishDir === null) return { error: "Geçersiz yayın klasörü (depo köküne göre göreli yol, ör. dist)." }
-      return { plan: { type: "STATIC", siteRoot, linuxUser, publishDir } }
-    }
-    case "PHP": {
-      const phpVersion = toStr(cfg.phpVersion) || "8.3"
-      const siteRoot = toStr(cfg.siteRoot) || defaultSiteRoot(domain)
-      if (!isValidPhpVersion(phpVersion)) return { error: "Geçerli bir PHP sürümü gereklidir (örn. 8.3)." }
-      if (!isValidSiteRoot(siteRoot)) return { error: "Geçerli bir site kök dizini gereklidir (/var/www/... altında)." }
-      const linuxUser = ownedUser()
-      if (typeof linuxUser !== "string") return linuxUser
-      return { plan: { type: "PHP", phpVersion, siteRoot, linuxUser } }
-    }
-    case "WORDPRESS": {
-      const phpVersion = toStr(cfg.phpVersion) || "8.3"
-      const siteRoot = toStr(cfg.siteRoot) || defaultSiteRoot(domain)
-      const dbNameDefault = domain.replace(/[^A-Za-z0-9_]/g, "_").slice(0, 60)
-      const dbName = toStr(cfg.dbName) || dbNameDefault
-      const dbUser = toStr(cfg.dbUser) || `${dbNameDefault}_u`.slice(0, 64)
-      const dbPassword = toStr(cfg.dbPassword)
-      if (!isValidPhpVersion(phpVersion)) return { error: "Geçerli bir PHP sürümü gereklidir (örn. 8.3)." }
-      if (!isValidSiteRoot(siteRoot)) return { error: "Geçerli bir site kök dizini gereklidir (/var/www/... altında)." }
-      if (!isValidDbIdentifier(dbName)) return { error: "Geçerli bir veritabanı adı gereklidir." }
-      if (!isValidDbIdentifier(dbUser)) return { error: "Geçerli bir veritabanı kullanıcısı gereklidir." }
-      if (!dbPassword) return { error: "Veritabanı şifresi gereklidir." }
-      if (!isValidDbPassword(dbPassword)) {
-        return {
-          error:
-            "Veritabanı şifresi 8-64 karakter olmalı ve yalnızca harf/rakam ile !@#%^*_+=.- sembollerini içerebilir.",
-        }
-      }
-      const linuxUser = ownedUser()
-      if (typeof linuxUser !== "string") return linuxUser
-      return { plan: { type: "WORDPRESS", phpVersion, siteRoot, linuxUser, dbName, dbUser, dbPassword } }
-    }
-    case "NODEJS":
-    case "PYTHON": {
-      const port = toPort(cfg.port)
-      const startCommand = toStr(cfg.startCommand)
-      const workingDir = defaultSiteRoot(domain)
-      if (!port || !isValidPort(port)) return { error: "Geçerli bir port numarası gereklidir (1-65535)." }
-      if (!startCommand || !isValidStartCommand(startCommand)) {
-        return { error: "Geçerli bir başlatma komutu gereklidir (örn. npm run start)." }
-      }
-      return { plan: { type, port, startCommand, workingDir, linuxUser: autoLinuxUserFor(domain) } }
+      return { plan: { type: "STATIC", siteRoot, linuxUser, publishDir, spa: toBool(cfg.spa) } }
     }
     case "REVERSE_PROXY": {
-      const upstreamUrl = toStr(cfg.upstreamUrl)
+      // Hedef: tam adres (`upstreamUrl`) ya da yalnız yerel port (`port` ->
+      // http://127.0.0.1:<port>). Docker Compose'daki uygulama genelde ikincisi.
+      const port = toPort(cfg.port)
+      if (port !== null && !isValidPort(port)) return { error: "Geçerli bir port numarası gereklidir (1-65535)." }
+      const upstreamUrl = toStr(cfg.upstreamUrl) || (port ? `http://127.0.0.1:${port}` : "")
       if (!upstreamUrl || !isValidUpstreamUrl(upstreamUrl)) {
         return {
-          error:
-            "Geçerli bir hedef adres gereklidir (http:// veya https:// ile başlamalı, örn. http://127.0.0.1:4000).",
+          error: "Geçerli bir port ya da hedef adres gereklidir (http:// veya https:// ile, örn. http://127.0.0.1:4000).",
         }
       }
-      return {
-        plan: { type: "REVERSE_PROXY", upstreamUrl, workingDir: defaultSiteRoot(domain), linuxUser: autoLinuxUserFor(domain) },
-      }
-    }
-    case "DOCKER": {
-      const port = toPort(cfg.port)
-      const workingDir = toStr(cfg.workingDir) || defaultSiteRoot(domain)
-      const composeService = toStr(cfg.composeService)
-      if (!port || !isValidPort(port)) return { error: "Geçerli bir port numarası gereklidir (1-65535)." }
-      if (!isValidSiteRoot(workingDir)) {
-        return { error: "Geçerli bir çalışma dizini gereklidir (/var/www/... altında)." }
-      }
-      if (composeService && !/^[A-Za-z0-9._-]{1,64}$/.test(composeService)) {
-        return { error: "Geçersiz compose servis adı." }
+      const localPort = sitePortOf({ type: "REVERSE_PROXY", config: { upstreamUrl } })
+      if (bootstrapCompose && !localPort) {
+        return { error: "Örnek Docker Compose için hedef bu sunucuda bir port olmalı (http://127.0.0.1:<port>)." }
       }
       return {
-        plan: { type: "DOCKER", port, workingDir, composeService, linuxUser: autoLinuxUserFor(domain), bootstrap: !skipDockerBootstrap },
+        plan: {
+          type: "REVERSE_PROXY",
+          upstreamUrl,
+          workingDir: defaultSiteRoot(domain),
+          linuxUser: autoLinuxUserFor(domain),
+          composePort: bootstrapCompose ? localPort : null,
+        },
       }
     }
     default:
-      return { error: "Geçerli bir site türü gereklidir." }
+      return { error: "Geçerli bir site türü gereklidir (Statik ya da Uygulama)." }
   }
 }
 
-/** Kalıcı `config` — yalnızca planın doğrulanmış alanları (+ www/sslEmail). Şifre ASLA yazılmaz. */
+/** Kalıcı `config` — yalnızca planın doğrulanmış alanları (+ www/sslEmail). */
 function configFromPlan(plan: ProvisionPlan, www: boolean, sslEmail: string): Record<string, unknown> {
   const base: Record<string, unknown> = { www }
   if (sslEmail) base.sslEmail = sslEmail
   switch (plan.type) {
     case "STATIC":
-      return { ...base, siteRoot: plan.siteRoot, linuxUser: plan.linuxUser, ...(plan.publishDir ? { publishDir: plan.publishDir } : {}) }
-    case "PHP":
-      return { ...base, phpVersion: plan.phpVersion, siteRoot: plan.siteRoot, linuxUser: plan.linuxUser }
-    case "WORDPRESS":
       return {
         ...base,
-        phpVersion: plan.phpVersion,
         siteRoot: plan.siteRoot,
         linuxUser: plan.linuxUser,
-        dbName: plan.dbName,
-        dbUser: plan.dbUser,
+        ...(plan.publishDir ? { publishDir: plan.publishDir } : {}),
+        ...(plan.spa ? { spa: true } : {}),
       }
-    case "NODEJS":
-    case "PYTHON":
-      return { ...base, port: plan.port, startCommand: plan.startCommand, workingDir: plan.workingDir, linuxUser: plan.linuxUser }
     case "REVERSE_PROXY":
       return { ...base, upstreamUrl: plan.upstreamUrl, workingDir: plan.workingDir, linuxUser: plan.linuxUser }
-    case "DOCKER":
-      return {
-        ...base,
-        port: plan.port,
-        workingDir: plan.workingDir,
-        composeService: plan.composeService || undefined,
-        linuxUser: plan.linuxUser,
-      }
   }
 }
 
-function defaultProcessManager(plan: ProvisionPlan): "SYSTEMD" | "DOCKER_COMPOSE" | "NONE" {
-  if (plan.type === "DOCKER") return "DOCKER_COMPOSE"
-  if (plan.type === "REVERSE_PROXY") return "NONE"
-  return "SYSTEMD"
-}
-
 /**
- * Uygulamanın KENDİSİNİN bağlanacağı portlarda (Node.js/Python/Docker)
- * çakışma sert hata: başka bir site kaydı aynı portu kullanıyorsa ya da
- * sunucuda o an biri dinliyorsa. Ters proxy'de hedef port zaten çalışan bir
- * uygulama olabilir — yalnızca başka bir site kaydıyla çakışma engellenir.
+ * Port çakışması: hedef port başka bir site kaydında kullanılıyorsa sert hata.
+ * Örnek compose başlatılacaksa port o an dinleniyor olmamalı; aksi halde hedef
+ * zaten çalışan bir uygulama olabilir — yalnız site kaydı çakışması engellenir.
  */
 async function findPortConflict(plan: ProvisionPlan, domain: string): Promise<string | null> {
-  const port =
-    plan.type === "NODEJS" || plan.type === "PYTHON" || plan.type === "DOCKER"
-      ? plan.port
-      : plan.type === "REVERSE_PROXY"
-        ? sitePortOf({ type: "REVERSE_PROXY", config: { upstreamUrl: plan.upstreamUrl } })
-        : null
+  if (plan.type !== "REVERSE_PROXY") return null
+  const port = sitePortOf({ type: "REVERSE_PROXY", config: { upstreamUrl: plan.upstreamUrl } })
   if (!port) return null
 
   const others = await prisma.site.findMany({ select: { domain: true, type: true, config: true } })
   const clash = others.find((s) => s.domain !== domain && sitePortOf(s) === port)
   if (clash) return `Port ${port} zaten "${clash.domain}" sitesi tarafından kullanılıyor.`
 
-  if (plan.type !== "REVERSE_PROXY" && (await isPortListening(port))) {
+  if (plan.composePort && (await isPortListening(port))) {
     return `Port ${port} sunucuda şu an başka bir süreç tarafından dinleniyor — Portlar sayfasından boş bir port seçin.`
   }
   return null
@@ -257,56 +168,16 @@ async function findPortConflict(plan: ProvisionPlan, domain: string): Promise<st
 async function runProvisioning(domain: string, www: boolean, plan: ProvisionPlan): Promise<void> {
   switch (plan.type) {
     case "STATIC":
-      await createVhost({ domain, type: "STATIC", www, siteRoot: plan.siteRoot, linuxUser: plan.linuxUser })
-      break
-    case "PHP":
-      await createVhost({
-        domain,
-        type: "PHP",
-        www,
-        phpVersion: plan.phpVersion,
-        siteRoot: plan.siteRoot,
-        linuxUser: plan.linuxUser,
-      })
-      break
-    case "WORDPRESS":
-      await createWpDb({ domain, dbName: plan.dbName, dbUser: plan.dbUser, dbPassword: plan.dbPassword })
-      await createVhost({
-        domain,
-        type: "WORDPRESS",
-        www,
-        phpVersion: plan.phpVersion,
-        siteRoot: plan.siteRoot,
-        dbName: plan.dbName,
-        dbUser: plan.dbUser,
-        dbPassword: plan.dbPassword,
-        linuxUser: plan.linuxUser,
-      })
-      break
-    case "NODEJS":
-    case "PYTHON":
-      await createVhost({ domain, type: plan.type, www, port: plan.port })
-      await createService({
-        domain,
-        workingDir: plan.workingDir,
-        startCommand: plan.startCommand,
-        port: plan.port,
-        linuxUser: plan.linuxUser,
-      })
+      await createVhost({ domain, type: "STATIC", www, siteRoot: plan.siteRoot, linuxUser: plan.linuxUser, spa: plan.spa })
       break
     case "REVERSE_PROXY":
-      await createVhost({ domain, type: "REVERSE_PROXY", www, upstreamUrl: plan.upstreamUrl, linuxUser: plan.linuxUser })
-      break
-    case "DOCKER":
       await createVhost({
         domain,
-        type: "DOCKER",
+        type: "REVERSE_PROXY",
         www,
-        port: plan.port,
-        workingDir: plan.workingDir,
-        composeService: plan.composeService || undefined,
+        upstreamUrl: plan.upstreamUrl,
         linuxUser: plan.linuxUser,
-        bootstrap: plan.bootstrap,
+        composePort: plan.composePort ?? undefined,
       })
       break
   }
@@ -314,7 +185,7 @@ async function runProvisioning(domain: string, www: boolean, plan: ProvisionPlan
 
 /**
  * Site satırını PROVISIONING durumunda oluşturur, gerçek provisioning'i
- * (`scripts/provision-site.sh` üzerinden nginx/systemd/mysql) senkron çalıştırır
+ * (`scripts/provision-site.sh` üzerinden nginx/kullanıcı/compose) senkron çalıştırır
  * ve satırı ACTIVE/FAILED yapar. SSL ayrı, best-effort bir adımdır: önce DNS
  * ön kontrolü (bkz. src/lib/dns-check.ts) — alan adı bu sunucuya (ya da
  * Cloudflare'a) bakmıyorsa certbot hiç çağrılmaz, net bir mesaj yazılır;
@@ -359,7 +230,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "SSL için geçerli bir e-posta adresi gereklidir." }, { status: 400 })
   }
 
-  const planResult = buildPlan(type, domainValue, cfg, toBool(skipDockerBootstrap))
+  // Uygulama + Docker Compose + repo yok: örnek compose ile hemen ayağa kalksın.
+  // Repo seçildiyse (`skipDockerBootstrap`) gerçek compose klonlanacak.
+  const wantsCompose = type === "REVERSE_PROXY" && (processManager === undefined || processManager === "DOCKER_COMPOSE")
+  const planResult = buildPlan(type, domainValue, cfg, wantsCompose && !toBool(skipDockerBootstrap))
   if ("error" in planResult) {
     return NextResponse.json({ error: planResult.error }, { status: 400 })
   }
@@ -369,13 +243,11 @@ export async function POST(request: Request) {
   if (deployCommandValue && !isValidDeployCommand(deployCommandValue)) {
     return NextResponse.json({ error: "Deploy komutu en fazla 500 karakter olabilir." }, { status: 400 })
   }
-  let processManagerValue = defaultProcessManager(plan) as string
-  if (typeof processManager === "string" && processManager) {
+  // Statik sitede süreç yok; Uygulama'da varsayılan Docker Compose.
+  let processManagerValue = plan.type === "STATIC" ? "NONE" : "DOCKER_COMPOSE"
+  if (plan.type === "REVERSE_PROXY" && typeof processManager === "string" && processManager) {
     if (!VALID_PROCESS_MANAGERS.has(processManager)) {
       return NextResponse.json({ error: "Geçersiz process manager." }, { status: 400 })
-    }
-    if (processManager === "SYSTEMD" && plan.type !== "NODEJS" && plan.type !== "PYTHON") {
-      return NextResponse.json({ error: "systemd yalnızca Node.js/Python sitelerinde kullanılabilir." }, { status: 400 })
     }
     processManagerValue = processManager
   }
@@ -396,7 +268,7 @@ export async function POST(request: Request) {
         status: "PROVISIONING",
         sslEnabled: sslEnabledBool,
         config: initialConfig as Prisma.InputJsonValue,
-        processManager: processManagerValue as "SYSTEMD" | "DOCKER_COMPOSE" | "PM2" | "CUSTOM_SCRIPT" | "NONE",
+        processManager: processManagerValue as "DOCKER_COMPOSE" | "PM2" | "CUSTOM_SCRIPT" | "NONE",
         deployCommand: deployCommandValue || null,
       },
     })
