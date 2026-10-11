@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react"
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode, type Ref } from "react"
 import {
   ArrowDown,
   ArrowUp,
@@ -51,7 +51,7 @@ import {
   type CreateRequest,
   type TransferRequest,
 } from "@/components/site-file-dialogs"
-import { collectDroppedItems, itemsFromFileList, uploadInBatches, type UploadItem } from "@/lib/file-upload-client"
+import { itemsFromFileList, uploadInBatches, type UploadItem } from "@/lib/file-upload-client"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "@/components/language-provider"
 
@@ -69,6 +69,12 @@ interface EnvOverview {
 }
 
 type SortKey = "name" | "size" | "modifiedAt"
+
+/** Sayfa düzeyindeki sürükle-bırak (`SiteDropUpload`) yüklemeyi buraya devreder. */
+export interface SiteFileManagerHandle {
+  /** Öğeleri bulunulan klasöre yükler; başka bir yükleme sürüyorsa yok sayar. */
+  upload: (items: UploadItem[]) => void
+}
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -122,16 +128,19 @@ function setDirectoryInput(el: HTMLInputElement | null) {
 /**
  * Site dosya yöneticisi — site detay sayfasının "Dosyalar" sekmesinde render
  * edilir. Oluşturma (dosya/klasör, iç içe yol, şablon), yükleme (dosya,
- * klasör, sürükle-bırak), yeniden adlandırma/taşıma/kopyalama, zip indirme ve
- * silme. Bir dosyaya tıklanınca `onOpenFile(path)`; klasör değişimi
- * `onPathChange` ile üst bileşene (URL'e) bildirilir.
+ * klasör; sürükle-bırak sayfa düzeyinde `SiteDropUpload` → `ref.upload`),
+ * yeniden adlandırma/taşıma/kopyalama, zip indirme ve silme. Bir dosyaya
+ * tıklanınca `onOpenFile(path)`; klasör değişimi `onPathChange` ile üst
+ * bileşene (URL'e) bildirilir.
  */
 export function SiteFileManager({
+  ref,
   siteId,
   initialPath = "",
   onOpenFile,
   onPathChange,
 }: {
+  ref?: Ref<SiteFileManagerHandle>
   siteId: string
   initialPath?: string
   onOpenFile: (path: string) => void
@@ -158,7 +167,6 @@ export function SiteFileManager({
 
   const [upload, setUpload] = useState<{ done: number; total: number } | null>(null)
   const [uploadErrors, setUploadErrors] = useState<string[]>([])
-  const [dragDepth, setDragDepth] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
 
@@ -310,13 +318,11 @@ export function SiteFileManager({
     await refresh(firstTop ? (currentPath ? `${currentPath}/${firstTop}` : firstTop) : null)
   }
 
-  async function handleDrop(e: DragEvent) {
-    e.preventDefault()
-    setDragDepth(0)
-    if (upload) return
-    const items = await collectDroppedItems(e.dataTransfer)
-    await runUpload(items)
-  }
+  useImperativeHandle(ref, () => ({
+    upload: (items) => {
+      if (!upload) void runUpload(items)
+    },
+  }))
 
   async function deletePaths(paths: string[]) {
     const label = paths.length === 1 ? `"${displayPath(paths[0])}"` : en ? `${paths.length} items` : `${paths.length} öğe`
@@ -387,7 +393,6 @@ export function SiteFileManager({
   }
 
   const breadcrumbSegments = currentPath ? currentPath.split("/") : []
-  const dragging = dragDepth > 0
   const selectedPaths = Array.from(selected)
 
   function sortHeader(k: SortKey, children: ReactNode, className?: string) {
@@ -510,27 +515,7 @@ export function SiteFileManager({
         </Card>
       )}
 
-      <Card
-        className="relative gap-4"
-        onDragEnter={(e) => {
-          if (!e.dataTransfer.types.includes("Files")) return
-          e.preventDefault()
-          setDragDepth((d) => d + 1)
-        }}
-        onDragOver={(e) => {
-          if (e.dataTransfer.types.includes("Files")) e.preventDefault()
-        }}
-        onDragLeave={() => setDragDepth((d) => Math.max(0, d - 1))}
-        onDrop={handleDrop}
-      >
-        {dragging && (
-          <div className="pointer-events-none absolute inset-2 z-20 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary bg-primary/5 backdrop-blur-[1px]">
-            <Upload className="size-8 text-primary" />
-            <p className="text-sm font-medium text-foreground">{en ? "Drop to upload" : "Yüklemek için bırakın"}</p>
-            <p className="font-mono text-xs text-muted-foreground">{displayPath(currentPath)}</p>
-          </div>
-        )}
-
+      <Card className="gap-4">
         {/* ── Araç çubuğu: oluştur / yükle / ara / yenile ── */}
         <CardHeader className="gap-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -679,7 +664,7 @@ export function SiteFileManager({
                     </div>
                     <div>
                       <p className="text-sm font-medium text-foreground">{en ? "This folder is empty" : "Bu klasör boş"}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{en ? "Create a file or folder, or drag files here to upload." : "Dosya veya klasör oluşturun ya da yüklemek için dosyaları buraya sürükleyin."}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{en ? "Create a file or folder, or drag files onto the page to upload." : "Dosya veya klasör oluşturun ya da yüklemek için dosyaları sayfaya sürükleyin."}</p>
                     </div>
                     <div className="flex flex-wrap justify-center gap-2">
                       <Button size="sm" onClick={() => openCreate("file")}>
@@ -731,8 +716,8 @@ export function SiteFileManager({
 
           <p className="text-xs text-muted-foreground">
             {en
-              ? "Tip: drag files or folders onto this card to upload them into the current folder."
-              : "İpucu: dosya veya klasörleri bu kartın üzerine sürükleyip bırakarak bulunduğunuz klasöre yükleyebilirsiniz."}
+              ? "Tip: drag files or folders anywhere on the page to upload them into the current folder."
+              : "İpucu: dosya veya klasörleri sayfanın herhangi bir yerine sürükleyip bırakarak bulunduğunuz klasöre yükleyebilirsiniz."}
           </p>
         </CardContent>
       </Card>

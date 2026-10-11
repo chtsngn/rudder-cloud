@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { createPortal } from "react-dom"
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation"
@@ -34,7 +34,8 @@ import { SiteDeployHookCard } from "@/components/site-deploy-hook-card"
 import { SiteGitCard } from "@/components/site-git-card"
 import { SiteProcessCard } from "@/components/site-process-card"
 import { SiteFileEditor } from "@/components/site-file-editor"
-import { SiteFileManager } from "@/components/site-file-manager"
+import { SiteFileManager, type SiteFileManagerHandle } from "@/components/site-file-manager"
+import { SiteDropUpload } from "@/components/site-drop-upload"
 import { SITE_TYPES, type Site, type SiteType } from "@/lib/mock-data"
 import { apiSiteToUiSite, GIT_CAPABLE_DB_TYPES, sitePortFromConfig, type ApiSite } from "@/lib/site-adapter"
 import { useTranslation } from "@/components/language-provider"
@@ -113,6 +114,8 @@ export default function SiteDetailPage() {
   })
   const [filesDir, setFilesDir] = useState(() => searchParams.get("dir") ?? "")
   const [editingFile, setEditingFile] = useState<string | null>(() => searchParams.get("file"))
+  // Dosyalar sekmesinde liste açıkken sayfaya bırakılan dosyalar yöneticiye gider.
+  const fileManagerRef = useRef<SiteFileManagerHandle>(null)
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteRemoveFolder, setDeleteRemoveFolder] = useState(false)
@@ -636,6 +639,7 @@ export default function SiteDetailPage() {
             <SiteFileEditor key={editingFile} siteId={api.id} path={editingFile} onBack={() => openFilesDir(parentDirOf(editingFile))} />
           ) : (
             <SiteFileManager
+              ref={fileManagerRef}
               key={api.id}
               siteId={api.id}
               initialPath={filesDir}
@@ -685,6 +689,22 @@ export default function SiteDetailPage() {
           )}
         </div>
       )}
+
+      {/* ═══ SAYFA GENELİ SÜRÜKLE-BIRAK YÜKLEME ═══ */}
+      <SiteDropUpload
+        siteId={api.id}
+        domain={site.domain}
+        targetDir={activeTab === "files" && editingFile ? parentDirOf(editingFile) : filesDir}
+        routeDrop={(items) => {
+          if (!fileManagerRef.current) return false
+          fileManagerRef.current.upload(items)
+          return true
+        }}
+        onShowFiles={(dir) => {
+          setActiveTab("files")
+          openFilesDir(dir)
+        }}
+      />
 
       {/* ═══ SİLME DİYALOĞU ═══ */}
       {deleteOpen &&

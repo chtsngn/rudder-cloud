@@ -1128,7 +1128,7 @@ cwd. Gerçek nginx/certbot/ACL/PHP-FPM/`cleanup-site` yolları sunucuda test edi
 - **Yeniden adlandır / taşı / kopyala:** `PATCH /api/sites/[id]/files` `{ from, to, mode }`
   → `transferEntry` (EDIT_FILES). Hedef varsa üzerine yazılmaz (409); klasör kendi içine
   taşınamaz; kopyada symlink'ler takip edilmez (`verbatimSymlinks`). Toplu seçimde "Taşı".
-- **Yükleme:** "Yükle" menüsü (dosya / klasör), kartın üzerine sürükle-bırak (klasörler
+- **Yükleme:** "Yükle" menüsü (dosya / klasör), sürükle-bırak (klasörler
   `webkitGetAsEntry` ile dolaşılır). İstemci 40MB / 50 dosyalık parçalar halinde gönderir
   (`src/lib/file-upload-client.ts`); klasör yapısı `paths` alanıyla korunur.
 - Liste: sütun sıralama, klasör içi arama, tümünü seç, `..` satırı, tür ikonları, boş
@@ -1137,3 +1137,19 @@ cwd. Gerçek nginx/certbot/ACL/PHP-FPM/`cleanup-site` yolları sunucuda test edi
 - `resolveSitePath` artık sözcüksel kökü (`root`) ve gerçek kökü (`realRoot`) ayrı
   döner; göreli yol hesapları ve "kökün kendisi mi" kontrolü sözcüksel kökle tutarlı
   yapılır (site kökü bir symlink ise eskiden yanlış göreli yol üretebiliyordu).
+
+### 2026-10-11 güncellemesi: sayfa geneli sürükle-bırak yükleme
+
+- **Site detay sayfasının tamamı bırakma alanı** (`src/components/site-drop-upload.tsx`):
+  dosya/klasör pencerenin herhangi bir yerine, hangi sekmede olunursa olunsun
+  bırakılabilir; sürüklerken tam ekran kaplama hedefi gösterir (`alan-adı/klasör`).
+  Olaylar `window` üzerinde yakalama aşamasında dinlenir — Monaco editör ya da
+  terminal bırakmayı kendine almaz, tarayıcı dosyayı açmaya çalışmaz. Yalnız dosya
+  içeren sürüklemeler (`dataTransfer.types` içinde `Files`) yakalanır.
+- **Hedef klasör:** Dosyalar sekmesinde bulunulan klasör (editördeyken düzenlenen
+  dosyanın klasörü); diğer sekmelerde Dosyalar'da son açılan klasör, yoksa site kökü.
+- **Dosyalar sekmesinde liste açıkken** yükleme dosya yöneticisine devredilir
+  (`SiteFileManagerHandle.upload`, `ref` ile): ilerleme, hata listesi ve liste
+  yenilemesi orada. Kartın kendi sürükle-bırak dinleyicileri ve kaplaması kaldırıldı.
+  Diğer durumlarda yükleme sağ altta ilerleme/sonuç bildirimiyle yapılır;
+  "Dosyalarda göster" Dosyalar sekmesini hedef klasörde açar.
