@@ -32,7 +32,7 @@ import { Switch } from "@/components/ui/switch"
 import { BusyPortsHint } from "@/components/busy-ports-hint"
 import { cn } from "@/lib/utils"
 import { SITE_TYPES, type SiteType } from "@/lib/mock-data"
-import { uiTypeToDbType, type ApiSite } from "@/lib/site-adapter"
+import { GIT_CAPABLE_UI_TYPES, uiTypeToDbType, type ApiSite } from "@/lib/site-adapter"
 import { useTranslation } from "@/components/language-provider"
 
 function fieldValue(id: string): string {
@@ -71,6 +71,7 @@ function buildConfig(type: SiteType, useWww: boolean, useSsl: boolean, sslEmail:
     case "static":
       config.siteRoot = fieldValue("site-root")
       config.linuxUser = fieldValue("linux-user")
+      config.publishDir = fieldValue("publish-dir")
       break
     case "proxy":
       config.upstreamUrl = fieldValue("target-url")
@@ -109,7 +110,9 @@ function typeChecklist(type: SiteType, managed: boolean, hasSsl: boolean, lang: 
   if (hasSsl) {
     items.push(lang === "en" ? "Checking DNS and requesting SSL certificate (Let's Encrypt)" : "DNS kontrol ediliyor ve SSL sertifikası isteniyor (Let's Encrypt)")
   }
-  if (connectingRepo) {
+  if (connectingRepo && type === "static") {
+    items.push(lang === "en" ? "Connecting repository, cloning, building and publishing" : "Depo bağlanıyor, klonlanıp derleniyor ve yayınlanıyor")
+  } else if (connectingRepo) {
     items.push(lang === "en" ? "Connecting repository, cloning and deploying into site root" : "Depo bağlanıyor, site köküne klonlanıp deploy ediliyor")
   }
   return items
@@ -128,9 +131,9 @@ interface InstalledRepoOption {
 }
 
 /** Sihirbazda opsiyonel repo bağlama yalnızca git-pull desteklenen tipler için
- * (bkz. src/lib/git.ts GIT_PULL_TYPES) — STATIC/PHP/WORDPRESS dedicated bir
- * linux user kullanabildiği için panelin o dizine yazma izni garanti değil. */
-const GIT_CONNECTABLE_TYPES: SiteType[] = ["nodejs", "python", "proxy", "docker"]
+ * (bkz. src/lib/git.ts GIT_PULL_TYPES) — PHP/WORDPRESS'te kod doğrudan web
+ * kökünde çalıştığı için hâlâ yok. */
+const GIT_CONNECTABLE_TYPES: SiteType[] = GIT_CAPABLE_UI_TYPES
 
 function getTypeIcon(type: SiteType) {
   switch (type) {
@@ -483,10 +486,15 @@ export default function NewSitePage() {
                     ))}
                   </select>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    {lang === "en"
-                      ? "As soon as the site's folder exists, this repo is cloned straight into it."
-                      : "Sitenin klasörü oluşur oluşmaz bu depo doğrudan içine klonlanır."}
+                    {selectedType === "static"
+                      ? lang === "en"
+                        ? "The repo is cloned into the site's repo/ folder; after the optional build, the publish folder is copied to public/."
+                        : "Depo sitenin repo/ klasörüne klonlanır; isteğe bağlı derlemeden sonra yayın klasörü public/'e kopyalanır."
+                      : lang === "en"
+                        ? "As soon as the site's folder exists, this repo is cloned straight into it."
+                        : "Sitenin klasörü oluşur oluşmaz bu depo doğrudan içine klonlanır."}
                   </p>
+                  {selectedType === "static" && selectedRepoFullName && <StaticBuildFields lang={lang} />}
                 </div>
               )}
             </div>
@@ -613,6 +621,31 @@ function DeployCommandField({ type, lang }: { type: SiteType; lang: "tr" | "en" 
         {lang === "en"
           ? "Runs in the site folder (e.g. install dependencies / build). Leave empty for Docker — compose builds the image itself."
           : "Site klasöründe çalışır (bağımlılık kurma / build). Docker'da boş bırakılabilir — image'ı compose kendisi build eder."}
+      </p>
+    </div>
+  )
+}
+
+function StaticBuildFields({ lang }: { lang: "tr" | "en" }) {
+  const inputCls = "font-mono h-10 rounded-xl bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 pt-2">
+      <div className="space-y-2">
+        <Label htmlFor="deploy-cmd" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+          {lang === "en" ? "Build command (optional)" : "Derleme komutu (isteğe bağlı)"}
+        </Label>
+        <Input id="deploy-cmd" placeholder={lang === "en" ? "empty for plain HTML — e.g. npm ci && npm run build" : "düz HTML için boş — örn. npm ci && npm run build"} className={inputCls} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="publish-dir" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+          {lang === "en" ? "Publish folder" : "Yayın klasörü"}
+        </Label>
+        <Input id="publish-dir" placeholder={lang === "en" ? ". (repository root)" : ". (depo kökü)"} className={inputCls} />
+      </div>
+      <p className="sm:col-span-2 text-[11px] text-slate-500 dark:text-slate-400">
+        {lang === "en"
+          ? "Publish folder is relative to the repository root: empty for plain HTML, dist for Vite/Astro, build for Create React App. Both can be changed later on the Git & Deployment tab."
+          : "Yayın klasörü depo köküne göre: düz HTML için boş, Vite/Astro için dist, Create React App için build. İkisi de sonra Git & Dağıtım sekmesinden değiştirilebilir."}
       </p>
     </div>
   )

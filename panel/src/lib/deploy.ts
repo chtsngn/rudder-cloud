@@ -3,12 +3,16 @@
  *
  *   pull (repo varsa) → değişiklik varsa/zorlandıysa deployCommand → yeniden başlatma
  *
+ * STATIC (2026-10-11): yeniden başlatma yerine yayın — depo `<siteRoot>/repo`'da,
+ * deployCommand (derleme) orada çalışır, yayın klasörü `public`'e aynalanır
+ * (bkz. src/lib/static-publish.ts).
+ *
  * Elle "Deploy Et", "Pull", otomatik pull zamanlayıcısı, deploy hook ve GitHub
  * push webhook'u hepsi buradan geçer; böylece "pull başarılı ama restart eski
  * image'ı kullandı" ya da "klonlandı ama npm install hiç çalışmadı" gibi kopuk
  * adımlar kalmaz. Aynı site için eş zamanlı iki deploy engellenir (`inFlight`).
  *
- * `deployCommand` sitenin kök dizininde `panel` kullanıcısı olarak `bash -lc`
+ * `deployCommand` sitenin git dizininde `panel` kullanıcısı olarak `bash -lc`
  * ile çalışır (ör. `npm ci && npm run build`). Yalnızca SUPER_ADMIN
  * ayarlayabilir (bkz. PATCH /api/sites/[id]) — panel kullanıcısının sudo'su
  * olduğu için bu komut fiilen root yetkisindedir.
@@ -18,7 +22,8 @@ import { spawn } from "node:child_process"
 import { GitError, gitPullOrClone, isGitPullSupported } from "@/lib/git"
 import { prisma } from "@/lib/prisma"
 import { RestartError, restartSite, tail, type RestartableSite } from "@/lib/restart"
-import { resolveSiteWorkdir } from "@/lib/site-paths"
+import { resolveGitWorkdir, resolveSiteWorkdir } from "@/lib/site-paths"
+import { PublishError, publishStaticSite } from "@/lib/static-publish"
 
 const DEPLOY_COMMAND_TIMEOUT_MS = 15 * 60_000
 const OUTPUT_KEEP_BYTES = 16 * 1024
@@ -148,7 +153,8 @@ async function runDeploy(site: DeployableSite, opts: DeployOptions): Promise<Dep
 
   // 2) deployCommand
   const lines: string[] = []
-  const workdir = resolveSiteWorkdir(site)
+  const isStatic = site.type === "STATIC"
+  const workdir = isStatic && !pulled ? resolveSiteWorkdir(site) : resolveGitWorkdir(site)
   const command = site.deployCommand?.trim()
   if (command) {
     if (!workdir) throw new DeployError("deploy", "Bu site türü için çalışma dizini belirlenemedi.")
@@ -170,6 +176,35 @@ async function runDeploy(site: DeployableSite, opts: DeployOptions): Promise<Dep
         .catch(() => {})
       throw new DeployError("deploy", message, output)
     }
+  }
+
+  // 3a) STATIC: yayın klasörünü public'e aynala (süreç yok, yeniden başlatma yok)
+  if (isStatic) {
+    if (pulled) {
+      try {
+        const published = await publishStaticSite(site)
+        lines.push(`[panel] yayınlandı: repo/${published.publishDir || "."} → public/`)
+      } catch (error) {
+        const message = error instanceof PublishError ? error.message : "Yayınlama başarısız oldu."
+        lines.push(`[panel] ${message}`)
+        const output = tail(lines.join("\n"), OUTPUT_KEEP_BYTES)
+        await prisma.site
+          .update({
+            where: { id: site.id },
+            data: { lastDeployAt: startedAt, lastDeployOk: false, lastDeployError: message, lastDeployOutput: output },
+          })
+          .catch(() => {})
+        throw new DeployError("deploy", message, output)
+      }
+    }
+    const output = tail(lines.join("\n"), OUTPUT_KEEP_BYTES)
+    await prisma.site
+      .update({
+        where: { id: site.id },
+        data: { lastDeployAt: startedAt, lastDeployOk: true, lastDeployError: null, lastDeployOutput: output },
+      })
+      .catch(() => {})
+    return { pulled, changed, commit, deployed: true, restarted: false, output, restartError: null }
   }
 
   // 3) Yeniden başlatma (DOCKER_COMPOSE'da rebuild)

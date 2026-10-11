@@ -23,7 +23,7 @@ import {
   removeVhost,
   updateUpstream,
 } from "@/lib/provision"
-import { resolveSiteWorkdir } from "@/lib/site-paths"
+import { normalizePublishDir, resolveSiteWorkdir } from "@/lib/site-paths"
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -188,6 +188,26 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Geçersiz PM2 süreç adı (harf/rakam/._- en fazla 64 karakter)." }, { status: 400 })
     }
     changed.push("pm2ProcessName")
+  }
+
+  /**
+   * Yayın klasörü — yalnızca STATIC: derlemeden sonra depodaki hangi klasörün
+   * `public`'e aynalanacağı (bkz. src/lib/static-publish.ts). Bir sonraki
+   * deploy'da uygulanır.
+   */
+  if ("publishDir" in input) {
+    if (site.type !== "STATIC") {
+      return NextResponse.json({ error: "Yayın klasörü yalnızca statik siteler için ayarlanabilir." }, { status: 400 })
+    }
+    const value = normalizePublishDir(input.publishDir)
+    if (value === null) {
+      return NextResponse.json(
+        { error: "Geçersiz yayın klasörü (depo köküne göre göreli yol, ör. dist ya da apps/web/out; .. kullanılamaz)." },
+        { status: 400 }
+      )
+    }
+    nextConfig = { ...(nextConfig ?? currentConfig), publishDir: value }
+    changed.push("publishDir")
   }
 
   /**

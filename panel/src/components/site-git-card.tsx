@@ -33,6 +33,7 @@ interface DeployResponse extends Partial<ApiSite> {
 }
 
 const DEPLOY_COMMAND_PLACEHOLDER: Record<string, string> = {
+  STATIC: "düz HTML için boş — örn. npm ci && npm run build",
   NODEJS: "npm ci && npm run build",
   PYTHON: "pip install -r requirements.txt",
   REVERSE_PROXY: "örn. npm ci && npm run build",
@@ -48,7 +49,8 @@ function isSshUrl(url: string): boolean {
  * SSH deploy key), deploy hattı ayarları (deploy komutu, süreç yöneticisi,
  * PM2 adı, özel betik), otomatik pull, "Pull" / "Deploy Et" ve son pull/deploy
  * durumu + çıktı. Yürütme alanları yalnızca SUPER_ADMIN'e açık (API de
- * zorlar — bkz. PATCH /api/sites/[id]).
+ * zorlar — bkz. PATCH /api/sites/[id]). Statik sitede süreç yöneticisi yok;
+ * onun yerine yayın klasörü (`config.publishDir`) seçilir.
  */
 export function SiteGitCard({
   site,
@@ -61,6 +63,12 @@ export function SiteGitCard({
 }) {
   const { t, lang } = useTranslation()
   const hasSystemdOption = site.type === "NODEJS" || site.type === "PYTHON"
+  const isStatic = site.type === "STATIC"
+  const en = lang === "en"
+  const publishDirOf = (s: ApiSite) => {
+    const cfg = (s.config ?? {}) as Record<string, unknown>
+    return typeof cfg.publishDir === "string" ? cfg.publishDir : ""
+  }
 
   const [installedRepos, setInstalledRepos] = useState<InstalledRepoOption[]>([])
   const [installedReposLoaded, setInstalledReposLoaded] = useState(false)
@@ -78,6 +86,7 @@ export function SiteGitCard({
     customRestartCommand: site.customRestartCommand ?? "",
     deployCommand: site.deployCommand ?? "",
     pm2ProcessName: site.pm2ProcessName ?? "",
+    publishDir: publishDirOf(site),
   })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -151,7 +160,13 @@ export function SiteGitCard({
         return
       }
       setForm((f) => ({ ...f, repoUrl: `https://github.com/${repo.fullName}.git`, gitBranch: repo.defaultBranch }))
-      applyDeployResponse(res, data, lang === "en" ? "Repository connected and deployed into the site root." : "Depo bağlandı ve kök dizine deploy edildi.")
+      applyDeployResponse(
+        res,
+        data,
+        isStatic
+          ? (en ? "Repository connected and published." : "Depo bağlandı ve yayınlandı.")
+          : (en ? "Repository connected and deployed into the site root." : "Depo bağlandı ve kök dizine deploy edildi.")
+      )
     } catch {
       setConnectRepoError(lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı.")
     } finally {
@@ -191,7 +206,10 @@ export function SiteGitCard({
       }
       // GitHub App bağlıyken repoUrl salt-okunur (connect route yönetir).
       if (!site.githubRepoFullName) payload.repoUrl = form.repoUrl.trim() === "" ? null : form.repoUrl.trim()
-      if (isSuperAdmin) {
+      if (isStatic) payload.publishDir = form.publishDir.trim()
+      if (isSuperAdmin && isStatic) {
+        payload.deployCommand = form.deployCommand.trim() || null
+      } else if (isSuperAdmin) {
         payload.processManager = form.processManager
         payload.customRestartCommand = form.processManager === "CUSTOM_SCRIPT" ? form.customRestartCommand.trim() || null : null
         payload.deployCommand = form.deployCommand.trim() || null
@@ -217,6 +235,7 @@ export function SiteGitCard({
         customRestartCommand: data.customRestartCommand ?? "",
         deployCommand: data.deployCommand ?? "",
         pm2ProcessName: data.pm2ProcessName ?? "",
+        publishDir: publishDirOf(data),
       })
       setSaveOk(true)
     } catch {
@@ -252,7 +271,11 @@ export function SiteGitCard({
     try {
       const res = await fetch(`/api/sites/${site.id}/deploy`, { method: "POST" })
       const data = (await res.json().catch(() => null)) as DeployResponse | null
-      applyDeployResponse(res, data, lang === "en" ? "Deployed and restarted." : "Deploy edildi ve yeniden başlatıldı.")
+      applyDeployResponse(
+        res,
+        data,
+        isStatic ? (en ? "Built and published." : "Derlendi ve yayınlandı.") : en ? "Deployed and restarted." : "Deploy edildi ve yeniden başlatıldı."
+      )
     } catch {
       setResult({ ok: false, text: lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı." })
     } finally {
@@ -273,9 +296,13 @@ export function SiteGitCard({
       <div className="border-b border-border pb-4">
         <h3 className="font-heading font-bold text-foreground text-base">{t("sites.detail.gitRepoTitle")}</h3>
         <p className="text-xs text-muted-foreground mt-0.5">
-          {lang === "en"
-            ? "Deploy pipeline: pull → deploy command → restart. Connect a GitHub App repository or enter any git address (GitLab, Bitbucket, self-hosted…)."
-            : "Deploy hattı: pull → deploy komutu → yeniden başlatma. Bir GitHub App deposu bağlayın ya da herhangi bir git adresi girin (GitLab, Bitbucket, self-hosted…)."}
+          {isStatic
+            ? en
+              ? "Deploy pipeline: pull → build command (optional) → publish folder copied to public/. Connect a GitHub App repository or enter any git address (GitLab, Bitbucket, self-hosted…)."
+              : "Deploy hattı: pull → derleme komutu (isteğe bağlı) → yayın klasörü public/'e kopyalanır. Bir GitHub App deposu bağlayın ya da herhangi bir git adresi girin (GitLab, Bitbucket, self-hosted…)."
+            : en
+              ? "Deploy pipeline: pull → deploy command → restart. Connect a GitHub App repository or enter any git address (GitLab, Bitbucket, self-hosted…)."
+              : "Deploy hattı: pull → deploy komutu → yeniden başlatma. Bir GitHub App deposu bağlayın ya da herhangi bir git adresi girin (GitLab, Bitbucket, self-hosted…)."}
         </p>
       </div>
 
@@ -322,7 +349,13 @@ export function SiteGitCard({
             )}
             <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-start gap-1.5 pt-1">
               <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
-              {lang === "en" ? "Switching repositories deletes the site's current files and clones the new repository fresh." : "Depoyu değiştirmek, sitenin mevcut dosyalarını siler ve yeni depoyu sıfırdan klonlar."}
+              {isStatic
+                ? en
+                  ? "Every deploy mirrors the publish folder into public/ — files added to public/ by hand (e.g. uploads) are removed."
+                  : "Her deploy yayın klasörünü public/'e aynalar — public/'e elle eklenen dosyalar (ör. yüklemeler) silinir."
+                : en
+                  ? "Switching repositories deletes the site's current files and clones the new repository fresh."
+                  : "Depoyu değiştirmek, sitenin mevcut dosyalarını siler ve yeni depoyu sıfırdan klonlar."}
             </p>
             {connectRepoError && <p className="text-xs text-destructive">{connectRepoError}</p>}
           </div>
@@ -376,7 +409,13 @@ export function SiteGitCard({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="deployCommand" className="text-xs font-bold text-foreground/90">
-            {lang === "en" ? "Deploy command (after pull, before restart — optional)" : "Deploy komutu (pull sonrası, yeniden başlatmadan önce — isteğe bağlı)"}
+            {isStatic
+              ? en
+                ? "Build command (after pull, before publishing — optional)"
+                : "Derleme komutu (pull sonrası, yayından önce — isteğe bağlı)"
+              : en
+                ? "Deploy command (after pull, before restart — optional)"
+                : "Deploy komutu (pull sonrası, yeniden başlatmadan önce — isteğe bağlı)"}
           </Label>
           <Input
             id="deployCommand"
@@ -387,33 +426,60 @@ export function SiteGitCard({
             className={inputCls}
           />
           <p className="text-[11px] text-muted-foreground">
-            {lang === "en" ? "Runs in the site folder as the panel user via bash. Environment: PORT, GIT_COMMIT, CI=true." : "Site klasöründe, panel kullanıcısı olarak bash ile çalışır. Ortam: PORT, GIT_COMMIT, CI=true."}
+            {isStatic
+              ? en
+                ? "Runs in the repository folder (repo/) as the panel user via bash. Environment: GIT_COMMIT, CI=true."
+                : "Depo klasöründe (repo/), panel kullanıcısı olarak bash ile çalışır. Ortam: GIT_COMMIT, CI=true."
+              : en
+                ? "Runs in the site folder as the panel user via bash. Environment: PORT, GIT_COMMIT, CI=true."
+                : "Site klasöründe, panel kullanıcısı olarak bash ile çalışır. Ortam: PORT, GIT_COMMIT, CI=true."}
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        {isStatic && (
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold text-foreground/90">{t("sites.detail.processManagerLabel")}</Label>
-            {isSuperAdmin ? (
-              <CustomSelect value={form.processManager} onChange={(val) => setForm((f) => ({ ...f, processManager: val as DbProcessManager }))} options={processOptions} className="w-full" />
-            ) : (
-              <Input value={PROCESS_MANAGER_LABELS[form.processManager][lang === "en" ? "en" : "tr"]} disabled className={inputCls} />
+            <Label htmlFor="publishDir" className="text-xs font-bold text-foreground/90">
+              {en ? "Publish folder (served after the build)" : "Yayın klasörü (derlemeden sonra sunulan)"}
+            </Label>
+            <Input
+              id="publishDir"
+              placeholder={en ? ". (repository root)" : ". (depo kökü)"}
+              value={form.publishDir}
+              onChange={(e) => setForm((f) => ({ ...f, publishDir: e.target.value }))}
+              className={cn(inputCls, "sm:w-80")}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              {en
+                ? "Relative to the repository root: empty for plain HTML, dist for Vite/Astro, build for Create React App, out for Next.js export. Takes effect on the next deploy. Its contents are mirrored into public/, so files added to public/ by hand are removed."
+                : "Depo köküne göre: düz HTML için boş, Vite/Astro için dist, Create React App için build, Next.js export için out. Bir sonraki deploy'da uygulanır. İçeriği public/'e aynalanır, public/'e elle eklenen dosyalar silinir."}
+            </p>
+          </div>
+        )}
+        {!isStatic && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-foreground/90">{t("sites.detail.processManagerLabel")}</Label>
+              {isSuperAdmin ? (
+                <CustomSelect value={form.processManager} onChange={(val) => setForm((f) => ({ ...f, processManager: val as DbProcessManager }))} options={processOptions} className="w-full" />
+              ) : (
+                <Input value={PROCESS_MANAGER_LABELS[form.processManager][lang === "en" ? "en" : "tr"]} disabled className={inputCls} />
+              )}
+            </div>
+            {form.processManager === "PM2" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="pm2ProcessName" className="text-xs font-bold text-foreground/90">{lang === "en" ? "PM2 process name" : "PM2 süreç adı"}</Label>
+                <Input id="pm2ProcessName" placeholder={site.domain.replace(/\./g, "-")} value={form.pm2ProcessName} disabled={!isSuperAdmin} onChange={(e) => setForm((f) => ({ ...f, pm2ProcessName: e.target.value }))} className={inputCls} />
+                <p className="text-[11px] text-muted-foreground">{lang === "en" ? "The name shown by `pm2 list` in the root terminal." : "Root terminalde `pm2 list`'in gösterdiği ad."}</p>
+              </div>
+            )}
+            {form.processManager === "CUSTOM_SCRIPT" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="customRestartCommand" className="text-xs font-bold text-foreground/90">{t("sites.detail.customRestartScriptLabel")}</Label>
+                <Input id="customRestartCommand" placeholder={`/var/www/${site.domain}/deploy/restart.sh`} value={form.customRestartCommand} disabled={!isSuperAdmin} onChange={(e) => setForm((f) => ({ ...f, customRestartCommand: e.target.value }))} className={inputCls} />
+              </div>
             )}
           </div>
-          {form.processManager === "PM2" && (
-            <div className="space-y-1.5">
-              <Label htmlFor="pm2ProcessName" className="text-xs font-bold text-foreground/90">{lang === "en" ? "PM2 process name" : "PM2 süreç adı"}</Label>
-              <Input id="pm2ProcessName" placeholder={site.domain.replace(/\./g, "-")} value={form.pm2ProcessName} disabled={!isSuperAdmin} onChange={(e) => setForm((f) => ({ ...f, pm2ProcessName: e.target.value }))} className={inputCls} />
-              <p className="text-[11px] text-muted-foreground">{lang === "en" ? "The name shown by `pm2 list` in the root terminal." : "Root terminalde `pm2 list`'in gösterdiği ad."}</p>
-            </div>
-          )}
-          {form.processManager === "CUSTOM_SCRIPT" && (
-            <div className="space-y-1.5">
-              <Label htmlFor="customRestartCommand" className="text-xs font-bold text-foreground/90">{t("sites.detail.customRestartScriptLabel")}</Label>
-              <Input id="customRestartCommand" placeholder={`/var/www/${site.domain}/deploy/restart.sh`} value={form.customRestartCommand} disabled={!isSuperAdmin} onChange={(e) => setForm((f) => ({ ...f, customRestartCommand: e.target.value }))} className={inputCls} />
-            </div>
-          )}
-        </div>
-        {form.processManager === "DOCKER_COMPOSE" && (
+        )}
+        {!isStatic && form.processManager === "DOCKER_COMPOSE" && (
           <p className="text-[11px] text-muted-foreground">
             {lang === "en" ? "After each deploy the panel runs `docker compose up -d --build --remove-orphans` in the site folder, so code, compose and image changes all go live." : "Her deploy sonrası panel site klasöründe `docker compose up -d --build --remove-orphans` çalıştırır — kod, compose ve image değişiklikleri yayına girer."}
           </p>
@@ -421,7 +487,7 @@ export function SiteGitCard({
 
         <div className="flex items-center justify-between rounded-xl border border-border p-4 bg-muted/30">
           <div>
-            <p className="text-xs font-bold text-foreground">{t("sites.detail.autoPullRestartLabel")}</p>
+            <p className="text-xs font-bold text-foreground">{isStatic ? (en ? "Auto Pull & Publish" : "Otomatik Pull & Yayın") : t("sites.detail.autoPullRestartLabel")}</p>
             <p className="text-[11px] text-muted-foreground mt-0.5">
               {lang === "en" ? "Polls the repo; on a new commit runs the full pipeline. A GitHub App push webhook triggers instantly (see Settings)." : "Depoyu periyodik kontrol eder; yeni commit'te tüm hattı çalıştırır. GitHub App push webhook'u anında tetikler (bkz. Ayarlar)."}
             </p>
@@ -446,7 +512,15 @@ export function SiteGitCard({
             {running === "pull" ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <RotateCw className="size-3.5 mr-1" />}
             {t("sites.detail.pullNow")}
           </Button>
-          <Button variant="outline" onClick={handleDeploy} disabled={running !== null} className="h-10 px-4 rounded-xl border border-border bg-card text-xs font-semibold cursor-pointer text-[#580619] dark:text-[#38bdf8]" title={lang === "en" ? "pull → deploy command → restart, even without new commits" : "pull → deploy komutu → yeniden başlatma, yeni commit olmasa bile"}>
+          <Button variant="outline" onClick={handleDeploy} disabled={running !== null} className="h-10 px-4 rounded-xl border border-border bg-card text-xs font-semibold cursor-pointer text-[#580619] dark:text-[#38bdf8]" title={
+              isStatic
+                ? en
+                  ? "pull → build → publish, even without new commits"
+                  : "pull → derleme → yayın, yeni commit olmasa bile"
+                : en
+                  ? "pull → deploy command → restart, even without new commits"
+                  : "pull → deploy komutu → yeniden başlatma, yeni commit olmasa bile"
+            }>
             {running === "deploy" ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Rocket className="size-3.5 mr-1" />}
             {lang === "en" ? "Deploy Now" : "Şimdi Deploy Et"}
           </Button>

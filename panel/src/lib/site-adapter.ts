@@ -44,8 +44,8 @@ export function dbTypeToUiType(type: string): SiteType {
 }
 
 /** Git bağlanabilen / deploy hattı olan tipler (bkz. src/lib/git.ts GIT_PULL_TYPES). */
-export const GIT_CAPABLE_DB_TYPES: DbSiteType[] = ["NODEJS", "PYTHON", "REVERSE_PROXY", "DOCKER"]
-export const GIT_CAPABLE_UI_TYPES: SiteType[] = ["nodejs", "python", "proxy", "docker"]
+export const GIT_CAPABLE_DB_TYPES: DbSiteType[] = ["STATIC", "NODEJS", "PYTHON", "REVERSE_PROXY", "DOCKER"]
+export const GIT_CAPABLE_UI_TYPES: SiteType[] = ["static", "nodejs", "python", "proxy", "docker"]
 /** Panelin kendi systemd birimi olan tipler. */
 export const SYSTEMD_DB_TYPES: DbSiteType[] = ["NODEJS", "PYTHON"]
 

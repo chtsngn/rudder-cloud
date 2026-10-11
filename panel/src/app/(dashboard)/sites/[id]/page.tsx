@@ -205,6 +205,7 @@ export default function SiteDetailPage() {
   const hasSystemd = api?.type === "NODEJS" || api?.type === "PYTHON"
   const isProxy = api?.type === "REVERSE_PROXY"
   const isDocker = api?.type === "DOCKER"
+  const isStatic = api?.type === "STATIC"
   const gitCapable = !!api && (GIT_CAPABLE_DB_TYPES as string[]).includes(api.type)
   const isCompose = api?.processManager === "DOCKER_COMPOSE"
   const showLogsTab = hasSystemd || isCompose
@@ -403,6 +404,9 @@ export default function SiteDetailPage() {
     ...(hasSystemd ? [{ label: t("sites.detail.startCmdLabel"), value: String(config.startCommand ?? "-") }] : []),
     ...(isProxy ? [{ label: t("sites.detail.upstreamLabel"), value: String(config.upstreamUrl ?? "-") }] : []),
     { label: gitCapable ? (lang === "en" ? "Site folder" : "Site klasörü") : t("sites.detail.siteRootLabel"), value: workdir },
+    ...(isStatic && api.repoUrl
+      ? [{ label: lang === "en" ? "Published folder" : "Yayın klasörü", value: `repo/${typeof config.publishDir === "string" && config.publishDir ? config.publishDir : "."} → public/` }]
+      : []),
     { label: t("sites.detail.linuxUserLabel"), value: linuxUser ?? (lang === "en" ? "— (set up from the Access tab)" : "— (Erişim sekmesinden kurulabilir)") },
     {
       label: t("sites.detail.sslStatusLabel"),
@@ -550,7 +554,7 @@ export default function SiteDetailPage() {
       {/* ═══ 3. GENEL BAKIŞ ═══ */}
       {activeTab === "overview" && (
         <div className="space-y-6">
-          {gitCapable && <SiteProcessCard site={api} onSiteUpdate={applySite} />}
+          {gitCapable && !isStatic && <SiteProcessCard site={api} onSiteUpdate={applySite} />}
 
           {isProxy && (
             <div className={panelCls}>

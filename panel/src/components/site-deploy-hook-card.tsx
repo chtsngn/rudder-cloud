@@ -110,8 +110,8 @@ export function SiteDeployHookCard({ siteId, githubConnected }: { siteId: string
       <CardContent className="space-y-4">
         <p className="text-xs text-muted-foreground">
           {lang === "en"
-            ? "A secret URL. A single POST from your CI (GitHub Actions, GitLab CI, a cron, curl…) runs this site's deploy pipeline: pull → deploy command → restart. No SSH key needed."
-            : "Gizli bir URL. CI'ınızdan (GitHub Actions, GitLab CI, cron, curl…) atılan tek bir POST bu sitenin deploy hattını çalıştırır: pull → deploy komutu → yeniden başlatma. SSH anahtarı gerekmez."}
+            ? "A secret URL. A single POST from your CI (GitHub Actions, GitLab CI, a cron, curl…) runs this site's deploy pipeline: pull → deploy command → restart (publish on static sites). No SSH key needed."
+            : "Gizli bir URL. CI'ınızdan (GitHub Actions, GitLab CI, cron, curl…) atılan tek bir POST bu sitenin deploy hattını çalıştırır: pull → deploy komutu → yeniden başlatma (statik sitede yayın). SSH anahtarı gerekmez."}
         </p>
         {githubConnected && (
           <p className="text-[11px] text-emerald-700 dark:text-emerald-400">

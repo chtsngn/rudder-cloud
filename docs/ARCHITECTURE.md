@@ -1153,3 +1153,34 @@ cwd. Gerçek nginx/certbot/ACL/PHP-FPM/`cleanup-site` yolları sunucuda test edi
   yenilemesi orada. Kartın kendi sürükle-bırak dinleyicileri ve kaplaması kaldırıldı.
   Diğer durumlarda yükleme sağ altta ilerleme/sonuç bildirimiyle yapılır;
   "Dosyalarda göster" Dosyalar sekmesini hedef klasörde açar.
+
+### 2026-10-11 güncellemesi: statik sitelere Git bağlama
+
+- **Statik site artık git'e bağlanabiliyor** (Git & Dağıtım sekmesi, sihirbazdaki depo
+  seçici, otomatik pull, deploy hook, GitHub push webhook'u). `GIT_PULL_TYPES` /
+  `GIT_CAPABLE_*` listelerine STATIC eklendi. Yukarıdaki "STATIC/PHP/WORDPRESS kapsam
+  dışı" gerekçesi STATIC için geçersiz: v1.3.0 sahiplik modelinden beri panel site
+  klasörüne ACL ile yazabiliyor (`apply_owned_site_access`). PHP/WORDPRESS hâlâ dışarıda.
+- **Akış:** depo `<siteRoot>/repo`'ya klonlanır (`resolveGitWorkdir`), deploy komutu
+  (derleme) orada çalışır, ardından yayın klasörü (`config.publishDir`, depo köküne göre;
+  boş = depo kökü, ör. `dist`) `src/lib/static-publish.ts` ile `<siteRoot>/public`'e
+  aynalanır. Vhost'a dokunulmaz; `.git` ve kaynak kod yayına çıkmaz; yeniden başlatma yok
+  (süreç yöneticisi alanı gizli, Süreç kartı gösterilmez).
+- **rsync bayrakları:** `-rlt --checksum --safe-links --delete --delay-updates
+  --omit-dir-times --no-perms --no-owner --no-group --exclude=.git`. `public` site
+  kullanıcısına ait olduğundan sahiplik/izin/klasör zamanı aktarılmaz (panelde
+  chmod/chgrp/utime hata verirdi); yeni dosyalar `public`'in varsayılan ACL'ini
+  (www-data okuma) devralır. `--checksum`: aynı boyutta ve aynı saniyede değişen dosya
+  boyut+zaman kontrolüyle atlanıyordu (testte yakalandı). `--safe-links`: depo dışını
+  gösteren symlink kopyalanmaz; yayın klasörünün kendisi symlink ile depo dışına
+  çıkamaz (realpath kontrolü).
+- **Uyarı:** `--delete` nedeniyle `public/`'e elle eklenen dosyalar (dosya yöneticisi
+  yüklemeleri dahil) bir sonraki deploy'da silinir; arayüz bunu yayın klasörü alanında
+  söylüyor.
+- `PATCH /api/sites/[id]` `publishDir` (yalnız STATIC, `normalizePublishDir`: göreli,
+  `..`/`.git` yok) — süper admin şartı yok, çünkü yalnız depo içinden hangi klasörün
+  kopyalanacağını seçer; derleme komutu (`deployCommand`) yine süper admin.
+- Doğrulama: Debian konteynerinde site kullanıcısı + ACL + nginx ile düz HTML, derleme +
+  `dist`, olmayan klasör ve `/etc`'ye symlink senaryoları; yerelde panel arayüzünden
+  manuel HTTPS depo ile bağla → deploy.
+

@@ -27,6 +27,7 @@ import {
   ProvisionError,
   requestSsl,
 } from "@/lib/provision"
+import { normalizePublishDir } from "@/lib/site-paths"
 
 const VALID_TYPES = new Set<string>(Object.values(SiteType))
 const VALID_PROCESS_MANAGERS = new Set(["SYSTEMD", "DOCKER_COMPOSE", "PM2", "CUSTOM_SCRIPT", "NONE"])
@@ -72,7 +73,7 @@ function toPort(value: unknown): number | null {
  * olabiliyordu).
  */
 type ProvisionPlan =
-  | { type: "STATIC"; siteRoot: string; linuxUser: string }
+  | { type: "STATIC"; siteRoot: string; linuxUser: string; publishDir: string }
   | { type: "PHP"; phpVersion: string; siteRoot: string; linuxUser: string }
   | {
       type: "WORDPRESS"
@@ -109,7 +110,10 @@ function buildPlan(
       if (!isValidSiteRoot(siteRoot)) return { error: "Geçerli bir site kök dizini gereklidir (/var/www/... altında)." }
       const linuxUser = ownedUser()
       if (typeof linuxUser !== "string") return linuxUser
-      return { plan: { type: "STATIC", siteRoot, linuxUser } }
+      // Yalnızca depo bağlanırsa kullanılır (bkz. src/lib/static-publish.ts).
+      const publishDir = normalizePublishDir(cfg.publishDir)
+      if (publishDir === null) return { error: "Geçersiz yayın klasörü (depo köküne göre göreli yol, ör. dist)." }
+      return { plan: { type: "STATIC", siteRoot, linuxUser, publishDir } }
     }
     case "PHP": {
       const phpVersion = toStr(cfg.phpVersion) || "8.3"
@@ -191,7 +195,7 @@ function configFromPlan(plan: ProvisionPlan, www: boolean, sslEmail: string): Re
   if (sslEmail) base.sslEmail = sslEmail
   switch (plan.type) {
     case "STATIC":
-      return { ...base, siteRoot: plan.siteRoot, linuxUser: plan.linuxUser }
+      return { ...base, siteRoot: plan.siteRoot, linuxUser: plan.linuxUser, ...(plan.publishDir ? { publishDir: plan.publishDir } : {}) }
     case "PHP":
       return { ...base, phpVersion: plan.phpVersion, siteRoot: plan.siteRoot, linuxUser: plan.linuxUser }
     case "WORDPRESS":

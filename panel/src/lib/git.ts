@@ -4,9 +4,12 @@
  * panelin zaten yazma izni olduğu dizinlerde çalışır: NODEJS/PYTHON (systemd
  * birimleri `User=panel`), REVERSE_PROXY ve DOCKER (klasör panel tarafından
  * oluşturulur — CloudPanel-tarzı "reverse-proxy + git clone + Docker Compose
- * ile ayağa kaldır" akışı tam olarak bunu gerektiriyor). STATIC/PHP/WORDPRESS
- * dosyaları dedicated kullanıcıya ait olduğu için (bkz. provision-site.sh
- * apply_owned_site_access) git-pull kasıtlı olarak DESTEKLENMİYOR.
+ * ile ayağa kaldır" akışı tam olarak bunu gerektiriyor) ve STATIC (2026-10-11):
+ * site klasörü dedicated kullanıcıya ait ama panel ACL ile yazabiliyor (bkz.
+ * provision-site.sh apply_owned_site_access); depo `<siteRoot>/repo`'ya
+ * klonlanır, `public`'e yayın adımı aynalar (bkz. src/lib/static-publish.ts).
+ * PHP/WORDPRESS'te git-pull hâlâ DESTEKLENMİYOR (kod doğrudan web kökünde
+ * çalışır, sahiplik/yazma modeli farklı).
  *
  * Kimlik doğrulama: site bir GitHub App kurulumuna bağlıysa kısa ömürlü
  * installation token (HTTPS); SSH adresli manuel depolarda sitenin kendi
@@ -21,7 +24,7 @@ import { promisify } from "node:util"
 
 import { gitSshEnvFor } from "@/lib/deploy-keys"
 import { getInstallationAccessToken } from "@/lib/github-app"
-import { resolveSiteWorkdir, type SiteLike } from "@/lib/site-paths"
+import { resolveGitWorkdir, type SiteLike } from "@/lib/site-paths"
 
 const execFileAsync = promisify(execFile)
 const GIT_TIMEOUT_MS = 180_000
@@ -46,14 +49,14 @@ export class GitError extends Error {
   }
 }
 
-const GIT_PULL_TYPES = new Set(["NODEJS", "PYTHON", "REVERSE_PROXY", "DOCKER"])
+const GIT_PULL_TYPES = new Set(["STATIC", "NODEJS", "PYTHON", "REVERSE_PROXY", "DOCKER"])
 
 export function isGitPullSupported(siteType: string): boolean {
   return GIT_PULL_TYPES.has(siteType)
 }
 
 export const GIT_PULL_UNSUPPORTED_MESSAGE =
-  "Bu site türü için git bağlama desteklenmiyor (yalnızca Node.js/Python/Ters Proxy/Docker)."
+  "Bu site türü için git bağlama desteklenmiyor (yalnızca Statik/Node.js/Python/Ters Proxy/Docker)."
 
 async function pathExists(path: string): Promise<boolean> {
   try {
@@ -123,7 +126,7 @@ export async function gitPullOrClone(
     throw new GitError(`Geçersiz git branch: ${site.gitBranch}`)
   }
 
-  const workdir = resolveSiteWorkdir(site)
+  const workdir = resolveGitWorkdir(site)
   if (!workdir) {
     throw new GitError("Bu site türü için çalışma dizini belirlenemedi.")
   }
