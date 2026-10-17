@@ -120,6 +120,7 @@ export default function SiteDetailPage() {
   const [upstreamSaving, setUpstreamSaving] = useState(false)
   const [upstreamSaveError, setUpstreamSaveError] = useState<string | null>(null)
   const [upstreamSaveOk, setUpstreamSaveOk] = useState(false)
+  const [upstreamSaveWarnings, setUpstreamSaveWarnings] = useState<string[]>([])
 
   const [spaSaving, setSpaSaving] = useState(false)
   const [spaError, setSpaError] = useState<string | null>(null)
@@ -241,19 +242,21 @@ export default function SiteDetailPage() {
     setUpstreamSaving(true)
     setUpstreamSaveError(null)
     setUpstreamSaveOk(false)
+    setUpstreamSaveWarnings([])
     try {
       const res = await fetch(`/api/sites/${api.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ upstreamUrl: trimmed }),
       })
-      const data = (await res.json().catch(() => null)) as (ApiSite & { error?: string }) | null
+      const data = (await res.json().catch(() => null)) as (ApiSite & { error?: string; warnings?: string[] }) | null
       if (!res.ok || !data) {
         setUpstreamSaveError(data?.error ?? "Hedef adres güncellenemedi.")
         return
       }
       applySite(data)
       setUpstreamSaveOk(true)
+      setUpstreamSaveWarnings(data.warnings ?? [])
     } catch {
       setUpstreamSaveError("Sunucuya bağlanılamadı.")
     } finally {
@@ -555,6 +558,11 @@ export default function SiteDetailPage() {
                   {t("sites.detail.targetUpdated")}
                 </p>
               )}
+              {upstreamSaveWarnings.map((w) => (
+                <p key={w} className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/60 p-3 text-xs text-amber-800 dark:text-amber-300 break-words">
+                  {w}
+                </p>
+              ))}
             </div>
           )}
 

@@ -1260,3 +1260,16 @@ tarama yalnız öneri ve ön doldurma üretir.
   açma, Dockerfile kartı dosyaları, örnek compose, compose kartı + klon (`.env` korunur),
   klon sonrası izinler.
 
+
+### 2026-10-17 güncellemesi (v1.5.1): ortak upstream portu uyarı oldu
+
+- Birden çok site aynı uygulamaya yönlenebilir (ör. iki alan adı tek bir OSRM'e). Başka
+  bir site kaydının portunu kullanmak artık 409 değil: `POST /api/sites` uyarıyı
+  `setupWarnings`'e, `PATCH /api/sites/[id]` (`upstreamUrl`) yanıttaki `warnings`'e
+  koyar; sihirbaz ve site sayfası sarı uyarı olarak gösterir.
+- Sert hata kalan tek durum: Rudder bu portta yeni bir compose başlatacakken port o an
+  dinleniyorsa (konteyner bağlanamaz). Compose'lu yeni site başka bir kaydın portunu
+  alırsa uyarı iki uygulamanın aynı anda dinleyemeyeceğini söyler.
+- Üye (MEMBER) hedef adresi yalnız `EDIT_FILES` yetkisi olduğu sitelerin portuna
+  çevirebilir; aksi halde 403 — erişimi olmayan bir uygulamayı kendi alan adından
+  yayınlayamaz. Süper admin için yalnız uyarı.
