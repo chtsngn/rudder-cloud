@@ -147,23 +147,34 @@ function configFromPlan(plan: ProvisionPlan, www: boolean, sslEmail: string): Re
 }
 
 /**
- * Port çakışması: hedef port başka bir site kaydında kullanılıyorsa sert hata.
- * Örnek compose başlatılacaksa port o an dinleniyor olmamalı; aksi halde hedef
- * zaten çalışan bir uygulama olabilir — yalnız site kaydı çakışması engellenir.
+ * Port denetimi. Hedef port başka bir site kaydında da varsa yalnız uyarı:
+ * birden çok site aynı uygulamaya yönlenebilir (ör. iki alan adı tek OSRM).
+ * Sert hata yalnız Rudder bu portta yeni bir compose başlatacakken port o an
+ * dinleniyorsa — konteyner bağlanamaz.
  */
-async function findPortConflict(plan: ProvisionPlan, domain: string): Promise<string | null> {
-  if (plan.type !== "REVERSE_PROXY") return null
+async function checkPorts(plan: ProvisionPlan, domain: string): Promise<{ error: string | null; warnings: string[] }> {
+  const warnings: string[] = []
+  if (plan.type !== "REVERSE_PROXY") return { error: null, warnings }
   const port = sitePortOf({ type: "REVERSE_PROXY", config: { upstreamUrl: plan.upstreamUrl } })
-  if (!port) return null
-
-  const others = await prisma.site.findMany({ select: { domain: true, type: true, config: true } })
-  const clash = others.find((s) => s.domain !== domain && sitePortOf(s) === port)
-  if (clash) return `Port ${port} zaten "${clash.domain}" sitesi tarafından kullanılıyor.`
+  if (!port) return { error: null, warnings }
 
   if (plan.composePort && (await isPortListening(port))) {
-    return `Port ${port} sunucuda şu an başka bir süreç tarafından dinleniyor — Portlar sayfasından boş bir port seçin.`
+    return {
+      error: `Port ${port} sunucuda şu an başka bir süreç tarafından dinleniyor — Portlar sayfasından boş bir port seçin.`,
+      warnings,
+    }
   }
-  return null
+
+  const others = await prisma.site.findMany({ select: { domain: true, type: true, config: true } })
+  const sharing = others.filter((s) => s.domain !== domain && sitePortOf(s) === port).map((s) => `"${s.domain}"`)
+  if (sharing.length > 0) {
+    warnings.push(
+      plan.composePort
+        ? `Port ${port} ${sharing.join(", ")} kaydında da var — iki uygulama aynı anda bu portu dinleyemez.`
+        : `Port ${port} ${sharing.join(", ")} ile ortak — bu siteler aynı uygulamaya yönlenecek.`
+    )
+  }
+  return { error: null, warnings }
 }
 
 const MAX_ENV_FILE_BYTES = 64 * 1024
@@ -293,9 +304,9 @@ export async function POST(request: Request) {
     composeContainerPort = port
   }
 
-  const conflict = await findPortConflict(plan, domainValue)
-  if (conflict) {
-    return NextResponse.json({ error: conflict }, { status: 409 })
+  const portCheck = await checkPorts(plan, domainValue)
+  if (portCheck.error) {
+    return NextResponse.json({ error: portCheck.error }, { status: 409 })
   }
 
   const initialConfig = configFromPlan(plan, www, sslEmail)
@@ -337,7 +348,7 @@ export async function POST(request: Request) {
 
   // Sihirbazın hazırladığı dosyalar: depo klonlanmadan ÖNCE yazılır (ilk klon
   // var olan dosyalara dokunmaz). Başarısızlık siteyi bozmaz, uyarı olarak döner.
-  const setupWarnings: string[] = []
+  const setupWarnings: string[] = [...portCheck.warnings]
   if (status === "ACTIVE" && plan.type === "REVERSE_PROXY" && (envFileValue !== null || composeContainerPort)) {
     const siteLike = { domain: domainValue, type: plan.type, config: initialConfig }
     try {

@@ -94,6 +94,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   const data: Record<string, unknown> = {}
   const changed: string[] = []
+  const warnings: string[] = []
   const currentConfig = (site.config ?? {}) as Record<string, unknown>
   let nextConfig: Record<string, unknown> | null = null
 
@@ -216,12 +217,27 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (typeof value !== "string" || !isValidUpstreamUrl(value.trim())) {
       return NextResponse.json({ error: "Geçersiz hedef adres." }, { status: 400 })
     }
+    // Birden çok site aynı uygulamaya yönlenebilir (ör. iki alan adı tek OSRM):
+    // ortak port engel değil, yalnız uyarı. Üye ise yalnız kendi yönettiği
+    // sitelerin uygulamasına yönlendirebilir — yoksa erişimi olmayan bir
+    // uygulamayı kendi alan adından yayınlayabilirdi.
     const newPort = sitePortOf({ type: site.type, config: { upstreamUrl: value.trim() } })
     if (newPort && newPort !== sitePortOf(site)) {
-      const others = await prisma.site.findMany({ where: { id: { not: id } }, select: { domain: true, type: true, config: true } })
-      const clash = others.find((s) => sitePortOf(s) === newPort)
-      if (clash) {
-        return NextResponse.json({ error: `Port ${newPort} zaten "${clash.domain}" sitesi tarafından kullanılıyor.` }, { status: 409 })
+      const others = await prisma.site.findMany({ where: { id: { not: id } }, select: { id: true, domain: true, type: true, config: true } })
+      const sharing = others.filter((s) => sitePortOf(s) === newPort)
+      if (!admin) {
+        for (const other of sharing) {
+          if (!(await canManageSite(session.userId, other, "EDIT_FILES"))) {
+            return NextResponse.json(
+              { error: `Port ${newPort} "${other.domain}" sitesinin; yönetmediğiniz bir sitenin uygulamasına yönlendiremezsiniz.` },
+              { status: 403 }
+            )
+          }
+        }
+      }
+      if (sharing.length > 0) {
+        const domains = sharing.map((s) => `"${s.domain}"`).join(", ")
+        warnings.push(`Port ${newPort} ${domains} ile ortak — bu siteler aynı uygulamaya yönlenecek.`)
       }
     }
     try {
@@ -271,7 +287,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     targetId: id,
     detail: `${site.domain}: ${changed.join(", ")}`,
   })
-  return NextResponse.json(updated)
+  return NextResponse.json(warnings.length > 0 ? { ...updated, warnings } : updated)
 }
 
 /**
