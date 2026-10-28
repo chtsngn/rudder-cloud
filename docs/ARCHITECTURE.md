@@ -1273,3 +1273,13 @@ tarama yalnız öneri ve ön doldurma üretir.
 - Üye (MEMBER) hedef adresi yalnız `EDIT_FILES` yetkisi olduğu sitelerin portuna
   çevirebilir; aksi halde 403 — erişimi olmayan bir uygulamayı kendi alan adından
   yayınlayamaz. Süper admin için yalnız uyarı.
+
+### 2026-10-28 güncellemesi (v1.5.2): Next.js 16.4.3 güvenlik yaması
+
+- `next` ve `eslint-config-next` 16.3.3'ten 16.4.3'e (tam sürüm sabitli) yükseltildi.
+  Next.js 16.0.0–16.4.0 aralığında kritik açıklar vardı: SVG görsel optimizasyonunda
+  uzaktan kod çalıştırma (GHSA-2464-fhr4-w9xw), `use cache` ile uzaktan kod çalıştırma
+  (GHSA-673q-mjm6-r5xr) ve Server Actions ile hizmet reddi (GHSA-p3m5-59mp-jv5r).
+- Uygulama kodunda değişiklik yok; yalnız bağımlılık yükseltmesi. `next`'in geçişli
+  bağımlılığı `sharp` da 0.35.5'e çıktı.
+- Doğrulama: `npm audit --omit=dev` artık `next` için bulgu vermiyor.
