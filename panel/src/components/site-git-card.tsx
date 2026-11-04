@@ -65,6 +65,10 @@ export function SiteGitCard({
     const cfg = (s.config ?? {}) as Record<string, unknown>
     return typeof cfg.publishDir === "string" ? cfg.publishDir : ""
   }
+  const composeFileOf = (s: ApiSite) => {
+    const cfg = (s.config ?? {}) as Record<string, unknown>
+    return typeof cfg.composeFile === "string" ? cfg.composeFile : ""
+  }
 
   const [installedRepos, setInstalledRepos] = useState<InstalledRepoOption[]>([])
   const [installedReposLoaded, setInstalledReposLoaded] = useState(false)
@@ -83,6 +87,7 @@ export function SiteGitCard({
     deployCommand: site.deployCommand ?? "",
     pm2ProcessName: site.pm2ProcessName ?? "",
     publishDir: publishDirOf(site),
+    composeFile: composeFileOf(site),
   })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -210,6 +215,7 @@ export function SiteGitCard({
         payload.customRestartCommand = form.processManager === "CUSTOM_SCRIPT" ? form.customRestartCommand.trim() || null : null
         payload.deployCommand = form.deployCommand.trim() || null
         payload.pm2ProcessName = form.processManager === "PM2" ? form.pm2ProcessName.trim() || null : null
+        if (form.processManager === "DOCKER_COMPOSE") payload.composeFile = form.composeFile.trim()
       }
       const res = await fetch(`/api/sites/${site.id}`, {
         method: "PATCH",
@@ -232,6 +238,7 @@ export function SiteGitCard({
         deployCommand: data.deployCommand ?? "",
         pm2ProcessName: data.pm2ProcessName ?? "",
         publishDir: publishDirOf(data),
+        composeFile: composeFileOf(data),
       })
       setSaveOk(true)
     } catch {
@@ -476,9 +483,25 @@ export function SiteGitCard({
           </div>
         )}
         {!isStatic && form.processManager === "DOCKER_COMPOSE" && (
-          <p className="text-[11px] text-muted-foreground">
-            {lang === "en" ? "After each deploy the panel runs `docker compose up -d --build --remove-orphans` in the site folder, so code, compose and image changes all go live." : "Her deploy sonrası panel site klasöründe `docker compose up -d --build --remove-orphans` çalıştırır — kod, compose ve image değişiklikleri yayına girer."}
-          </p>
+          <div className="space-y-1.5">
+            <Label htmlFor="composeFile" className="text-xs font-bold text-foreground/90">{en ? "Compose file" : "Compose dosyası"}</Label>
+            <Input
+              id="composeFile"
+              placeholder={en ? "docker-compose.yml (automatic)" : "docker-compose.yml (otomatik)"}
+              value={form.composeFile}
+              disabled={!isSuperAdmin}
+              onChange={(e) => setForm((f) => ({ ...f, composeFile: e.target.value }))}
+              className={cn(inputCls, "sm:w-80")}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              {en
+                ? "A file name in the site folder, e.g. docker-compose.prod.yml. Empty: compose finds docker-compose.yml/compose.yml and its override file itself. When set, every command runs with -f <file> and docker-compose.override.yml is not loaded."
+                : "Site klasöründeki dosyanın adı, ör. docker-compose.prod.yml. Boş: compose docker-compose.yml/compose.yml'yi ve override dosyasını kendisi bulur. Seçilince her komut -f <dosya> ile çalışır, docker-compose.override.yml yüklenmez."}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {lang === "en" ? "After each deploy the panel runs `docker compose up -d --build --remove-orphans` in the site folder, so code, compose and image changes all go live." : "Her deploy sonrası panel site klasöründe `docker compose up -d --build --remove-orphans` çalıştırır — kod, compose ve image değişiklikleri yayına girer."}
+            </p>
+          </div>
         )}
 
         <div className="flex items-center justify-between rounded-xl border border-border p-4 bg-muted/30">

@@ -70,16 +70,64 @@ export async function findComposeFile(workdir: string): Promise<string | null> {
   return null
 }
 
-async function requireComposeWorkdir(site: SiteLike): Promise<string> {
+/**
+ * Site klasöründeki bir compose dosyasının ADI (alt klasör yok: compose proje
+ * dizinini ilk `-f` dosyasının klasörü sayar, alt klasörde proje adı, `.env`
+ * ve göreli build yolları değişirdi). Nokta ya da `-` ile başlayamaz.
+ */
+const COMPOSE_FILE_NAME_RE = /^[A-Za-z0-9_][A-Za-z0-9._-]{0,120}\.ya?ml$/
+
+/**
+ * `config.composeFile` doğrulaması (2026-11): boş/yok → "" (otomatik arama),
+ * geçerli dosya adı → kendisi, geçersiz → null.
+ */
+export function normalizeComposeFile(value: unknown): string | null {
+  if (value === null || value === undefined) return ""
+  if (typeof value !== "string") return null
+  const trimmed = value.trim()
+  if (trimmed === "") return ""
+  return COMPOSE_FILE_NAME_RE.test(trimmed) ? trimmed : null
+}
+
+/** Sitede elle seçilmiş compose dosyası; yoksa "" (compose kendi arar). */
+export function configuredComposeFile(site: SiteLike): string {
+  const cfg = site.config && typeof site.config === "object" ? (site.config as Record<string, unknown>) : {}
+  return normalizeComposeFile(cfg.composeFile) ?? ""
+}
+
+export interface ComposeTarget {
+  workdir: string
+  /** Kullanılan dosya (seçilmiş ya da otomatik bulunan). */
+  file: string
+  /** `docker` argümanlarının başı: `["compose"]` ya da `["compose", "-f", <dosya>]`. */
+  args: string[]
+}
+
+/**
+ * Sitenin compose hedefi. Dosya seçilmişse (ör. Fire Sight'ın
+ * `docker-compose.prod.yml`'i) her komut `-f <dosya>` ile çalışır; bu durumda
+ * `docker-compose.override.yml` otomatik yüklenmez. Seçilmemişse davranış eski:
+ * `-f` yok, compose dosyayı ve override'ı kendisi bulur.
+ */
+export async function resolveComposeTarget(site: SiteLike): Promise<ComposeTarget> {
   const workdir = resolveSiteWorkdir(site)
   if (!workdir) throw new RestartError("Bu site türü için çalışma dizini belirlenemedi.")
-  const composeFile = await findComposeFile(workdir)
-  if (!composeFile) {
+  const configured = configuredComposeFile(site)
+  if (configured) {
+    try {
+      await access(join(workdir, configured), fsConstants.R_OK)
+    } catch {
+      throw new RestartError(`Seçili compose dosyası bulunamadı: ${join(workdir, configured)}`)
+    }
+    return { workdir, file: configured, args: ["compose", "-f", configured] }
+  }
+  const found = await findComposeFile(workdir)
+  if (!found) {
     throw new RestartError(
-      `Çalışma dizininde compose dosyası yok (${workdir}) — docker-compose.yml/compose.yml bekleniyor.`
+      `Çalışma dizininde compose dosyası yok (${workdir}) — docker-compose.yml/compose.yml bekleniyor ya da site ayarlarından compose dosyasını seçin.`
     )
   }
-  return workdir
+  return { workdir, file: found, args: ["compose"] }
 }
 
 /**
@@ -146,15 +194,15 @@ export const DOCKER_COMPOSE_ACTIONS: DockerComposeControlAction[] = ["up", "down
  * konteynerleri yeniden başlatır. Çıktının kuyruğunu döner.
  */
 export async function dockerComposeControl(site: SiteLike, action: DockerComposeControlAction): Promise<string> {
-  const workdir = await requireComposeWorkdir(site)
+  const { workdir, args: base } = await resolveComposeTarget(site)
   const args =
     action === "up"
-      ? ["compose", "up", "-d", "--remove-orphans"]
+      ? [...base, "up", "-d", "--remove-orphans"]
       : action === "rebuild"
-        ? ["compose", "up", "-d", "--build", "--remove-orphans"]
+        ? [...base, "up", "-d", "--build", "--remove-orphans"]
         : action === "pull"
-          ? ["compose", "pull"]
-          : ["compose", action]
+          ? [...base, "pull"]
+          : [...base, action]
   const timeout = action === "rebuild" || action === "pull" || action === "up" ? BUILD_TIMEOUT_MS : RESTART_TIMEOUT_MS
   try {
     const { stdout, stderr } = await execFileAsync("docker", args, {
@@ -169,12 +217,12 @@ export async function dockerComposeControl(site: SiteLike, action: DockerCompose
 }
 
 export async function dockerComposeLogs(site: SiteLike, lines: number): Promise<string> {
-  const workdir = await requireComposeWorkdir(site)
+  const { workdir, args: base } = await resolveComposeTarget(site)
   const safeLines = Number.isInteger(lines) && lines >= 1 && lines <= 2000 ? lines : 200
   try {
     const { stdout, stderr } = await execFileAsync(
       "docker",
-      ["compose", "logs", "--tail", String(safeLines), "--no-color", "--timestamps"],
+      [...base, "logs", "--tail", String(safeLines), "--no-color", "--timestamps"],
       { cwd: workdir, timeout: 30_000, maxBuffer: 8 * 1024 * 1024 }
     )
     return `${stdout}${stderr}`
@@ -261,12 +309,15 @@ function parseComposePs(stdout: string): ContainerStatus[] {
 export async function getProcessStatus(site: RestartableSite): Promise<ProcessStatus> {
   switch (site.processManager) {
     case "DOCKER_COMPOSE": {
-      const workdir = resolveSiteWorkdir(site)
-      if (!workdir) return { manager: "DOCKER_COMPOSE", state: "unknown", detail: "Çalışma dizini belirlenemedi." }
-      const composeFile = await findComposeFile(workdir)
-      if (!composeFile) return { manager: "DOCKER_COMPOSE", state: "unknown", detail: "Compose dosyası bulunamadı." }
+      let target: ComposeTarget
       try {
-        const { stdout } = await execFileAsync("docker", ["compose", "ps", "-a", "--format", "json"], {
+        target = await resolveComposeTarget(site)
+      } catch (error) {
+        return { manager: "DOCKER_COMPOSE", state: "unknown", detail: error instanceof Error ? error.message : String(error) }
+      }
+      const { workdir } = target
+      try {
+        const { stdout } = await execFileAsync("docker", [...target.args, "ps", "-a", "--format", "json"], {
           cwd: workdir,
           timeout: 20_000,
           maxBuffer: 4 * 1024 * 1024,

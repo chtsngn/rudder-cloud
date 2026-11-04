@@ -8,9 +8,9 @@
 import { execFile } from "node:child_process"
 import { promisify } from "node:util"
 
-import { findComposeFile } from "@/lib/restart"
+import { resolveComposeTarget, type ComposeTarget } from "@/lib/restart"
 import { readTextFile, SiteFsError } from "@/lib/site-fs"
-import { resolveSiteWorkdir, type SiteLike } from "@/lib/site-paths"
+import { type SiteLike } from "@/lib/site-paths"
 
 const execFileAsync = promisify(execFile)
 
@@ -32,14 +32,16 @@ export interface DetectedDatabase {
    * konteyner İÇİNDEN alınır (host'tan `db:5432` erişilemez). */
   composeService?: string
   composeWorkdir?: string
+  /** Sitede compose dosyası elle seçildiyse (`-f` ile çağrılır). */
+  composeFile?: string
 }
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"])
 
-async function composeServiceNames(workdir: string): Promise<string[]> {
+async function composeServiceNames(target: ComposeTarget): Promise<string[]> {
   try {
-    const { stdout } = await execFileAsync("docker", ["compose", "config", "--services"], {
-      cwd: workdir,
+    const { stdout } = await execFileAsync("docker", [...target.args, "config", "--services"], {
+      cwd: target.workdir,
       timeout: 15_000,
     })
     return stdout.split("\n").map((l) => l.trim()).filter(Boolean)
@@ -65,12 +67,20 @@ function hostOf(detected: DetectedDatabase): string | null {
 export async function resolveComposeService(site: SiteLike, detected: DetectedDatabase): Promise<DetectedDatabase> {
   const host = hostOf(detected)
   if (!host || LOOPBACK_HOSTS.has(host) || host.includes(".")) return detected
-  const workdir = resolveSiteWorkdir(site)
-  if (!workdir) return detected
-  if (!(await findComposeFile(workdir))) return detected
-  const services = await composeServiceNames(workdir)
+  let target: ComposeTarget
+  try {
+    target = await resolveComposeTarget(site)
+  } catch {
+    return detected
+  }
+  const services = await composeServiceNames(target)
   if (!services.includes(host)) return detected
-  return { ...detected, composeService: host, composeWorkdir: workdir }
+  return {
+    ...detected,
+    composeService: host,
+    composeWorkdir: target.workdir,
+    ...(target.args.length > 1 ? { composeFile: target.file } : {}),
+  }
 }
 
 const ENV_CANDIDATES = [".env", ".env.production", ".env.local"]
