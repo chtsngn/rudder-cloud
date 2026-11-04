@@ -143,11 +143,12 @@ async function createComposeDump(domain: string, detected: DetectedDatabase, dir
   await assertToolAvailable("docker", "Docker Compose")
   const service = detected.composeService!
   const cwd = detected.composeWorkdir!
+  const base = detected.composeFile ? ["compose", "-f", detected.composeFile] : ["compose"]
   const env: NodeJS.ProcessEnv = { ...process.env }
 
   if (detected.engine === "postgres") {
     const fileName = `${domain}_postgres_${slug}.sql.gz`
-    const args = ["compose", "exec", "-T"]
+    const args = [...base, "exec", "-T"]
     if (detected.password) {
       env.PGPASSWORD = detected.password
       args.push("-e", "PGPASSWORD")
@@ -161,7 +162,7 @@ async function createComposeDump(domain: string, detected: DetectedDatabase, dir
 
   if (detected.engine === "mysql") {
     const fileName = `${domain}_mysql_${slug}.sql.gz`
-    const args = ["compose", "exec", "-T"]
+    const args = [...base, "exec", "-T"]
     if (detected.password) {
       env.MYSQL_PWD = detected.password
       args.push("-e", "MYSQL_PWD")
@@ -183,7 +184,7 @@ async function createComposeDump(domain: string, detected: DetectedDatabase, dir
   } catch {
     // olduğu gibi bırak
   }
-  const args = ["compose", "exec", "-T", service, "mongodump", "--uri", uri, "--archive", "--gzip"]
+  const args = [...base, "exec", "-T", service, "mongodump", "--uri", uri, "--archive", "--gzip"]
   await runDumpToGzipFile("docker", args, env, path.join(dir, fileName), { cwd, gzip: false })
   return statBackupFile(dir, fileName)
 }

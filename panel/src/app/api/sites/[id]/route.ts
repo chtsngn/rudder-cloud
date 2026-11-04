@@ -21,6 +21,7 @@ import {
   updateUpstream,
 } from "@/lib/provision"
 import { normalizePublishDir, resolveSiteWorkdir } from "@/lib/site-paths"
+import { normalizeComposeFile } from "@/lib/restart"
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -53,7 +54,7 @@ const VALID_PROCESS_MANAGERS = new Set(["DOCKER_COMPOSE", "PM2", "CUSTOM_SCRIPT"
  * yetkisindedir — EDIT_FILES'lı bir MEMBER dosya yöneticisiyle betik yazıp
  * bunlardan birine bağlayarak root'a çıkabilirdi.
  */
-const ADMIN_ONLY_FIELDS = ["processManager", "customRestartCommand", "deployCommand", "pm2ProcessName"]
+const ADMIN_ONLY_FIELDS = ["processManager", "customRestartCommand", "deployCommand", "pm2ProcessName", "composeFile"]
 
 /**
  * `PATCH /api/sites/[id]` — git/deploy/restart ayarları, Uygulama hedefi,
@@ -183,6 +184,29 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Geçersiz PM2 süreç adı (harf/rakam/._- en fazla 64 karakter)." }, { status: 400 })
     }
     changed.push("pm2ProcessName")
+  }
+
+  /**
+   * Compose dosyası — yalnızca Uygulama (REVERSE_PROXY): site klasöründe
+   * otomatik bulunan `docker-compose.yml` yerine kullanılacak dosya
+   * (ör. `docker-compose.prod.yml`). Boş → otomatik. Bir sonraki
+   * compose komutunda uygulanır (bkz. src/lib/restart.ts resolveComposeTarget).
+   */
+  if ("composeFile" in input) {
+    if (site.type !== "REVERSE_PROXY") {
+      return NextResponse.json({ error: "Compose dosyası yalnızca uygulama siteleri için seçilebilir." }, { status: 400 })
+    }
+    const value = normalizeComposeFile(input.composeFile)
+    if (value === null) {
+      return NextResponse.json(
+        { error: "Geçersiz compose dosyası (site klasöründeki .yml/.yaml dosyasının adı, ör. docker-compose.prod.yml)." },
+        { status: 400 }
+      )
+    }
+    const { composeFile: _previous, ...rest } = nextConfig ?? currentConfig
+    void _previous
+    nextConfig = value ? { ...rest, composeFile: value } : rest
+    changed.push("composeFile")
   }
 
   /**
