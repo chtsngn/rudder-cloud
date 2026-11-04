@@ -105,6 +105,22 @@ export async function resolveSitePath(
     }
   }
 
+  // realpath çözülemeyen ama `lstat` ile var görünen bir parça sarkık
+  // (hedefi olmayan) bir symlink'tir; yazma işlemleri onu takip edip site
+  // kökü dışına dosya oluşturabilirdi — reddedilir.
+  if (checkDir !== normalized) {
+    let current = checkDir
+    for (const part of path.relative(checkDir, normalized).split(path.sep)) {
+      current = path.join(current, part)
+      try {
+        await fs.lstat(current)
+      } catch {
+        break
+      }
+      throw new SiteFsError("Site dizini dışına çıkılamaz (symlink).", 400)
+    }
+  }
+
   return { absPath: normalized, root, realRoot }
 }
 

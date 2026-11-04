@@ -38,8 +38,3 @@ export interface Site {
   cpu?: number
   ram?: number
 }
-
-export const MOCK_SITES: Site[] = [
-  { id: "1", domain: "app.example.com", type: "proxy", status: "running" },
-  { id: "2", domain: "docs.example.com", type: "static", status: "active" },
-]

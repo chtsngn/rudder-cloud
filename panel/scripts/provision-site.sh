@@ -7,8 +7,10 @@ set -euo pipefail
 # Panel süreci (unprivileged `panel` sistem kullanıcısı) tarafından
 # `sudo` ile çağrılan TEK ayrıcalıklı betik. nginx/certbot/kullanıcı
 # yönetimi gibi kök yetkisi gerektiren TÜM site provisioning işlemleri buradan
-# geçer — panel süreci başka hiçbir komuta sudo erişimine sahip değil
-# (bkz. /etc/sudoers.d/panel-provisioning).
+# geçer (bkz. /etc/sudoers.d/panel-provisioning). NOT: aynı sudoers dosyası
+# süper admin web terminali için `/bin/bash`/`/bin/sh` izni de veriyor — yani
+# panel süreci fiilen root'a eşdeğer; bu betiğin doğrulaması bir ayrıcalık
+# sınırı değil, hatalı girdiye karşı savunma derinliğidir.
 #
 # Doğrudan interaktif kullanım için değildir: her girdi argüman olarak
 # gelir, hiçbir `read` yoktur, tüm girdiler burada BAĞIMSIZ OLARAK tekrar
@@ -255,6 +257,8 @@ cmd_cleanup_site() {
   validate_abs_path "$workdir" "çalışma dizini"
   [[ "$workdir" == /var/www/* ]] || die "Çalışma dizini /var/www/ altında olmalı: $workdir"
   [[ "$workdir" != "/var/www" && "$workdir" != "/var/www/" ]] || die "Kök dizin silinemez."
+  # `/var/www//`, `/var/www/.` gibi yazımlar da kökün kendisidir.
+  [[ "$(realpath -m -- "$workdir")" == /var/www/?* ]] || die "Kök dizin silinemez: $workdir"
   case "$remove_folder" in true|false) ;; *) die "remove_folder true|false olmalı" ;; esac
   case "$remove_user" in true|false) ;; *) die "remove_user true|false olmalı" ;; esac
 

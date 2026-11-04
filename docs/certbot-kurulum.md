@@ -1,6 +1,6 @@
 # Certbot Kurulumu (Nginx için SSL)
 
-`site-wizard.sh` SSL adımı için `certbot` ve `python3-certbot-nginx` gerektirir.
+Panelin SSL adımı (`provision-site.sh request-ssl`) için `certbot` ve `python3-certbot-nginx` gerektirir.
 
 ## Normal kurulum
 

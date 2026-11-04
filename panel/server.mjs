@@ -43,6 +43,10 @@ import { WebSocketServer } from "ws"
 
 const dev = process.env.NODE_ENV !== "production"
 const port = parseInt(process.env.PORT || "3000", 10)
+// Panel yalnız nginx arkasından (127.0.0.1) erişilmek üzere tasarlandı; tüm
+// arayüzlerde dinlemek nginx'i (body sınırı, X-Forwarded-* başlıkları) atlayan
+// doğrudan erişim açardı. Gerekirse PANEL_BIND_HOST ile değiştirilebilir.
+const bindHost = process.env.PANEL_BIND_HOST || "127.0.0.1"
 
 const TERMINAL_WS_PATH = "/api/terminal/socket"
 const SESSION_COOKIE_NAME = "panel_session" // bkz. src/lib/session.ts
@@ -109,6 +113,26 @@ function resolveMemberSiteWorkdir(site) {
       return typeof cfg.workingDir === "string" && cfg.workingDir ? cfg.workingDir : `/var/www/${site.domain}`
     default:
       return `/var/www/${site.domain}`
+  }
+}
+
+/**
+ * Tarayıcıdan gelen WS el sıkışmasında `Origin` panelin kendi adresi olmalı:
+ * oturum çerezi aynı "site"daki (ör. panel ile aynı alan adı altındaki bir
+ * barındırılan site) başka bir sayfadan açılan bağlantıda da gönderilir.
+ * Nginx `Host`'u portsuz (`$host`) ilettiği için yalnız host adları
+ * karşılaştırılır. Origin başlığı yoksa (tarayıcı dışı istemci) çerez yine
+ * zorunlu olduğundan izin verilir.
+ */
+function isSameOriginUpgrade(req) {
+  const origin = req.headers.origin
+  if (!origin) return true
+  const host = (req.headers.host || "").toLowerCase().replace(/:\d+$/, "").replace(/^\[|\]$/g, "")
+  try {
+    const originHost = new URL(origin).hostname.toLowerCase().replace(/^\[|\]$/g, "")
+    return originHost !== "" && originHost === host
+  } catch {
+    return false
   }
 }
 
@@ -255,6 +279,12 @@ httpServer.on("upgrade", (req, socket, head) => {
     return
   }
   const siteId = typeof query.siteId === "string" && query.siteId.trim() ? query.siteId.trim() : null
+
+  if (!isSameOriginUpgrade(req)) {
+    socket.write("HTTP/1.1 403 Forbidden\r\n\r\n")
+    socket.destroy()
+    return
+  }
 
   resolveTerminalAuthorization(req, siteId)
     .then((auth) => {
@@ -425,9 +455,9 @@ process.on("SIGTERM", shutdown)
 process.on("SIGINT", shutdown)
 
 app.prepare().then(() => {
-  httpServer.listen(port, () => {
+  httpServer.listen(port, bindHost, () => {
     console.log(
-      `> Sunucu Yönetim Paneli dinliyor: :${port} (${dev ? "development" : process.env.NODE_ENV})`
+      `> Sunucu Yönetim Paneli dinliyor: ${bindHost}:${port} (${dev ? "development" : process.env.NODE_ENV})`
     )
   })
 })

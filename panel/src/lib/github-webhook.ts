@@ -11,7 +11,9 @@ export function verifyGithubSignature(rawBody: string, signatureHeader: string |
   if (!secret || !signatureHeader || !signatureHeader.startsWith("sha256=")) return false
   const expected = createHmac("sha256", secret).update(rawBody).digest("hex")
   const given = signatureHeader.slice("sha256=".length)
-  if (given.length !== expected.length) return false
+  // Hex olmayan karakterler Buffer.from'da kırpılır; uzunluklar farklılaşınca
+  // timingSafeEqual hata fırlatıp 500 döndürürdü.
+  if (!/^[0-9a-f]{64}$/i.test(given)) return false
   return timingSafeEqual(Buffer.from(given, "hex"), Buffer.from(expected, "hex"))
 }
 
