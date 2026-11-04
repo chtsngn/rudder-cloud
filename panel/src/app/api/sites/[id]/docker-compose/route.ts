@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { logAudit } from "@/lib/audit"
+import { withBuildSlot } from "@/lib/deploy-safety"
 import { getSession } from "@/lib/auth"
 import { canManageSite } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
@@ -57,7 +58,12 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   let output = ""
   try {
-    output = await dockerComposeControl(site, action as DockerComposeControlAction)
+    const composeAction = action as DockerComposeControlAction
+    // Derleme/imaj çekme yapabilen eylemler sunucu genelindeki derleme kuyruğuna girer.
+    output =
+      composeAction === "rebuild" || composeAction === "pull" || composeAction === "up"
+        ? await withBuildSlot(() => dockerComposeControl(site, composeAction))
+        : await dockerComposeControl(site, composeAction)
   } catch (error) {
     const message = error instanceof RestartError ? error.message : "Docker Compose eylemi başarısız oldu."
     return NextResponse.json({ error: message }, { status: 500 })

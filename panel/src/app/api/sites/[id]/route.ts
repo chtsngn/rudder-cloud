@@ -21,6 +21,7 @@ import {
   updateUpstream,
 } from "@/lib/provision"
 import { normalizePublishDir, resolveSiteWorkdir } from "@/lib/site-paths"
+import { normalizeHealthCheckPath } from "@/lib/deploy-safety"
 import { normalizeComposeFile } from "@/lib/restart"
 
 interface RouteParams {
@@ -54,7 +55,7 @@ const VALID_PROCESS_MANAGERS = new Set(["DOCKER_COMPOSE", "PM2", "CUSTOM_SCRIPT"
  * yetkisindedir — EDIT_FILES'lı bir MEMBER dosya yöneticisiyle betik yazıp
  * bunlardan birine bağlayarak root'a çıkabilirdi.
  */
-const ADMIN_ONLY_FIELDS = ["processManager", "customRestartCommand", "deployCommand", "pm2ProcessName", "composeFile"]
+const ADMIN_ONLY_FIELDS = ["processManager", "customRestartCommand", "deployCommand", "pm2ProcessName", "composeFile", "deploySafety", "healthCheckPath"]
 
 /**
  * `PATCH /api/sites/[id]` — git/deploy/restart ayarları, Uygulama hedefi,
@@ -207,6 +208,36 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     void _previous
     nextConfig = value ? { ...rest, composeFile: value } : rest
     changed.push("composeFile")
+  }
+
+  /**
+   * Deploy güvenliği — yalnızca Uygulama (REVERSE_PROXY): deploy öncesi
+   * döküm, geri dönüş noktası ve sağlık kontrolü (bkz. src/lib/deploy-safety.ts).
+   * Varsayılan açık; `config.deploySafety === false` kapatır.
+   */
+  if ("deploySafety" in input || "healthCheckPath" in input) {
+    if (site.type !== "REVERSE_PROXY") {
+      return NextResponse.json({ error: "Deploy güvenliği yalnızca uygulama siteleri için ayarlanabilir." }, { status: 400 })
+    }
+    const base: Record<string, unknown> = { ...(nextConfig ?? currentConfig) }
+    if ("deploySafety" in input) {
+      if (typeof input.deploySafety !== "boolean") {
+        return NextResponse.json({ error: "deploySafety true ya da false olmalı." }, { status: 400 })
+      }
+      if (input.deploySafety) delete base.deploySafety
+      else base.deploySafety = false
+      changed.push("deploySafety")
+    }
+    if ("healthCheckPath" in input) {
+      const value = normalizeHealthCheckPath(input.healthCheckPath)
+      if (value === null) {
+        return NextResponse.json({ error: "Geçersiz sağlık kontrolü yolu (/ ile başlamalı, ör. /api/health)." }, { status: 400 })
+      }
+      if (value === "/") delete base.healthCheckPath
+      else base.healthCheckPath = value
+      changed.push("healthCheckPath")
+    }
+    nextConfig = base
   }
 
   /**

@@ -69,6 +69,11 @@ export function SiteGitCard({
     const cfg = (s.config ?? {}) as Record<string, unknown>
     return typeof cfg.composeFile === "string" ? cfg.composeFile : ""
   }
+  const deploySafetyOf = (s: ApiSite) => ((s.config ?? {}) as Record<string, unknown>).deploySafety !== false
+  const healthCheckPathOf = (s: ApiSite) => {
+    const cfg = (s.config ?? {}) as Record<string, unknown>
+    return typeof cfg.healthCheckPath === "string" ? cfg.healthCheckPath : ""
+  }
 
   const [installedRepos, setInstalledRepos] = useState<InstalledRepoOption[]>([])
   const [installedReposLoaded, setInstalledReposLoaded] = useState(false)
@@ -88,6 +93,8 @@ export function SiteGitCard({
     pm2ProcessName: site.pm2ProcessName ?? "",
     publishDir: publishDirOf(site),
     composeFile: composeFileOf(site),
+    deploySafety: deploySafetyOf(site),
+    healthCheckPath: healthCheckPathOf(site),
   })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -216,6 +223,10 @@ export function SiteGitCard({
         payload.deployCommand = form.deployCommand.trim() || null
         payload.pm2ProcessName = form.processManager === "PM2" ? form.pm2ProcessName.trim() || null : null
         if (form.processManager === "DOCKER_COMPOSE") payload.composeFile = form.composeFile.trim()
+        if (site.type === "REVERSE_PROXY") {
+          payload.deploySafety = form.deploySafety
+          payload.healthCheckPath = form.healthCheckPath.trim()
+        }
       }
       const res = await fetch(`/api/sites/${site.id}`, {
         method: "PATCH",
@@ -239,6 +250,8 @@ export function SiteGitCard({
         pm2ProcessName: data.pm2ProcessName ?? "",
         publishDir: publishDirOf(data),
         composeFile: composeFileOf(data),
+        deploySafety: deploySafetyOf(data),
+        healthCheckPath: healthCheckPathOf(data),
       })
       setSaveOk(true)
     } catch {
@@ -501,6 +514,40 @@ export function SiteGitCard({
             <p className="text-[11px] text-muted-foreground">
               {lang === "en" ? "After each deploy the panel runs `docker compose up -d --build --remove-orphans` in the site folder, so code, compose and image changes all go live." : "Her deploy sonrası panel site klasöründe `docker compose up -d --build --remove-orphans` çalıştırır — kod, compose ve image değişiklikleri yayına girer."}
             </p>
+          </div>
+        )}
+
+        {site.type === "REVERSE_PROXY" && (
+          <div className="space-y-3 rounded-xl border border-border p-4 bg-muted/30">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold text-foreground">{en ? "Deploy safety" : "Deploy güvenliği"}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {en
+                    ? "Before each deploy: database dump into the backup folder (deploy stops if it fails) and, for Docker Compose, a rollback tag of the current images. After the restart the site address is checked; on failure the previous images are started again. The database is not rolled back."
+                    : "Her deploy öncesi: veritabanı dökümü yedek klasörüne (alınamazsa deploy durur) ve Docker Compose'da mevcut imajlara geri dönüş etiketi. Yeniden başlatmadan sonra site adresi kontrol edilir; başarısızsa önceki imajlar yeniden başlatılır. Veritabanı geri alınmaz."}
+                </p>
+              </div>
+              <Switch checked={form.deploySafety} disabled={!isSuperAdmin} onCheckedChange={(checked) => setForm((f) => ({ ...f, deploySafety: checked }))} />
+            </div>
+            {form.deploySafety && (
+              <div className="space-y-1.5">
+                <Label htmlFor="healthCheckPath" className="text-xs font-bold text-foreground/90">{en ? "Health check path" : "Sağlık kontrolü yolu"}</Label>
+                <Input
+                  id="healthCheckPath"
+                  placeholder="/"
+                  value={form.healthCheckPath}
+                  disabled={!isSuperAdmin}
+                  onChange={(e) => setForm((f) => ({ ...f, healthCheckPath: e.target.value }))}
+                  className={cn(inputCls, "sm:w-80")}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  {en
+                    ? "Requested on the site's target address for up to 2 minutes; any answer below 500 counts as healthy (e.g. /api/health)."
+                    : "Sitenin hedef adresinde en çok 2 dakika denenir; 500'ün altındaki her yanıt sağlıklı sayılır (ör. /api/health)."}
+                </p>
+              </div>
+            )}
           </div>
         )}
 

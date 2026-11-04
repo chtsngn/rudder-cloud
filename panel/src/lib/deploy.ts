@@ -12,6 +12,10 @@
  * image'ı kullandı" ya da "klonlandı ama npm install hiç çalışmadı" gibi kopuk
  * adımlar kalmaz. Aynı site için eş zamanlı iki deploy engellenir (`inFlight`).
  *
+ * 2026-11: pull'dan sonraki ağır kısım sunucu genelinde TEK bir derleme
+ * kuyruğundan geçer; Uygulama sitelerinde deploy güvenliği (döküm, geri dönüş
+ * noktası, sağlık kontrolü) varsayılan açıktır — bkz. src/lib/deploy-safety.ts.
+ *
  * `deployCommand` sitenin git dizininde `panel` kullanıcısı olarak `bash -lc`
  * ile çalışır (ör. `npm ci && npm run build`). Yalnızca SUPER_ADMIN
  * ayarlayabilir (bkz. PATCH /api/sites/[id]) — panel kullanıcısının sudo'su
@@ -22,6 +26,18 @@ import { spawn } from "node:child_process"
 import { GitError, gitPullOrClone, isGitPullSupported } from "@/lib/git"
 import { prisma } from "@/lib/prisma"
 import { RestartError, restartSite, tail, type RestartableSite } from "@/lib/restart"
+import {
+  createRollbackPoint,
+  deploySafetySettings,
+  DeploySafetyError,
+  healthCheckUrl,
+  restoreRollbackTags,
+  rollbackTo,
+  takePredeployDump,
+  waitHealthy,
+  withBuildSlot,
+  type RollbackPoint,
+} from "@/lib/deploy-safety"
 import { resolveGitWorkdir, resolveSiteWorkdir } from "@/lib/site-paths"
 import { PublishError, publishStaticSite } from "@/lib/static-publish"
 
@@ -151,8 +167,59 @@ async function runDeploy(site: DeployableSite, opts: DeployOptions): Promise<Dep
     return { pulled, changed, commit, deployed: false, restarted: false, output: "", restartError: null }
   }
 
+  return withBuildSlot((waitedMs) => buildAndRestart(site, opts, { startedAt, pulled, changed, commit, waitedMs }))
+}
+
+interface BuildContext {
+  startedAt: Date
+  pulled: boolean
+  changed: boolean
+  commit: string | null
+  waitedMs: number
+}
+
+/**
+ * Pull'dan sonraki ağır kısım — sunucu genelindeki derleme kuyruğunda çalışır
+ * (bkz. src/lib/deploy-safety.ts): deploy güvenliği açıksa döküm + geri dönüş
+ * noktası → deployCommand → yeniden başlatma/yayın → sağlık kontrolü.
+ */
+async function buildAndRestart(site: DeployableSite, opts: DeployOptions, ctx: BuildContext): Promise<DeployResult> {
+  const { startedAt, pulled, changed, commit } = ctx
   // 2) deployCommand
   const lines: string[] = []
+  if (ctx.waitedMs >= 1000) lines.push(`[panel] derleme kuyruğunda ${Math.round(ctx.waitedMs / 1000)} sn beklendi.`)
+
+  const safety = deploySafetySettings(site)
+  let rollbackPoint: RollbackPoint | null = null
+  let dumpFile: string | null = null
+  if (safety.enabled) {
+    try {
+      const dump = await takePredeployDump(site)
+      if (dump.status === "done") {
+        dumpFile = dump.fileName
+        lines.push(`[panel] deploy öncesi döküm: ${dump.fileName} (${Math.round(dump.sizeBytes / 1024)} KB)`)
+      } else {
+        lines.push(`[panel] deploy öncesi döküm atlandı: ${dump.reason}`)
+      }
+    } catch (error) {
+      const message = error instanceof DeploySafetyError ? error.message : "Deploy öncesi döküm başarısız oldu."
+      lines.push(`[panel] ${message}`)
+      const output = tail(lines.join("\n"), OUTPUT_KEEP_BYTES)
+      await prisma.site
+        .update({
+          where: { id: site.id },
+          data: { lastDeployAt: startedAt, lastDeployOk: false, lastDeployError: message, lastDeployOutput: output },
+        })
+        .catch(() => {})
+      throw new DeployError("deploy", message, output)
+    }
+    if (site.processManager === "DOCKER_COMPOSE") {
+      const created = await createRollbackPoint(site)
+      rollbackPoint = created.point
+      lines.push(`[panel] ${created.note}`)
+    }
+  }
+
   const isStatic = site.type === "STATIC"
   const workdir = isStatic && !pulled ? resolveSiteWorkdir(site) : resolveGitWorkdir(site)
   const command = site.deployCommand?.trim()
@@ -166,6 +233,11 @@ async function runDeploy(site: DeployableSite, opts: DeployOptions): Promise<Dep
     const result = await runDeployCommand(command, workdir, env)
     lines.push(result.output.trim())
     if (!result.ok) {
+      if (rollbackPoint) {
+        // Konteynerler yeniden başlatılmadı (eski imajla çalışıyor); deploy komutu
+        // imajı yeniden derlediyse etiketleri eski imaja geri çek.
+        await restoreRollbackTags(rollbackPoint).catch(() => {})
+      }
       const output = tail(lines.join("\n"), OUTPUT_KEEP_BYTES)
       const message = `Deploy komutu başarısız oldu (çıkış kodu ${result.code ?? "?"}).`
       await prisma.site
@@ -217,6 +289,42 @@ async function runDeploy(site: DeployableSite, opts: DeployOptions): Promise<Dep
   } catch (error) {
     restartError = error instanceof RestartError ? error.message : "Yeniden başlatma başarısız oldu."
     lines.push(`[panel] yeniden başlatma başarısız: ${restartError}`)
+  }
+
+  // 4) Sağlık kontrolü + geri dönüş (deploy güvenliği açık Uygulama siteleri)
+  if (safety.enabled && site.processManager !== "NONE") {
+    let failure = restartError
+    if (!failure) {
+      const url = healthCheckUrl(site, safety)
+      if (url) {
+        const health = await waitHealthy(url)
+        lines.push(`[panel] sağlık kontrolü ${url}: ${health.ok ? health.detail : `BAŞARISIZ — ${health.detail}`}`)
+        if (!health.ok) failure = `Sağlık kontrolü başarısız: ${health.detail}`
+      } else {
+        lines.push("[panel] sağlık kontrolü atlandı: sitenin hedef adresi yok.")
+      }
+    }
+    if (failure && rollbackPoint) {
+      try {
+        await rollbackTo(rollbackPoint)
+        lines.push(`[panel] önceki imajlara dönüldü (${rollbackPoint.images.map((i) => i.service).join(", ")}).`)
+        const url = healthCheckUrl(site, safety)
+        if (url) {
+          const again = await waitHealthy(url)
+          lines.push(`[panel] geri dönüş sonrası sağlık kontrolü: ${again.ok ? again.detail : `BAŞARISIZ — ${again.detail}`}`)
+        }
+        failure = `${failure} — önceki sürüme dönüldü.`
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error)
+        lines.push(`[panel] geri dönüş BAŞARISIZ: ${detail}`)
+        failure = `${failure} — geri dönüş de başarısız: ${detail}`
+      }
+      if (dumpFile) {
+        failure = `${failure} Veritabanı geri alınmadı; deploy öncesi döküm: ${dumpFile}`
+        lines.push(`[panel] veritabanı geri ALINMADI; gerekirse döküm: ${dumpFile}`)
+      }
+    }
+    restartError = failure
   }
 
   const output = tail(lines.join("\n"), OUTPUT_KEEP_BYTES)
