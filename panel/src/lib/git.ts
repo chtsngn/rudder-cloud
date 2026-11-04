@@ -35,7 +35,8 @@ export function isValidRepoUrl(url: string): boolean {
 }
 
 export function isValidGitBranch(branch: string): boolean {
-  return typeof branch === "string" && BRANCH_RE.test(branch) && !branch.includes("..")
+  // `-` ile başlayan ad git komutlarına seçenek olarak geçerdi (git zaten böyle bir ref'e izin vermez).
+  return typeof branch === "string" && BRANCH_RE.test(branch) && !branch.includes("..") && !branch.startsWith("-")
 }
 
 export class GitError extends Error {

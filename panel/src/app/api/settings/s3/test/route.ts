@@ -3,6 +3,7 @@ import { HeadBucketCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/clie
 
 import { getSession } from "@/lib/auth"
 import { decryptSecret } from "@/lib/crypto"
+import { isSuperAdmin } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 
 function toStr(val: unknown): string {
@@ -39,6 +40,12 @@ export async function POST(request: Request) {
   let endpoint = toStr(input.endpoint) || null
   let accessKeyId = toStr(input.accessKeyId)
   let secretAccessKey = toStr(input.secretAccessKey)
+
+  // Kaydedilmemiş form verisiyle test (keyfi endpoint'e sunucudan istek) yalnız
+  // süper admin içindir; site yedek kartı (MEMBER) yalnız kayıtlı ID ile test eder.
+  if (!configId && !(await isSuperAdmin(session.userId))) {
+    return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 })
+  }
 
   // 1. Kayitli ID verilmis ise veritabanindan oku ve secret coz
   if (configId) {
