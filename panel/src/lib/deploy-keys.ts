@@ -4,12 +4,18 @@
  * (2026-09-15 denetimi: bu yol arayüzden tamamen kaldırılmıştı, GitHub App tek
  * seçenek olmuştu — geri getirildi.)
  *
- * Tasarım: site başına bir ed25519 anahtar çifti `panel` kullanıcısının kendi
- * `~/.ssh` dizininde (0600) üretilir; git bu anahtarı `~/.ssh/config` host
+ * Tasarım: site başına bir ed25519 anahtar çifti `DEPLOY_KEYS_DIR`'de (0700
+ * dizin, 0600 anahtar) üretilir; git bu anahtarı `~/.ssh/config` host
  * alias'ı ile DEĞİL, doğrudan `GIT_SSH_COMMAND="ssh -i <key> -o
  * IdentitiesOnly=yes"` ile kullanır (bkz. src/lib/git.ts) — böylece herhangi
  * bir git host'u (github.com, gitlab.com, ...) aynı şekilde çalışır ve
  * `~/.ssh/config`'e dokunulmaz.
+ *
+ * DEPLOY_KEYS_DIR'i install.sh yazar (varsayılan /var/lib/rudder/ssh).
+ * v1.6.0-rc.1'e kadar anahtarlar `~/.ssh`'taydı; `panel`'in ev dizini
+ * PANEL_DIR olduğu için install.sh'ın `rsync --delete`'i her güncellemede
+ * onları siliyordu (install.sh adım 8 eskileri taşır). Tanımsızsa (yerel
+ * geliştirme) eski yer: `~/.ssh`.
  *
  * GÜVENLİK: private key ASLA veritabanına yazılmaz ve hiçbir API'den dönmez;
  * yalnızca public key gösterilir (kullanıcı bunu deponun "Deploy Keys"
@@ -24,7 +30,7 @@ import { promisify } from "node:util"
 
 const execFileAsync = promisify(execFile)
 
-const SSH_DIR = join(homedir(), ".ssh")
+const SSH_DIR = process.env.DEPLOY_KEYS_DIR?.trim() || join(homedir(), ".ssh")
 
 export class DeployKeyError extends Error {
   status: number

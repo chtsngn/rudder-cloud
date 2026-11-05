@@ -17,12 +17,14 @@
  * noktası, sağlık kontrolü) varsayılan açıktır — bkz. src/lib/deploy-safety.ts.
  *
  * `deployCommand` sitenin git dizininde `panel` kullanıcısı olarak `bash -lc`
- * ile çalışır (ör. `npm ci && npm run build`). Yalnızca SUPER_ADMIN
+ * ile çalışır (ör. `npm ci && npm run build`); ortamı panelin değil,
+ * beyaz listeli temiz bir ortamdır (bkz. src/lib/command-env.ts). Yalnızca SUPER_ADMIN
  * ayarlayabilir (bkz. PATCH /api/sites/[id]) — panel kullanıcısının sudo'su
  * olduğu için bu komut fiilen root yetkisindedir.
  */
 import { spawn } from "node:child_process"
 
+import { siteCommandEnv } from "@/lib/command-env"
 import { GitError, gitPullOrClone, isGitPullSupported } from "@/lib/git"
 import { prisma } from "@/lib/prisma"
 import { RestartError, restartSite, tail, type RestartableSite } from "@/lib/restart"
@@ -226,7 +228,7 @@ async function buildAndRestart(site: DeployableSite, opts: DeployOptions, ctx: B
   if (command) {
     if (!workdir) throw new DeployError("deploy", "Bu site türü için çalışma dizini belirlenemedi.")
     const cfg = site.config && typeof site.config === "object" ? (site.config as Record<string, unknown>) : {}
-    const env: NodeJS.ProcessEnv = { ...process.env, CI: "true", DEPLOY_TRIGGER: opts.trigger }
+    const env = siteCommandEnv({ CI: "true", DEPLOY_TRIGGER: opts.trigger })
     if (cfg.port !== undefined && cfg.port !== null) env.PORT = String(cfg.port)
     if (commit) env.GIT_COMMIT = commit
     lines.push(`$ ${command}`)

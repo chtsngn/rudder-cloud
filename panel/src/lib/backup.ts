@@ -1,10 +1,10 @@
 /**
  * Veritabanı yedekleme (Aşama D) — `db-detect.ts`'in bulduğu bağlantı
  * bilgisiyle `pg_dump`/`mysqldump`/`mongodump` çalıştırır, sonucu gzip'ler,
- * yerelde `/opt/sunucu-paneli/backups/<domain>/` altında saklar (panel
- * kullanıcısı zaten bu dizinin sahibi — sudo GEREKMEZ, bkz. doctor.sh
- * `chown -R panel:panel ${PANEL_DIR}`), retention'a göre eskileri siler ve
- * isteğe bağlı olarak S3'e yükler. Şifreler asla process argümanlarında
+ * yerelde `BACKUP_DIR/<domain>/` altında saklar (install.sh varsayılanı
+ * /var/lib/rudder/backups, panel kullanıcısına ait — sudo GEREKMEZ),
+ * retention'a göre eskileri siler ve isteğe bağlı olarak S3'e yükler.
+ * Dizinler 0700, dosyalar 0600. Şifreler asla process argümanlarında
  * görünmez (`ps aux`'ta ifşa olmasın diye) — PGPASSWORD/MYSQL_PWD ortam
  * değişkenleriyle veya mongo için doğrudan --uri içinde geçirilir.
  */
@@ -17,6 +17,7 @@ import { execFile } from "node:child_process"
 import { createGzip } from "node:zlib"
 import type { Readable } from "node:stream"
 
+import { siteCommandEnv } from "@/lib/command-env"
 import type { DetectedDatabase } from "@/lib/db-detect"
 
 const execFileAsync = promisify(execFile)
@@ -30,8 +31,15 @@ export class BackupError extends Error {
   }
 }
 
-const BACKUPS_ROOT = process.env.BACKUP_DIR ?? "/opt/sunucu-paneli/backups"
+// v1.6.0-rc.1'e kadar varsayılan PANEL_DIR/backups'tı: install.sh'ın
+// `rsync --delete`'i güncellemede siliyordu (install.sh adım 8 taşır).
+const BACKUPS_ROOT = process.env.BACKUP_DIR?.trim() || "/var/lib/rudder/backups"
 const DUMP_TIMEOUT_MS = 10 * 60 * 1000 // 10 dakika — büyük veritabanları için
+// Döküm veritabanının tamamı: sunucudaki başka hiçbir kullanıcı (ör. başka bir
+// sitenin linux kullanıcısı) okuyamamalı. Servisin UMask=0002'si yüzünden
+// varsayılan izinler 775/664 olurdu, bu yüzden açıkça veriliyor.
+const BACKUP_DIR_MODE = 0o700
+const BACKUP_FILE_MODE = 0o600
 
 export interface BackupFileInfo {
   fileName: string
@@ -48,7 +56,12 @@ function backupDirForDomain(domain: string): string {
 
 async function ensureBackupDir(domain: string): Promise<string> {
   const dir = backupDirForDomain(domain)
-  await fs.mkdir(dir, { recursive: true })
+  await fs.mkdir(dir, { recursive: true, mode: BACKUP_DIR_MODE })
+  // mkdir'in mode'u yalnız yeni oluşturulan dizinlere uygulanır; eski
+  // sürümlerin 775 bıraktığı dizinler burada daraltılır. Kök başka birine ait
+  // olabilir (elle verilmiş BACKUP_DIR) — o zaman install.sh'a bırakılır.
+  await fs.chmod(BACKUPS_ROOT, BACKUP_DIR_MODE).catch(() => {})
+  await fs.chmod(dir, BACKUP_DIR_MODE).catch(() => {})
   return dir
 }
 
@@ -104,7 +117,7 @@ function runDumpToGzipFile(
     })
     child.on("error", (err) => fail(new BackupError(`${command} başlatılamadı: ${err.message}`)))
 
-    const out = createWriteStream(outPath)
+    const out = createWriteStream(outPath, { mode: BACKUP_FILE_MODE })
     out.on("error", (err) => fail(new BackupError(`Yedek dosyası yazılamadı: ${err.message}`)))
 
     let exitCode: number | null = null
@@ -144,7 +157,8 @@ async function createComposeDump(domain: string, detected: DetectedDatabase, dir
   const service = detected.composeService!
   const cwd = detected.composeWorkdir!
   const base = detected.composeFile ? ["compose", "-f", detected.composeFile] : ["compose"]
-  const env: NodeJS.ProcessEnv = { ...process.env }
+  // Panelin ortamı değil (compose ${VAR}'ları kabuk ortamından okur) — bkz. command-env.ts.
+  const env = siteCommandEnv()
 
   if (detected.engine === "postgres") {
     const fileName = `${domain}_postgres_${slug}.sql.gz`
@@ -220,7 +234,7 @@ export async function createDatabaseDump(domain: string, detected: DetectedDatab
     ]
     if (detected.user) args.push("-U", detected.user)
     if (detected.database) args.push(detected.database)
-    const env: NodeJS.ProcessEnv = { ...process.env }
+    const env = siteCommandEnv()
     if (detected.password) env.PGPASSWORD = detected.password
     await runDumpToGzipFile("pg_dump", args, env, outPath)
     return statBackupFile(dir, fileName)
@@ -238,7 +252,7 @@ export async function createDatabaseDump(domain: string, detected: DetectedDatab
     ]
     if (detected.user) args.push("-u", detected.user)
     if (detected.database) args.push(detected.database)
-    const env: NodeJS.ProcessEnv = { ...process.env }
+    const env = siteCommandEnv()
     if (detected.password) env.MYSQL_PWD = detected.password
     await runDumpToGzipFile("mysqldump", args, env, outPath)
     return statBackupFile(dir, fileName)
@@ -252,12 +266,15 @@ export async function createDatabaseDump(domain: string, detected: DetectedDatab
     await execFileAsync(
       "mongodump",
       ["--uri", mongoUriFrom(detected), "--archive=" + outPath, "--gzip"],
-      { timeout: DUMP_TIMEOUT_MS }
+      { env: siteCommandEnv(), timeout: DUMP_TIMEOUT_MS }
     )
   } catch (error) {
     const err = error as NodeJS.ErrnoException & { stderr?: string }
     throw new BackupError(`mongodump başarısız oldu: ${err.stderr?.toString().trim().slice(0, 500) || err.message}`)
   }
+  // mongodump dosyayı kendisi açıyor (umask'a göre 664) — dizin zaten 0700 ama
+  // dosya da diğer dökümlerle aynı izni taşısın.
+  await fs.chmod(outPath, BACKUP_FILE_MODE)
   return statBackupFile(dir, fileName)
 }
 

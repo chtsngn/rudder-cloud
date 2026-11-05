@@ -11,6 +11,10 @@ set -euo pipefail
 # Kullanım:
 #   sudo bash doctor.sh          (root sorup onay ister)
 #   sudo bash doctor.sh --yes    (kurulumları otomatik onaylar)
+#   sudo bash doctor.sh --yes --docker-group
+#                                (panel'i soru sormadan docker grubuna da
+#                                 ekler — bkz. adım 7; PANEL_DOCKER_GROUP=1
+#                                 ortam değişkeni de aynı işi görür)
 #
 # Bu script apt tabanlı Ubuntu/Debian sunucular için yazıldı.
 # ============================================================
@@ -28,11 +32,23 @@ PANEL_USER="${PANEL_USER:-panel}"
 DB_NAME="${DB_NAME:-panel_db}"
 DB_USER="${DB_USER:-panel}"
 DB_CREDS_FILE="/root/.panel-db-credentials"
+# Eksikse kurulan Node.js ana sürümü (NodeSource). 20, Nisan 2026'da EOL oldu.
+NODE_LTS_MAJOR=22
+# Kabul edilen en düşük ana sürüm (Next.js 16 / Prisma 7 alt sınırı) — bundan
+# yenisi kuruluysa doctor sistemdeki Node'u kendiliğinden yükseltmez.
+NODE_MIN_MAJOR=20
 
 AUTO_YES=0
+DOCKER_GROUP=0
 for arg in "$@"; do
-  [[ "$arg" == "--yes" || "$arg" == "-y" ]] && AUTO_YES=1
+  case "$arg" in
+    --yes|-y) AUTO_YES=1 ;;
+    --docker-group) DOCKER_GROUP=1 ;;
+  esac
 done
+case "${PANEL_DOCKER_GROUP:-}" in
+  1|yes|true|evet) DOCKER_GROUP=1 ;;
+esac
 
 # ------------------------------------------------------------
 # 0) Root kontrolü — gerekiyorsa önce sorup sudo ile yeniden başlat
@@ -108,16 +124,22 @@ info "Node.js kontrol ediliyor..."
 NODE_OK=0
 if command -v node >/dev/null 2>&1; then
   NODE_MAJOR="$(node -e 'console.log(process.versions.node.split(".")[0])' 2>/dev/null || echo 0)"
-  if [[ "${NODE_MAJOR}" -ge 20 ]]; then
+  if [[ "${NODE_MAJOR}" -ge "${NODE_MIN_MAJOR}" ]]; then
     msg "Node.js: $(node -v) (kurulu, yeterli sürüm)"
     NODE_OK=1
+    if [[ "${NODE_MAJOR}" -lt "${NODE_LTS_MAJOR}" ]]; then
+      # Sistem Node'u sunucudaki başka uygulamaların da Node'u olabilir —
+      # çalışan bir kurulumu burada kendiliğinden yükseltmiyoruz.
+      warn "Node.js $(node -v) artık güvenlik güncellemesi almıyor (EOL); ${NODE_LTS_MAJOR} LTS'e geçmen önerilir:"
+      warn "  curl -fsSL https://deb.nodesource.com/setup_${NODE_LTS_MAJOR}.x | sudo bash - && sudo apt-get install -y nodejs"
+    fi
   else
-    warn "Node.js: $(node -v) bulundu ama çok eski (>=20 gerekli)"
+    warn "Node.js: $(node -v) bulundu ama çok eski (>=${NODE_MIN_MAJOR} gerekli)"
   fi
 else
   warn "Node.js: bulunamadı"
 fi
-[[ "${NODE_OK}" -eq 1 ]] || { MISSING+=("nodejs"); MISSING_LABEL+=("Node.js 20+"); }
+[[ "${NODE_OK}" -eq 1 ]] || { MISSING+=("nodejs"); MISSING_LABEL+=("Node.js ${NODE_LTS_MAJOR} LTS"); }
 
 hr
 info "Derleme araçları kontrol ediliyor (node-pty için gerekli — sunucu terminali, Aşama F)..."
@@ -191,8 +213,8 @@ if [[ "${#MISSING[@]}" -gt 0 ]]; then
         msg "acl kuruldu."
         ;;
       nodejs)
-        info "Node.js 20 LTS kuruluyor (NodeSource)..."
-        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+        info "Node.js ${NODE_LTS_MAJOR} LTS kuruluyor (NodeSource)..."
+        curl -fsSL "https://deb.nodesource.com/setup_${NODE_LTS_MAJOR}.x" | bash -
         apt-get install -y nodejs
         msg "Node.js kuruldu: $(node -v)"
         ;;
@@ -378,7 +400,9 @@ fi
 #    gerekir. Bu GERÇEK bir root-eşdeğeri yetki genişletmesidir (docker
 #    grubu üyeliği fiilen root'a eşittir) — bu yüzden diğer kurulum
 #    adımlarının aksine HER ZAMAN ayrıca ve açıkça sorulur, --yes ile
-#    dahi otomatik onaylanmaz.
+#    dahi otomatik onaylanmaz. Etkileşimsiz kurulumda (TTY yok) soru
+#    sorulamaz; orada yalnız açıkça --docker-group (ya da
+#    PANEL_DOCKER_GROUP=1) verilirse eklenir — bayrak bu sorunun cevabıdır.
 # ------------------------------------------------------------
 hr
 if ! command -v docker >/dev/null 2>&1; then
@@ -414,12 +438,16 @@ if command -v docker >/dev/null 2>&1; then
     echo "  projelerde 'proje restart' özelliğini kullanmak istiyorsan gereklidir."
     # Etkileşimsiz çalıştırmada (stdin TTY değil — örn. panel içi güncelleme
     # systemd-run altında) `read` EOF görür ve set -e betiği öldürürdü;
-    # soru atlanır, otomatik onaylanMAZ (yukarıdaki güvenlik notu geçerli).
+    # soru atlanır, otomatik onaylanMAZ (yukarıdaki güvenlik notu geçerli) —
+    # --docker-group verilmediyse.
     ANS=""
-    if [[ -t 0 ]]; then
+    if [[ "${DOCKER_GROUP}" -eq 1 ]]; then
+      info "  --docker-group verildi — soru sorulmadan ekleniyor."
+      ANS="e"
+    elif [[ -t 0 ]]; then
       read -r -p "${PANEL_USER} kullanıcısı 'docker' grubuna eklensin mi? [e/H]: " ANS
     else
-      warn "Etkileşimsiz çalıştırma — docker grubu sorusu atlandı. Gerekirse elle: usermod -aG docker ${PANEL_USER} && systemctl restart panel"
+      warn "Etkileşimsiz çalıştırma — docker grubu sorusu atlandı. Gerekirse: install.sh --yes --docker-group ile tekrar çalıştır ya da elle: usermod -aG docker ${PANEL_USER} && systemctl restart panel"
     fi
     if [[ "${ANS}" =~ ^[Ee]$ ]]; then
       usermod -aG docker "${PANEL_USER}"
@@ -428,6 +456,8 @@ if command -v docker >/dev/null 2>&1; then
       warn "Atlandı — DOCKER_COMPOSE tipi restart bu sunucuda çalışmayacak (manuel/CUSTOM_SCRIPT ile yönetilebilir)."
     fi
   fi
+elif [[ "${DOCKER_GROUP}" -eq 1 ]]; then
+  warn "--docker-group verildi ama Docker kurulu değil — grup ekleme atlandı (Docker'ı kurup tekrar çalıştır)."
 fi
 
 # ------------------------------------------------------------

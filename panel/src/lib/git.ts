@@ -18,6 +18,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { promisify } from "node:util"
 
+import { siteCommandEnv } from "@/lib/command-env"
 import { gitSshEnvFor } from "@/lib/deploy-keys"
 import { getInstallationAccessToken } from "@/lib/github-app"
 import { resolveGitWorkdir, type SiteLike } from "@/lib/site-paths"
@@ -134,11 +135,10 @@ export async function gitPullOrClone(
   const reuseExisting = hasGit && !repoChanged
   const before = reuseExisting ? await currentCommit(workdir) : null
 
-  const env: NodeJS.ProcessEnv = {
-    ...process.env,
+  const env = siteCommandEnv({
     GIT_TERMINAL_PROMPT: "0", // kimlik sorulursa asılı kalmak yerine hemen hata ver
     ...(await gitSshEnvFor(site.domain, site.repoUrl)),
-  }
+  })
 
   try {
     const authArgs = await githubAppAuthArgs(site.githubInstallationId)
@@ -208,7 +208,7 @@ export async function cloneForScan(params: {
     throw new GitError("SSH adresli depolar site oluşturulmadan taranamaz (deploy key site oluşunca üretilir).")
   }
 
-  const env: NodeJS.ProcessEnv = { ...process.env, GIT_TERMINAL_PROMPT: "0" }
+  const env = siteCommandEnv({ GIT_TERMINAL_PROMPT: "0" })
   const authArgs = await githubAppAuthArgs(params.githubInstallationId)
   const dir = await mkdtemp(join(tmpdir(), "site-scan-"))
   const cleanup = () => rm(dir, { recursive: true, force: true })

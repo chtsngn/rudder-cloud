@@ -68,7 +68,7 @@ bu uygulamaları Docker Compose ile bir Uygulama sitesi olarak çalıştırın.
 - Root erişimi (kurulum script'i kullanmadan önce onay ister)
 - Giden internet erişimi (paket kurulumu ve kullanılıyorsa GitHub/S3 için)
 
-Geri kalan her şey — Node.js 20+, PostgreSQL, Nginx, Certbot, `node-pty` için
+Geri kalan her şey — Node.js (eksikse 22 LTS kurulur; 20+ kabul edilir), PostgreSQL, Nginx, Certbot, `node-pty` için
 derleme araçları (ve istenirse Docker) — `doctor.sh` tarafından otomatik kontrol
 edilip kurulur.
 
@@ -107,6 +107,17 @@ paneli derler, veritabanı migration'larını çalıştırır, ilk süper admin 
 oluşturur, Nginx vhost'unu yazar ve `panel.service` systemd birimini başlatır.
 Bağımlılık kurulumlarını otomatik onaylamak için `--yes` bayrağını ekleyebilirsiniz.
 
+Seçenekler (bootstrap kurulum betiği de kabul eder):
+
+- `--docker-group` — Docker Compose siteleri deploy edilebilsin diye `panel`
+  kullanıcısını soru sormadan `docker` grubuna ekler. Bu grubun üyeliği root'a
+  eşdeğerdir; bayrak yoksa kurulum terminalde sorar, terminal yoksa atlar.
+- `PANEL_PUBLIC_HOST=127.0.0.1` (ör. `sudo PANEL_PUBLIC_HOST=127.0.0.1 bash
+  install.sh --yes`) — panelin Nginx vhost'u yalnız loopback'te dinler (127.0.0.1
+  ve varsa `[::1]`); panele SSH tüneliyle ya da bir proxy'yle erişilir. Tek bir
+  IPv4/IPv6 adresi de verilebilir; boş (varsayılan) tüm arayüzlerde dinler. Değer
+  panelin `.env` dosyasına yazılır, güncellemeler korur.
+
 ## Güncelleme
 
 Panel yeni bir GitHub sürümü gördüğünde Ayarlar sayfasından tek tıkla
@@ -123,9 +134,28 @@ sudo bash install.sh --yes
 `install.sh` klonun yerini `PANEL_SRC_DIR` olarak panelin `.env` dosyasına
 yazar; panel içi güncelleme bunu kullanır. Günlük: `/var/log/panel-update/update.log`.
 
+### Panelin verisi nerede durur
+
+`/opt/sunucu-paneli` (`PANEL_DIR`, aynı zamanda `panel` kullanıcısının ev dizini)
+her kurulum ve güncellemede `panel/`'in bir kopyasıyla değiştirilir. Panelin
+ürettiği her şey bunun dışında, panelin `.env` dosyasında adı geçen dizinlerde durur:
+
+| `.env` anahtarı | Varsayılan | İçerik |
+| --- | --- | --- |
+| `DEPLOY_KEYS_DIR` | `/var/lib/rudder/ssh` | site başına SSH deploy anahtarları |
+| `BACKUP_DIR` | `/var/lib/rudder/backups` | yerel veritabanı yedekleri ve deploy öncesi dökümler (0700, dosyalar 0600) |
+| `DOCKER_CONFIG` | `/var/lib/rudder/docker` | `panel` kullanıcısının Docker CLI ayarı (buildx derleyicisi, registry girişleri) |
+
+`.env`'de zaten verilmiş bir değer korunur. v1.6.0-rc.1'e kadar bunlar
+`PANEL_DIR` içindeydi ve güncelleme onları siliyordu; kurulum artık orada
+bulduklarını (`.ssh/site_*_deploy*`, `backups/`, `.docker/`) hiçbir şeyin üzerine
+yazmadan taşır ve `panel` ev dizinindeki gizli girdileri hiç silmez.
+
 ## İlk giriş
 
-Tarayıcıdan `http://<sunucu-ip>:24428` adresini açın. Süper admin kullanıcı adı ve
+Tarayıcıdan `http://<sunucu-ip>:24428` adresini açın (`PANEL_PUBLIC_HOST=127.0.0.1`
+ile: `ssh -N -L 24428:127.0.0.1:24428 <kullanıcı>@<sunucu-ip>`, sonra
+`http://127.0.0.1:24428`). Süper admin kullanıcı adı ve
 bir kereliğine ekrana basılan şifre, sunucuda `/root/.panel-credentials`
 dosyasına da kaydedilir.
 

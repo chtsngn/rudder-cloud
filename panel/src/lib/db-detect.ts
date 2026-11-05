@@ -8,6 +8,7 @@
 import { execFile } from "node:child_process"
 import { promisify } from "node:util"
 
+import { siteCommandEnv } from "@/lib/command-env"
 import { resolveComposeTarget, type ComposeTarget } from "@/lib/restart"
 import { readTextFile, SiteFsError } from "@/lib/site-fs"
 import { type SiteLike } from "@/lib/site-paths"
@@ -42,6 +43,7 @@ async function composeServiceNames(target: ComposeTarget): Promise<string[]> {
   try {
     const { stdout } = await execFileAsync("docker", [...target.args, "config", "--services"], {
       cwd: target.workdir,
+      env: siteCommandEnv(),
       timeout: 15_000,
     })
     return stdout.split("\n").map((l) => l.trim()).filter(Boolean)
