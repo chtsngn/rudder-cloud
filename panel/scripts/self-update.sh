@@ -175,7 +175,7 @@ info "1/3 — git fetch --tags origin"
 git_src fetch --tags --force --prune origin
 
 if [[ "${REF}" == "latest" ]]; then
-  RESOLVED_REF="$(git_src tag -l 'v*' --sort=-v:refname | head -n 1)"
+  RESOLVED_REF="$(git_src tag -l 'v*' --sort=-v:refname | sed -n '1p')"
   [[ -n "${RESOLVED_REF}" ]] || die "Depoda hiç sürüm etiketi (v*) bulunamadı."
   info "'latest' → ${RESOLVED_REF}"
 fi

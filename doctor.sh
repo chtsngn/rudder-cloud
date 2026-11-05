@@ -158,7 +158,9 @@ fi
 hr
 info "PostgreSQL kontrol ediliyor..."
 check_cmd psql "PostgreSQL (client)"
-if systemctl list-unit-files 2>/dev/null | grep -q '^postgresql'; then
+# `grep -q` ilk eşleşmede çıkar; `pipefail` altında systemctl'in kalan çıktısı SIGPIPE alır ve
+# kontrol (çoğu zaman) başarısız sayılırdı. Desenle daraltılmış liste tamamen okunur.
+if systemctl list-unit-files --no-legend 'postgresql*' 2>/dev/null | grep '^postgresql' >/dev/null; then
   msg "PostgreSQL servisi: kurulu"
 else
   warn "PostgreSQL servisi (systemd birimi) bulunamadı"
@@ -429,7 +431,7 @@ if ! command -v docker >/dev/null 2>&1; then
   fi
 fi
 if command -v docker >/dev/null 2>&1; then
-  if id -nG "${PANEL_USER}" 2>/dev/null | grep -qw docker; then
+  if id -nG "${PANEL_USER}" 2>/dev/null | grep -w docker >/dev/null; then
     msg "${PANEL_USER} kullanıcısı zaten docker grubunda."
   else
     warn "Docker kurulu ama ${PANEL_USER} kullanıcısı 'docker' grubunda değil."
@@ -510,7 +512,7 @@ fi
 # ------------------------------------------------------------
 hr
 if command -v gh >/dev/null 2>&1; then
-  msg "gh CLI bulundu ($(gh --version 2>/dev/null | head -n1 || echo '?'))."
+  msg "gh CLI bulundu ($(gh --version 2>/dev/null | sed -n '1p' || echo '?'))."
   if gh auth status >/dev/null 2>&1; then
     msg "gh CLI oturum açmış — GitHub Actions secret'ları otomatik eklenebilir."
   else
