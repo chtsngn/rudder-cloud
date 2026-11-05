@@ -24,6 +24,7 @@ import { execFile } from "node:child_process"
 import { promisify } from "node:util"
 
 import { applyRetention, createDatabaseDump } from "@/lib/backup"
+import { siteCommandEnv } from "@/lib/command-env"
 import { detectSiteDatabase } from "@/lib/db-detect"
 import { prisma } from "@/lib/prisma"
 import { resolveComposeTarget, type ComposeTarget } from "@/lib/restart"
@@ -161,7 +162,7 @@ interface ComposeConfigJson {
 }
 
 async function docker(args: string[], cwd?: string, timeout = 60_000): Promise<string> {
-  const { stdout } = await execFileAsync("docker", args, { cwd, timeout, maxBuffer: 16 * 1024 * 1024 })
+  const { stdout } = await execFileAsync("docker", args, { cwd, env: siteCommandEnv(), timeout, maxBuffer: 16 * 1024 * 1024 })
   return stdout
 }
 

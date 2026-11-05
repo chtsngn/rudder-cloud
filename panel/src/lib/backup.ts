@@ -17,6 +17,7 @@ import { execFile } from "node:child_process"
 import { createGzip } from "node:zlib"
 import type { Readable } from "node:stream"
 
+import { siteCommandEnv } from "@/lib/command-env"
 import type { DetectedDatabase } from "@/lib/db-detect"
 
 const execFileAsync = promisify(execFile)
@@ -156,7 +157,8 @@ async function createComposeDump(domain: string, detected: DetectedDatabase, dir
   const service = detected.composeService!
   const cwd = detected.composeWorkdir!
   const base = detected.composeFile ? ["compose", "-f", detected.composeFile] : ["compose"]
-  const env: NodeJS.ProcessEnv = { ...process.env }
+  // Panelin ortamı değil (compose ${VAR}'ları kabuk ortamından okur) — bkz. command-env.ts.
+  const env = siteCommandEnv()
 
   if (detected.engine === "postgres") {
     const fileName = `${domain}_postgres_${slug}.sql.gz`
@@ -232,7 +234,7 @@ export async function createDatabaseDump(domain: string, detected: DetectedDatab
     ]
     if (detected.user) args.push("-U", detected.user)
     if (detected.database) args.push(detected.database)
-    const env: NodeJS.ProcessEnv = { ...process.env }
+    const env = siteCommandEnv()
     if (detected.password) env.PGPASSWORD = detected.password
     await runDumpToGzipFile("pg_dump", args, env, outPath)
     return statBackupFile(dir, fileName)
@@ -250,7 +252,7 @@ export async function createDatabaseDump(domain: string, detected: DetectedDatab
     ]
     if (detected.user) args.push("-u", detected.user)
     if (detected.database) args.push(detected.database)
-    const env: NodeJS.ProcessEnv = { ...process.env }
+    const env = siteCommandEnv()
     if (detected.password) env.MYSQL_PWD = detected.password
     await runDumpToGzipFile("mysqldump", args, env, outPath)
     return statBackupFile(dir, fileName)
@@ -264,7 +266,7 @@ export async function createDatabaseDump(domain: string, detected: DetectedDatab
     await execFileAsync(
       "mongodump",
       ["--uri", mongoUriFrom(detected), "--archive=" + outPath, "--gzip"],
-      { timeout: DUMP_TIMEOUT_MS }
+      { env: siteCommandEnv(), timeout: DUMP_TIMEOUT_MS }
     )
   } catch (error) {
     const err = error as NodeJS.ErrnoException & { stderr?: string }

@@ -14,6 +14,7 @@ import { access, constants as fsConstants } from "node:fs/promises"
 import { join } from "node:path"
 import { promisify } from "node:util"
 
+import { siteCommandEnv } from "@/lib/command-env"
 import {
   domainToSlug,
   isValidAbsolutePath,
@@ -170,7 +171,7 @@ export async function restartSite(site: RestartableSite, opts: { deploy?: boolea
         throw new RestartError(`Betik çalıştırılabilir değil veya bulunamadı: ${cmd}`)
       }
       try {
-        await execFileAsync(cmd, [], { cwd: workdir, timeout: BUILD_TIMEOUT_MS, maxBuffer: 8 * 1024 * 1024 })
+        await execFileAsync(cmd, [], { cwd: workdir, env: siteCommandEnv(), timeout: BUILD_TIMEOUT_MS, maxBuffer: 8 * 1024 * 1024 })
       } catch (error) {
         throw new RestartError(extractDetail(error))
       }
@@ -207,6 +208,7 @@ export async function dockerComposeControl(site: SiteLike, action: DockerCompose
   try {
     const { stdout, stderr } = await execFileAsync("docker", args, {
       cwd: workdir,
+      env: siteCommandEnv(),
       timeout,
       maxBuffer: 8 * 1024 * 1024,
     })
@@ -223,7 +225,7 @@ export async function dockerComposeLogs(site: SiteLike, lines: number): Promise<
     const { stdout, stderr } = await execFileAsync(
       "docker",
       [...base, "logs", "--tail", String(safeLines), "--no-color", "--timestamps"],
-      { cwd: workdir, timeout: 30_000, maxBuffer: 8 * 1024 * 1024 }
+      { cwd: workdir, env: siteCommandEnv(), timeout: 30_000, maxBuffer: 8 * 1024 * 1024 }
     )
     return `${stdout}${stderr}`
   } catch (error) {
@@ -263,7 +265,7 @@ async function composeMemoryBytes(containerNames: string[]): Promise<number | nu
     const { stdout } = await execFileAsync(
       "docker",
       ["stats", "--no-stream", "--format", "{{.MemUsage}}", ...containerNames],
-      { timeout: 10_000 }
+      { env: siteCommandEnv(), timeout: 10_000 }
     )
     let total = 0
     let any = false
@@ -319,6 +321,7 @@ export async function getProcessStatus(site: RestartableSite): Promise<ProcessSt
       try {
         const { stdout } = await execFileAsync("docker", [...target.args, "ps", "-a", "--format", "json"], {
           cwd: workdir,
+          env: siteCommandEnv(),
           timeout: 20_000,
           maxBuffer: 4 * 1024 * 1024,
         })
