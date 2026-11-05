@@ -282,7 +282,7 @@ cmd_cleanup_site() {
   if [[ "$remove_user" == "true" && "$linux_user" != "-" ]]; then
     [[ "$linux_user" =~ $USERNAME_RE ]] || die "Geçersiz linux kullanıcı adı: $linux_user"
     if id "$linux_user" >/dev/null 2>&1; then
-      if id -nG "$linux_user" 2>/dev/null | grep -qw siteusers; then
+      if id -nG "$linux_user" 2>/dev/null | grep -w siteusers >/dev/null; then
         pkill -KILL -u "$linux_user" 2>/dev/null || true
         userdel "$linux_user" 2>/dev/null || warn "Kullanıcı silinemedi: ${linux_user}"
         getent group "$linux_user" >/dev/null 2>&1 && { groupdel "$linux_user" 2>/dev/null || true; }
@@ -625,7 +625,7 @@ PANEL_ACME_WEBROOT="/var/www/certbot"
 # bile burada dogru degeri kullanmak icin gercek dosyadan cikariyoruz.
 panel_upstream_port() {
   local port
-  port="$(sed -n 's#.*proxy_pass http://127\.0\.0\.1:\([0-9]*\);.*#\1#p' /etc/nginx/sites-available/panel.conf 2>/dev/null | head -1)"
+  port="$(sed -n 's#.*proxy_pass http://127\.0\.0\.1:\([0-9]*\);.*#\1#p' /etc/nginx/sites-available/panel.conf 2>/dev/null | sed -n '1p')"
   [[ -n "$port" ]] || port=3000
   echo "$port"
 }
