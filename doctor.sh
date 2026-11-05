@@ -11,6 +11,10 @@ set -euo pipefail
 # Kullanım:
 #   sudo bash doctor.sh          (root sorup onay ister)
 #   sudo bash doctor.sh --yes    (kurulumları otomatik onaylar)
+#   sudo bash doctor.sh --yes --docker-group
+#                                (panel'i soru sormadan docker grubuna da
+#                                 ekler — bkz. adım 7; PANEL_DOCKER_GROUP=1
+#                                 ortam değişkeni de aynı işi görür)
 #
 # Bu script apt tabanlı Ubuntu/Debian sunucular için yazıldı.
 # ============================================================
@@ -35,9 +39,16 @@ NODE_LTS_MAJOR=22
 NODE_MIN_MAJOR=20
 
 AUTO_YES=0
+DOCKER_GROUP=0
 for arg in "$@"; do
-  [[ "$arg" == "--yes" || "$arg" == "-y" ]] && AUTO_YES=1
+  case "$arg" in
+    --yes|-y) AUTO_YES=1 ;;
+    --docker-group) DOCKER_GROUP=1 ;;
+  esac
 done
+case "${PANEL_DOCKER_GROUP:-}" in
+  1|yes|true|evet) DOCKER_GROUP=1 ;;
+esac
 
 # ------------------------------------------------------------
 # 0) Root kontrolü — gerekiyorsa önce sorup sudo ile yeniden başlat
@@ -389,7 +400,9 @@ fi
 #    gerekir. Bu GERÇEK bir root-eşdeğeri yetki genişletmesidir (docker
 #    grubu üyeliği fiilen root'a eşittir) — bu yüzden diğer kurulum
 #    adımlarının aksine HER ZAMAN ayrıca ve açıkça sorulur, --yes ile
-#    dahi otomatik onaylanmaz.
+#    dahi otomatik onaylanmaz. Etkileşimsiz kurulumda (TTY yok) soru
+#    sorulamaz; orada yalnız açıkça --docker-group (ya da
+#    PANEL_DOCKER_GROUP=1) verilirse eklenir — bayrak bu sorunun cevabıdır.
 # ------------------------------------------------------------
 hr
 if ! command -v docker >/dev/null 2>&1; then
@@ -425,12 +438,16 @@ if command -v docker >/dev/null 2>&1; then
     echo "  projelerde 'proje restart' özelliğini kullanmak istiyorsan gereklidir."
     # Etkileşimsiz çalıştırmada (stdin TTY değil — örn. panel içi güncelleme
     # systemd-run altında) `read` EOF görür ve set -e betiği öldürürdü;
-    # soru atlanır, otomatik onaylanMAZ (yukarıdaki güvenlik notu geçerli).
+    # soru atlanır, otomatik onaylanMAZ (yukarıdaki güvenlik notu geçerli) —
+    # --docker-group verilmediyse.
     ANS=""
-    if [[ -t 0 ]]; then
+    if [[ "${DOCKER_GROUP}" -eq 1 ]]; then
+      info "  --docker-group verildi — soru sorulmadan ekleniyor."
+      ANS="e"
+    elif [[ -t 0 ]]; then
       read -r -p "${PANEL_USER} kullanıcısı 'docker' grubuna eklensin mi? [e/H]: " ANS
     else
-      warn "Etkileşimsiz çalıştırma — docker grubu sorusu atlandı. Gerekirse elle: usermod -aG docker ${PANEL_USER} && systemctl restart panel"
+      warn "Etkileşimsiz çalıştırma — docker grubu sorusu atlandı. Gerekirse: install.sh --yes --docker-group ile tekrar çalıştır ya da elle: usermod -aG docker ${PANEL_USER} && systemctl restart panel"
     fi
     if [[ "${ANS}" =~ ^[Ee]$ ]]; then
       usermod -aG docker "${PANEL_USER}"
@@ -439,6 +456,8 @@ if command -v docker >/dev/null 2>&1; then
       warn "Atlandı — DOCKER_COMPOSE tipi restart bu sunucuda çalışmayacak (manuel/CUSTOM_SCRIPT ile yönetilebilir)."
     fi
   fi
+elif [[ "${DOCKER_GROUP}" -eq 1 ]]; then
+  warn "--docker-group verildi ama Docker kurulu değil — grup ekleme atlandı (Docker'ı kurup tekrar çalıştır)."
 fi
 
 # ------------------------------------------------------------

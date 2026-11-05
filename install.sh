@@ -10,6 +10,9 @@ set -euo pipefail
 # Kullanım:
 #   sudo bash install.sh                  (etkileşimli)
 #   sudo bash install.sh --yes            (doctor.sh'a otomatik onay geçer)
+#   sudo bash install.sh --yes --docker-group
+#                                         (panel'i docker grubuna da ekler —
+#                                          bkz. doctor.sh adım 7)
 #   sudo PANEL_PUBLIC_HOST=127.0.0.1 bash install.sh --yes
 #                                         (panel vhost'u yalnız loopback'te;
 #                                          değer .env'e yazılır — bkz. adım 7)
@@ -41,9 +44,12 @@ ENV_FILE="${PANEL_DIR}/.env"
 DB_CREDS_FILE="/root/.panel-db-credentials"
 PANEL_CREDS_FILE="/root/.panel-credentials"
 
-AUTO_YES=0
+DOCTOR_ARGS=()
 for arg in "$@"; do
-  [[ "$arg" == "--yes" || "$arg" == "-y" ]] && AUTO_YES=1
+  case "$arg" in
+    --yes|-y) DOCTOR_ARGS+=(--yes) ;;
+    --docker-group) DOCTOR_ARGS+=(--docker-group) ;;
+  esac
 done
 
 [[ -d "${PANEL_SRC}" ]] || die "panel/ bulunamadı (${PANEL_SRC}). Bu scripti repo kökünden çalıştırdığından emin ol."
@@ -112,8 +118,6 @@ echo
 # ------------------------------------------------------------
 hr
 info "1/9 — doctor.sh çalıştırılıyor (gereksinim kontrolü + kurulumu)..."
-DOCTOR_ARGS=()
-[[ "${AUTO_YES}" -eq 1 ]] && DOCTOR_ARGS+=(--yes)
 PANEL_DIR="${PANEL_DIR}" PANEL_USER="${PANEL_USER}" bash "${REPO_DIR}/doctor.sh" "${DOCTOR_ARGS[@]}"
 
 # .env'de elle verilmiş kalıcı durum yollarını hiçbir şeye dokunmadan önce
