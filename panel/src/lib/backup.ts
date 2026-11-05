@@ -1,10 +1,10 @@
 /**
  * Veritabanı yedekleme (Aşama D) — `db-detect.ts`'in bulduğu bağlantı
  * bilgisiyle `pg_dump`/`mysqldump`/`mongodump` çalıştırır, sonucu gzip'ler,
- * yerelde `/opt/sunucu-paneli/backups/<domain>/` altında saklar (panel
- * kullanıcısı zaten bu dizinin sahibi — sudo GEREKMEZ, bkz. doctor.sh
- * `chown -R panel:panel ${PANEL_DIR}`), retention'a göre eskileri siler ve
- * isteğe bağlı olarak S3'e yükler. Şifreler asla process argümanlarında
+ * yerelde `BACKUP_DIR/<domain>/` altında saklar (install.sh varsayılanı
+ * /var/lib/rudder/backups, panel kullanıcısına ait — sudo GEREKMEZ),
+ * retention'a göre eskileri siler ve isteğe bağlı olarak S3'e yükler.
+ * Şifreler asla process argümanlarında
  * görünmez (`ps aux`'ta ifşa olmasın diye) — PGPASSWORD/MYSQL_PWD ortam
  * değişkenleriyle veya mongo için doğrudan --uri içinde geçirilir.
  */
@@ -30,7 +30,9 @@ export class BackupError extends Error {
   }
 }
 
-const BACKUPS_ROOT = process.env.BACKUP_DIR ?? "/opt/sunucu-paneli/backups"
+// v1.6.0-rc.1'e kadar varsayılan PANEL_DIR/backups'tı: install.sh'ın
+// `rsync --delete`'i güncellemede siliyordu (install.sh adım 8 taşır).
+const BACKUPS_ROOT = process.env.BACKUP_DIR?.trim() || "/var/lib/rudder/backups"
 const DUMP_TIMEOUT_MS = 10 * 60 * 1000 // 10 dakika — büyük veritabanları için
 
 export interface BackupFileInfo {
