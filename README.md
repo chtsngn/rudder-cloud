@@ -65,7 +65,7 @@ Docker Compose as an Application site.
 - Root access (the installer asks for confirmation before using it)
 - Outbound internet access (for package installation and, if used, GitHub/S3)
 
-Everything else — Node.js 20+, PostgreSQL, Nginx, Certbot, build tools for `node-pty`
+Everything else — Node.js (22 LTS is installed if missing; 20+ is accepted), PostgreSQL, Nginx, Certbot, build tools for `node-pty`
 (and, on request, Docker) — is checked and installed automatically by `doctor.sh`.
 
 ## Quick install
@@ -102,6 +102,17 @@ database migrations, creates the initial super admin account, writes the Nginx v
 and starts the `panel.service` systemd unit. Pass `--yes` to auto-confirm dependency
 installation.
 
+Options (also accepted by the bootstrap installer):
+
+- `--docker-group` — add the `panel` user to the `docker` group without asking, so
+  Docker Compose sites can be deployed. Membership of that group is root-equivalent;
+  without the flag the installer asks on a terminal and skips it otherwise.
+- `PANEL_PUBLIC_HOST=127.0.0.1` (e.g. `sudo PANEL_PUBLIC_HOST=127.0.0.1 bash install.sh
+  --yes`) — the Nginx vhost for the panel listens on loopback only (127.0.0.1 and,
+  when available, `[::1]`); reach it through an SSH tunnel or a proxy. Any single
+  IPv4/IPv6 address works too; empty (the default) listens on all interfaces. The
+  value is stored in the panel's `.env`, so updates keep it.
+
 ## Updating
 
 When the panel sees a newer GitHub release, it can update itself with one click
@@ -119,9 +130,27 @@ sudo bash install.sh --yes
 `install.sh` records the clone location as `PANEL_SRC_DIR` in the panel's `.env`;
 the in-panel updater relies on it. Log: `/var/log/panel-update/update.log`.
 
+### Where the panel keeps its data
+
+`/opt/sunucu-paneli` (`PANEL_DIR`, also the `panel` user's home) is replaced with a
+copy of `panel/` on every install and update. Everything the panel creates lives
+outside it, in directories named in the panel's `.env`:
+
+| `.env` key | Default | Contents |
+| --- | --- | --- |
+| `DEPLOY_KEYS_DIR` | `/var/lib/rudder/ssh` | per-site SSH deploy keys |
+| `BACKUP_DIR` | `/var/lib/rudder/backups` | local database backups and pre-deploy dumps (0700, files 0600) |
+| `DOCKER_CONFIG` | `/var/lib/rudder/docker` | the `panel` user's Docker CLI config (buildx builder, registry logins) |
+
+A value already set in `.env` is kept. Up to v1.6.0-rc.1 these lived inside
+`PANEL_DIR` and an update deleted them; the installer now moves any it finds there
+(`.ssh/site_*_deploy*`, `backups/`, `.docker/`) without overwriting anything, and
+never deletes hidden entries of the `panel` home directory.
+
 ## First login
 
-Open `http://<server-ip>:24428` in a browser. The super admin username and
+Open `http://<server-ip>:24428` in a browser (with `PANEL_PUBLIC_HOST=127.0.0.1`:
+`ssh -N -L 24428:127.0.0.1:24428 <user>@<server-ip>`, then `http://127.0.0.1:24428`). The super admin username and
 one-time-printed password are also saved to `/root/.panel-credentials` on the server.
 
 ## Releasing
