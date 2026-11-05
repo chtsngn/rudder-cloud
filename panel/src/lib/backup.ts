@@ -4,7 +4,7 @@
  * yerelde `BACKUP_DIR/<domain>/` altında saklar (install.sh varsayılanı
  * /var/lib/rudder/backups, panel kullanıcısına ait — sudo GEREKMEZ),
  * retention'a göre eskileri siler ve isteğe bağlı olarak S3'e yükler.
- * Şifreler asla process argümanlarında
+ * Dizinler 0700, dosyalar 0600. Şifreler asla process argümanlarında
  * görünmez (`ps aux`'ta ifşa olmasın diye) — PGPASSWORD/MYSQL_PWD ortam
  * değişkenleriyle veya mongo için doğrudan --uri içinde geçirilir.
  */
@@ -34,6 +34,11 @@ export class BackupError extends Error {
 // `rsync --delete`'i güncellemede siliyordu (install.sh adım 8 taşır).
 const BACKUPS_ROOT = process.env.BACKUP_DIR?.trim() || "/var/lib/rudder/backups"
 const DUMP_TIMEOUT_MS = 10 * 60 * 1000 // 10 dakika — büyük veritabanları için
+// Döküm veritabanının tamamı: sunucudaki başka hiçbir kullanıcı (ör. başka bir
+// sitenin linux kullanıcısı) okuyamamalı. Servisin UMask=0002'si yüzünden
+// varsayılan izinler 775/664 olurdu, bu yüzden açıkça veriliyor.
+const BACKUP_DIR_MODE = 0o700
+const BACKUP_FILE_MODE = 0o600
 
 export interface BackupFileInfo {
   fileName: string
@@ -50,7 +55,12 @@ function backupDirForDomain(domain: string): string {
 
 async function ensureBackupDir(domain: string): Promise<string> {
   const dir = backupDirForDomain(domain)
-  await fs.mkdir(dir, { recursive: true })
+  await fs.mkdir(dir, { recursive: true, mode: BACKUP_DIR_MODE })
+  // mkdir'in mode'u yalnız yeni oluşturulan dizinlere uygulanır; eski
+  // sürümlerin 775 bıraktığı dizinler burada daraltılır. Kök başka birine ait
+  // olabilir (elle verilmiş BACKUP_DIR) — o zaman install.sh'a bırakılır.
+  await fs.chmod(BACKUPS_ROOT, BACKUP_DIR_MODE).catch(() => {})
+  await fs.chmod(dir, BACKUP_DIR_MODE).catch(() => {})
   return dir
 }
 
@@ -106,7 +116,7 @@ function runDumpToGzipFile(
     })
     child.on("error", (err) => fail(new BackupError(`${command} başlatılamadı: ${err.message}`)))
 
-    const out = createWriteStream(outPath)
+    const out = createWriteStream(outPath, { mode: BACKUP_FILE_MODE })
     out.on("error", (err) => fail(new BackupError(`Yedek dosyası yazılamadı: ${err.message}`)))
 
     let exitCode: number | null = null
@@ -260,6 +270,9 @@ export async function createDatabaseDump(domain: string, detected: DetectedDatab
     const err = error as NodeJS.ErrnoException & { stderr?: string }
     throw new BackupError(`mongodump başarısız oldu: ${err.stderr?.toString().trim().slice(0, 500) || err.message}`)
   }
+  // mongodump dosyayı kendisi açıyor (umask'a göre 664) — dizin zaten 0700 ama
+  // dosya da diğer dökümlerle aynı izni taşısın.
+  await fs.chmod(outPath, BACKUP_FILE_MODE)
   return statBackupFile(dir, fileName)
 }
 

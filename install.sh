@@ -391,6 +391,9 @@ if [[ -d "${LEGACY_BACKUPS}" && ! -L "${LEGACY_BACKUPS}" && "${BACKUP_DIR_PATH}"
   retire_legacy_dir "${LEGACY_BACKUPS}"
 fi
 env_set BACKUP_DIR "${BACKUP_DIR_PATH}"
+# Dökümler veritabanının tamamı: yalnız panel kullanıcısı okuyabilmeli. Eski
+# sürümler (servis UMask=0002) dizinleri 775, dosyaları 664 bırakıyordu.
+chmod -R go-rwx "${BACKUP_DIR_PATH}" || warn "${BACKUP_DIR_PATH} izinleri daraltılamadı."
 
 # --- Docker ayarı ----------------------------------------------
 # Eski ~/.docker yalnız DOCKER_CONFIG'i biz ayarlıyorsak taşınır; elle
