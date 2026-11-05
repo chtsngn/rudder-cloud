@@ -8,8 +8,11 @@ set -euo pipefail
 # vhost'unu (port 24428) ve systemd servisini kurup başlatır.
 #
 # Kullanım:
-#   sudo bash install.sh          (etkileşimli)
-#   sudo bash install.sh --yes    (doctor.sh'a otomatik onay geçer)
+#   sudo bash install.sh                  (etkileşimli)
+#   sudo bash install.sh --yes            (doctor.sh'a otomatik onay geçer)
+#   sudo PANEL_PUBLIC_HOST=127.0.0.1 bash install.sh --yes
+#                                         (panel vhost'u yalnız loopback'te;
+#                                          değer .env'e yazılır — bkz. adım 7)
 #
 # Bu script, klonlanmış repo'nun İÇİNDEN (panel/ ile aynı dizinden)
 # çalıştırılmalı: sunucuda `git clone ... && cd <repo> && sudo bash install.sh`
@@ -120,6 +123,69 @@ for key in "${STATE_KEYS[@]}"; do
   [[ -z "${dir}" ]] || valid_state_path "${dir}" \
     || die "${ENV_FILE}: ${key}='${dir}' geçersiz (mutlak, en az iki bileşenli bir yol olmalı; PANEL_DIR'in kendisi ya da üstü olamaz). Düzeltip tekrar çalıştır."
 done
+
+# Panel vhost'unun dinleme adresi (adım 7) de burada çözülür ve doğrulanır.
+#
+# Dinleme adresi .env'deki PANEL_PUBLIC_HOST'tan gelir:
+#   yok / boş / 0.0.0.0 / *  tüm arayüzler: `listen PORT` + `[::]:PORT`
+#                            (eski davranış, varsayılan)
+#   127.0.0.1 / localhost    yalnız loopback: 127.0.0.1 + (varsa) [::1] —
+#                            panele SSH tüneliyle ya da önündeki bir
+#                            proxy'yle erişilir
+#   <IPv4> / <IPv6>          yalnız o adres
+# Öncelik: install.sh'ı çalıştırırken ortamdan verilen değer (.env'e
+# yazılır) > .env > mevcut panel.conf. Sonuncusu, vhost'u elle belirli bir
+# adrese çekmiş kurulumlar içindir: .env'de ayar yoksa o adres benimsenip
+# .env'e yazılır — güncelleme paneli sessizce tüm arayüzlere açmasın.
+NGINX_CONF="/etc/nginx/sites-available/panel.conf"
+
+# Mevcut panel.conf joker değil de belirli bir adreste dinliyorsa o adres.
+vhost_listen_host() {
+  local addr first=""
+  [[ -f "${NGINX_CONF}" ]] || return 0
+  while read -r addr; do
+    addr="${addr%;}"
+    case "${addr}" in
+      "${PUBLIC_PORT}"|"[::]:${PUBLIC_PORT}"|"0.0.0.0:${PUBLIC_PORT}"|"*:${PUBLIC_PORT}") return 0 ;;
+    esac
+    [[ -n "${first}" ]] || first="${addr}"
+  done < <(awk '$1 == "listen" { print $2 }' "${NGINX_CONF}")
+  case "${first}" in
+    "127.0.0.1:${PUBLIC_PORT}"|"[::1]:${PUBLIC_PORT}"|"localhost:${PUBLIC_PORT}") echo "127.0.0.1" ;;
+    *":${PUBLIC_PORT}") echo "${first%":${PUBLIC_PORT}"}" ;;
+  esac
+}
+
+has_ipv6_loopback() { grep -qi '^0\{31\}1 ' /proc/net/if_inet6 2>/dev/null; }
+
+if [[ -n "${PANEL_PUBLIC_HOST+x}" ]]; then
+  PUBLIC_HOST="${PANEL_PUBLIC_HOST}"; PUBLIC_HOST_FROM="ortam"
+elif env_has PANEL_PUBLIC_HOST; then
+  PUBLIC_HOST="$(env_get PANEL_PUBLIC_HOST)"; PUBLIC_HOST_FROM=".env"
+else
+  PUBLIC_HOST="$(vhost_listen_host)"; PUBLIC_HOST_FROM="panel.conf"
+fi
+
+IPV4_RE='^([0-9]{1,3}\.){3}[0-9]{1,3}$'
+IPV6_RE='^[0-9A-Fa-f.]*:[0-9A-Fa-f:.]*$'
+LISTEN_ADDRS=()
+case "${PUBLIC_HOST}" in
+  ""|"*"|"0.0.0.0")
+    LISTEN_ADDRS=("${PUBLIC_PORT}" "[::]:${PUBLIC_PORT}") ;;
+  localhost|127.0.0.1)
+    LISTEN_ADDRS=("127.0.0.1:${PUBLIC_PORT}")
+    # IPv6'sı kapalı bir sunucuda [::1]'e bind edilemez; nginx hiç kalkmaz.
+    if has_ipv6_loopback; then LISTEN_ADDRS+=("[::1]:${PUBLIC_PORT}"); fi ;;
+  *)
+    host="${PUBLIC_HOST#\[}"; host="${host%\]}"
+    if [[ "${host}" =~ ${IPV4_RE} ]]; then
+      LISTEN_ADDRS=("${host}:${PUBLIC_PORT}")
+    elif [[ "${host}" =~ ${IPV6_RE} ]]; then
+      LISTEN_ADDRS=("[${host}]:${PUBLIC_PORT}")
+    else
+      die "PANEL_PUBLIC_HOST geçersiz: '${PUBLIC_HOST}' (${PUBLIC_HOST_FROM}) — boş, 127.0.0.1, localhost ya da bir IPv4/IPv6 adresi olmalı."
+    fi ;;
+esac
 
 # ------------------------------------------------------------
 # 2) Panel kodunu hedef dizine yerleştir
@@ -245,15 +311,34 @@ else
 fi
 
 # ------------------------------------------------------------
-# 7) Nginx vhost (port 24428)
+# 7) Nginx vhost (port 24428) — dinleme adresi (PANEL_PUBLIC_HOST) adım
+#    1'in ardından çözüldü ve doğrulandı; .env'e burada yazılır.
 # ------------------------------------------------------------
 hr
 info "7/9 — Nginx vhost yazılıyor (port ${PUBLIC_PORT})..."
-NGINX_CONF="/etc/nginx/sites-available/panel.conf"
+# Joker benimsenmez (.env'e yazılmaz): ayar yokken sonradan elle değiştirilen
+# bir panel.conf bir sonraki güncellemede yine benimsenebilsin.
+if [[ "${PUBLIC_HOST_FROM}" == "ortam" || ( "${PUBLIC_HOST_FROM}" == "panel.conf" && -n "${PUBLIC_HOST}" ) ]]; then
+  env_set PANEL_PUBLIC_HOST "${PUBLIC_HOST}"
+  msg "PANEL_PUBLIC_HOST=${PUBLIC_HOST} .env'e yazıldı (kaynak: ${PUBLIC_HOST_FROM})."
+fi
+LISTEN_BLOCK="$(printf '  listen %s;\n' "${LISTEN_ADDRS[@]}")"
+
+# nginx'in panel portunda tam olarak beklenen adreslerde dinleyip dinlemediği.
+panel_listen_ok() {
+  local want have
+  want="$(for a in "${LISTEN_ADDRS[@]}"; do
+            [[ "${a}" == "${PUBLIC_PORT}" ]] && echo "0.0.0.0:${PUBLIC_PORT}" || echo "${a}"
+          done | sort)"
+  have="$(ss -Htln "sport = :${PUBLIC_PORT}" | awk '{ print $4 }' | sed 's/^\*:/[::]:/' | sort -u)"
+  [[ "${want}" == "${have}" ]]
+}
+
+OLD_LISTEN=""
+[[ -f "${NGINX_CONF}" ]] && OLD_LISTEN="$(awk '$1 == "listen"' "${NGINX_CONF}" | sed -E 's/^[[:space:]]+//')"
 cat > "${NGINX_CONF}" <<EOF
 server {
-  listen ${PUBLIC_PORT};
-  listen [::]:${PUBLIC_PORT};
+${LISTEN_BLOCK}
   server_name _;
 
   access_log /var/log/nginx/panel.access.log;
@@ -286,8 +371,30 @@ server {
 EOF
 ln -sf "${NGINX_CONF}" "/etc/nginx/sites-enabled/panel.conf"
 nginx -t
-systemctl reload nginx
-msg "Nginx vhost aktif: :${PUBLIC_PORT} -> 127.0.0.1:${PANEL_PORT}"
+NEW_LISTEN="$(awk '$1 == "listen"' "${NGINX_CONF}" | sed -E 's/^[[:space:]]+//')"
+# Aynı portta joker ↔ belirli adres geçişinde `reload` yeni soketi bağlayamaz
+# (EADDRINUSE); nginx error.log'a "still could not bind()" yazıp ESKİ soketle
+# devam eder, `systemctl reload` yine başarılı döner. Dinleme satırları
+# değiştiyse doğrudan restart (sitelerde ~1 sn kesinti); her durumda sonuç
+# `ss` ile doğrulanır.
+if [[ -n "${OLD_LISTEN}" && "${OLD_LISTEN}" != "${NEW_LISTEN}" ]]; then
+  info "Panel vhost'unun dinleme adresi değişti — nginx yeniden başlatılıyor (reload bu geçişi uygulayamıyor)."
+  systemctl restart nginx
+else
+  systemctl reload-or-restart nginx
+fi
+if command -v ss >/dev/null 2>&1; then
+  # reload eşzamansız; nginx bind'i ~2,5 sn boyunca yeniden dener.
+  for _ in 1 2 3 4 5 6 7 8 9 10; do panel_listen_ok && break; sleep 0.5; done
+  if ! panel_listen_ok; then
+    warn "nginx panel portunda beklenen adreslerde dinlemiyor (eski soket kalmış olabilir) — yeniden başlatılıyor."
+    systemctl restart nginx
+    panel_listen_ok || warn "nginx hâlâ beklenen adreslerde dinlemiyor: beklenen '${LISTEN_ADDRS[*]}', 'ss -tlnp' ve /var/log/nginx/error.log'u kontrol et."
+  fi
+else
+  warn "ss bulunamadı — panel portunun dinleme adresi doğrulanamadı."
+fi
+msg "Nginx vhost aktif: ${LISTEN_ADDRS[*]} -> 127.0.0.1:${PANEL_PORT}"
 
 # Cloudflare proxy'si arkasındaki siteler için gerçek ziyaretçi IP'si (real_ip)
 # — best-effort; ağ yoksa uyarır, kurulumu durdurmaz. Ayarlar'dan tekrar
@@ -469,7 +576,15 @@ echo
 hr
 msg "Kurulum tamamlandı."
 echo
-echo "🌐 Panel: http://${SERVER_IP:-<sunucu-ip>}:${PUBLIC_PORT}"
+case "${LISTEN_ADDRS[0]}" in
+  "${PUBLIC_PORT}")
+    echo "🌐 Panel: http://${SERVER_IP:-<sunucu-ip>}:${PUBLIC_PORT}" ;;
+  "127.0.0.1:${PUBLIC_PORT}"|"[::1]:${PUBLIC_PORT}")
+    echo "🌐 Panel yalnız bu sunucudan erişilebilir (PANEL_PUBLIC_HOST=${PUBLIC_HOST}). SSH tüneliyle:"
+    echo "   ssh -N -L ${PUBLIC_PORT}:127.0.0.1:${PUBLIC_PORT} <kullanıcı>@${SERVER_IP:-<sunucu-ip>}  →  http://127.0.0.1:${PUBLIC_PORT}" ;;
+  *)
+    echo "🌐 Panel: http://${LISTEN_ADDRS[0]}" ;;
+esac
 if [[ -f "${PANEL_CREDS_FILE}" ]]; then
   echo "🔑 Super admin bilgileri: ${PANEL_CREDS_FILE}"
 else
