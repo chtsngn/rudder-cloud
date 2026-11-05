@@ -28,6 +28,11 @@ PANEL_USER="${PANEL_USER:-panel}"
 DB_NAME="${DB_NAME:-panel_db}"
 DB_USER="${DB_USER:-panel}"
 DB_CREDS_FILE="/root/.panel-db-credentials"
+# Eksikse kurulan Node.js ana sürümü (NodeSource). 20, Nisan 2026'da EOL oldu.
+NODE_LTS_MAJOR=22
+# Kabul edilen en düşük ana sürüm (Next.js 16 / Prisma 7 alt sınırı) — bundan
+# yenisi kuruluysa doctor sistemdeki Node'u kendiliğinden yükseltmez.
+NODE_MIN_MAJOR=20
 
 AUTO_YES=0
 for arg in "$@"; do
@@ -108,16 +113,22 @@ info "Node.js kontrol ediliyor..."
 NODE_OK=0
 if command -v node >/dev/null 2>&1; then
   NODE_MAJOR="$(node -e 'console.log(process.versions.node.split(".")[0])' 2>/dev/null || echo 0)"
-  if [[ "${NODE_MAJOR}" -ge 20 ]]; then
+  if [[ "${NODE_MAJOR}" -ge "${NODE_MIN_MAJOR}" ]]; then
     msg "Node.js: $(node -v) (kurulu, yeterli sürüm)"
     NODE_OK=1
+    if [[ "${NODE_MAJOR}" -lt "${NODE_LTS_MAJOR}" ]]; then
+      # Sistem Node'u sunucudaki başka uygulamaların da Node'u olabilir —
+      # çalışan bir kurulumu burada kendiliğinden yükseltmiyoruz.
+      warn "Node.js $(node -v) artık güvenlik güncellemesi almıyor (EOL); ${NODE_LTS_MAJOR} LTS'e geçmen önerilir:"
+      warn "  curl -fsSL https://deb.nodesource.com/setup_${NODE_LTS_MAJOR}.x | sudo bash - && sudo apt-get install -y nodejs"
+    fi
   else
-    warn "Node.js: $(node -v) bulundu ama çok eski (>=20 gerekli)"
+    warn "Node.js: $(node -v) bulundu ama çok eski (>=${NODE_MIN_MAJOR} gerekli)"
   fi
 else
   warn "Node.js: bulunamadı"
 fi
-[[ "${NODE_OK}" -eq 1 ]] || { MISSING+=("nodejs"); MISSING_LABEL+=("Node.js 20+"); }
+[[ "${NODE_OK}" -eq 1 ]] || { MISSING+=("nodejs"); MISSING_LABEL+=("Node.js ${NODE_LTS_MAJOR} LTS"); }
 
 hr
 info "Derleme araçları kontrol ediliyor (node-pty için gerekli — sunucu terminali, Aşama F)..."
@@ -191,8 +202,8 @@ if [[ "${#MISSING[@]}" -gt 0 ]]; then
         msg "acl kuruldu."
         ;;
       nodejs)
-        info "Node.js 20 LTS kuruluyor (NodeSource)..."
-        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+        info "Node.js ${NODE_LTS_MAJOR} LTS kuruluyor (NodeSource)..."
+        curl -fsSL "https://deb.nodesource.com/setup_${NODE_LTS_MAJOR}.x" | bash -
         apt-get install -y nodejs
         msg "Node.js kuruldu: $(node -v)"
         ;;
