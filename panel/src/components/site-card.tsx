@@ -8,7 +8,7 @@ import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
 import { SITE_TYPES, type Site, type SiteType } from "@/lib/mock-data"
 
-const STATUS_CONFIG: Record<
+export const STATUS_CONFIG: Record<
   Site["status"],
   { label: string; dot: string; badge: string }
 > = {
