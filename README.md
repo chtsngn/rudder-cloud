@@ -26,7 +26,8 @@ and installs itself onto a plain Ubuntu/Debian box with a single script.
   `pull → build → publish` (static sites: the publish folder, e.g. `dist`, is mirrored
   into the web root; `.git`, sources and dotfiles never go live). Triggered manually, by polling, by a per-site
   **deploy hook URL** (one `POST` from any CI) or instantly by the GitHub App's
-  **push webhook**.
+  **push webhook**. Builds have no time limit by default (a build fails only when it
+  exits with an error); an optional cap can be set under Settings → Build.
 - **Real process status** — `docker compose ps` / pm2 state, memory usage,
   and whether anything is actually listening on the proxy target (no more "Active"
   while visitors get a 502). Compose sites get up/down/restart/rebuild/pull controls

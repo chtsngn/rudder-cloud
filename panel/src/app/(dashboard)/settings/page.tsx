@@ -34,6 +34,7 @@ import {
   Zap,
   Type,
   TerminalSquare,
+  Hammer,
   Infinity as InfinityIcon,
 } from "lucide-react"
 
@@ -70,6 +71,14 @@ const EMPTY_DOMAIN_FORM: DomainFormState = { domain: "", email: "" }
 interface TerminalSettingsView {
   idleTimeoutSeconds: number | null
 }
+
+interface BuildSettingsView {
+  buildTimeoutMinutes: number | null
+}
+
+// src/lib/build-timeout.ts ile aynı aralık (sunucu ayrıca doğrular).
+const BUILD_TIMEOUT_MIN_MINUTES = 5
+const BUILD_TIMEOUT_MAX_MINUTES = 240
 
 interface GitHubAppInfo {
   slug: string
@@ -238,14 +247,81 @@ export default function SettingsPage() {
     }
   }
 
+  // ═══ DERLEME ZAMAN AŞIMI STATE'LERİ ═══
+  const [buildSettings, setBuildSettings] = useState<BuildSettingsView | null>(null)
+  const [buildLoading, setBuildLoading] = useState(true)
+  const [buildUnlimited, setBuildUnlimited] = useState(true)
+  const [buildMinutes, setBuildMinutes] = useState("30")
+  const [buildSaving, setBuildSaving] = useState(false)
+  const [buildError, setBuildError] = useState<string | null>(null)
+  const [buildSuccess, setBuildSuccess] = useState<string | null>(null)
+
+  const loadBuildSettings = useCallback(async () => {
+    setBuildLoading(true)
+    try {
+      const res = await fetch("/api/settings/build", { cache: "no-store" })
+      if (!res.ok) return
+      const data = (await res.json()) as BuildSettingsView
+      setBuildSettings(data)
+      setBuildUnlimited(data.buildTimeoutMinutes === null)
+      if (data.buildTimeoutMinutes) setBuildMinutes(String(data.buildTimeoutMinutes))
+    } catch {
+      // sessizce yoksay
+    } finally {
+      setBuildLoading(false)
+    }
+  }, [])
+
+  async function handleSaveBuildSettings() {
+    setBuildError(null)
+    setBuildSuccess(null)
+    let buildTimeoutMinutes: number | null = null
+    if (!buildUnlimited) {
+      const minutesNum = Number(buildMinutes.trim())
+      if (
+        !Number.isInteger(minutesNum) ||
+        minutesNum < BUILD_TIMEOUT_MIN_MINUTES ||
+        minutesNum > BUILD_TIMEOUT_MAX_MINUTES
+      ) {
+        setBuildError(
+          lang === "en"
+            ? `Enter a whole number of minutes between ${BUILD_TIMEOUT_MIN_MINUTES} and ${BUILD_TIMEOUT_MAX_MINUTES}.`
+            : `${BUILD_TIMEOUT_MIN_MINUTES} ile ${BUILD_TIMEOUT_MAX_MINUTES} arasında tam sayı dakika girin.`
+        )
+        return
+      }
+      buildTimeoutMinutes = minutesNum
+    }
+    setBuildSaving(true)
+    try {
+      const res = await fetch("/api/settings/build", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ buildTimeoutMinutes }),
+      })
+      const data = (await res.json().catch(() => null)) as (BuildSettingsView & { error?: string }) | null
+      if (!res.ok) {
+        setBuildError(data?.error ?? `İstek başarısız oldu (${res.status}).`)
+        return
+      }
+      if (data) setBuildSettings(data)
+      setBuildSuccess(lang === "en" ? "Build settings saved." : "Derleme ayarları kaydedildi.")
+    } catch {
+      setBuildError(lang === "en" ? "Failed to connect to server." : "Sunucuya bağlanılamadı.")
+    } finally {
+      setBuildSaving(false)
+    }
+  }
+
   useEffect(() => {
     const timer = setTimeout(() => {
       load()
       loadDomain()
       loadTerminalSettings()
+      loadBuildSettings()
     }, 0)
     return () => clearTimeout(timer)
-  }, [load, loadDomain, loadTerminalSettings])
+  }, [load, loadDomain, loadTerminalSettings, loadBuildSettings])
 
   function openCreateForm() {
     setDialogConfig(null)
@@ -556,6 +632,7 @@ export default function SettingsPage() {
     typography: boolean
     domain: boolean
     terminal: boolean
+    build: boolean
     s3: boolean
     github: boolean
     system: boolean
@@ -565,13 +642,14 @@ export default function SettingsPage() {
     typography: false,
     domain: false,
     terminal: false,
+    build: false,
     s3: false,
     github: false,
     system: false,
   })
 
   const toggleSection = (
-    section: "language" | "theme" | "typography" | "domain" | "terminal" | "s3" | "github" | "system"
+    section: "language" | "theme" | "typography" | "domain" | "terminal" | "build" | "s3" | "github" | "system"
   ) => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }))
   }
@@ -1156,6 +1234,148 @@ export default function SettingsPage() {
                     className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] disabled:opacity-40 cursor-pointer"
                   >
                     {terminalSaving ? (
+                      <Loader2 className="size-4 animate-spin text-inherit" />
+                    ) : (
+                      <CheckCircle2 className="size-4 text-inherit" />
+                    )}
+                    {t("common.save")}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ═══ 3.6 DERLEME AYARLARI KARTI (AÇILIR SEKME) ═══ */}
+      <div className="rounded-2xl border border-slate-200/90 dark:border-[#16223f] bg-white dark:bg-[#090e1f] shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden transition-all">
+        <div
+          onClick={() => toggleSection("build")}
+          className="flex items-center justify-between p-5 md:p-6 select-none cursor-pointer hover:bg-slate-50/50 dark:hover:bg-[#0c1630]/50 transition-colors"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="size-10 rounded-2xl bg-slate-900/5 dark:bg-[#101c38] text-slate-700 dark:text-blue-300 flex items-center justify-center border border-transparent dark:border-[#1e3568]/50 shadow-2xs shrink-0">
+              <Hammer className="size-5" />
+            </div>
+            <div>
+              <h2 className="font-heading font-bold text-base md:text-lg text-slate-900 dark:text-slate-100">
+                {lang === "en" ? "Build" : "Derleme"}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
+                {lang === "en"
+                  ? "Optional time limit for builds and deploy commands."
+                  : "Derleme ve deploy komutu için isteğe bağlı süre sınırı."}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <span
+              className={cn(
+                "hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold border",
+                buildSettings?.buildTimeoutMinutes
+                  ? "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60"
+                  : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/50"
+              )}
+            >
+              {buildSettings?.buildTimeoutMinutes ? (
+                <span>{buildSettings.buildTimeoutMinutes} {lang === "en" ? "min" : "dk"}</span>
+              ) : (
+                <>
+                  <InfinityIcon className="size-3" />
+                  {lang === "en" ? "Unlimited" : "Sınırsız"}
+                </>
+              )}
+            </span>
+            <div
+              className={cn(
+                "size-8 rounded-xl flex items-center justify-center border border-slate-200 dark:border-[#16223f] bg-slate-50 dark:bg-[#060a17] text-slate-500 dark:text-slate-300 transition-transform duration-200",
+                openSections.build && "rotate-180 bg-slate-100 dark:bg-[#101c38] text-slate-900 dark:text-blue-300 border-slate-300 dark:border-[#2a4687]"
+              )}
+            >
+              <ChevronDown className="size-4" />
+            </div>
+          </div>
+        </div>
+
+        {openSections.build && (
+          <div className="p-5 md:p-6 pt-0 border-t border-slate-100 dark:border-[#16223f] space-y-6 animate-in fade-in-0 duration-200">
+            {buildLoading ? (
+              <div className="flex items-center justify-center py-8 text-slate-400">
+                <Loader2 className="size-6 animate-spin text-[#580619] dark:text-blue-400" />
+              </div>
+            ) : (
+              <div className="space-y-5 pt-4">
+                <div className="flex items-start gap-3 p-4 rounded-2xl border border-slate-200/80 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17]">
+                  <input
+                    type="checkbox"
+                    id="build-unlimited"
+                    checked={buildUnlimited}
+                    onChange={(e) => setBuildUnlimited(e.target.checked)}
+                    className="size-4 mt-0.5 rounded accent-[#580619] dark:accent-[#162752] cursor-pointer shrink-0"
+                  />
+                  <Label htmlFor="build-unlimited" className="text-xs cursor-pointer select-none">
+                    <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <InfinityIcon className="size-3.5 text-[#580619] dark:text-blue-300" />
+                      {lang === "en" ? "Unlimited (no time limit)" : "Sınırsız (süre sınırı yok)"}
+                    </span>
+                    <span className="block text-slate-500 dark:text-slate-400 mt-1 font-normal">
+                      {lang === "en"
+                        ? "Default. A build or deploy command fails only when it exits with an error."
+                        : "Varsayılan. Derleme ya da deploy komutu yalnız kendi hatasıyla (çıkış kodu ≠ 0) başarısız sayılır."}
+                    </span>
+                  </Label>
+                </div>
+
+                {!buildUnlimited && (
+                  <div className="space-y-2 max-w-xs">
+                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {lang === "en" ? "Build timeout (minutes)" : "Derleme zaman aşımı (dakika)"}
+                    </Label>
+                    <Input
+                      type="number"
+                      min={BUILD_TIMEOUT_MIN_MINUTES}
+                      max={BUILD_TIMEOUT_MAX_MINUTES}
+                      value={buildMinutes}
+                      onChange={(e) => setBuildMinutes(e.target.value)}
+                      className="h-11 rounded-xl font-mono text-xs bg-white dark:bg-[#060a17] dark:border-[#16223f] dark:text-slate-100"
+                    />
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {lang === "en"
+                        ? `${BUILD_TIMEOUT_MIN_MINUTES}–${BUILD_TIMEOUT_MAX_MINUTES} minutes.`
+                        : `${BUILD_TIMEOUT_MIN_MINUTES}–${BUILD_TIMEOUT_MAX_MINUTES} dakika.`}
+                    </p>
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-amber-200/80 dark:border-[#16223f] bg-amber-50/50 dark:bg-[#060a17] p-3.5 text-xs text-amber-900 dark:text-slate-300 flex items-start gap-2.5">
+                  <ShieldAlert className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <span>
+                    {lang === "en"
+                      ? "Applies to the site's deploy command and to the build/pull steps of application sites (docker compose up --build, pull, up, custom script). When the limit is exceeded the command is stopped and the deploy rolls back as on any other failure. Plain restarts, git, backups and health checks keep their own limits. Takes effect on the next deploy."
+                      : "Sitenin deploy komutuna ve Uygulama sitelerinin derleme/çekme adımlarına (docker compose up --build, pull, up, özel betik) uygulanır. Sınır aşılınca komut sonlandırılır ve deploy, diğer hatalarda olduğu gibi geri döner. Düz yeniden başlatma, git, döküm ve sağlık kontrolü kendi sürelerini korur. Bir sonraki deploy'da geçerli olur."}
+                  </span>
+                </div>
+
+                {buildError && (
+                  <p className="text-xs text-red-600 dark:text-red-400 font-mono bg-red-50 dark:bg-red-950/40 p-3 rounded-xl border border-red-200 dark:border-red-900">
+                    {buildError}
+                  </p>
+                )}
+                {buildSuccess && (
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 p-3 rounded-xl border border-emerald-200 dark:border-emerald-900">
+                    {buildSuccess}
+                  </p>
+                )}
+
+                <div className="flex justify-end pt-1">
+                  <Button
+                    size="sm"
+                    disabled={buildSaving || (!buildUnlimited && !buildMinutes.trim())}
+                    onClick={handleSaveBuildSettings}
+                    className="bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white font-semibold text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 h-11 border border-[#c8a87c]/40 dark:border-[#2a4687]/60 hover:border-[#c8a87c] dark:hover:border-[#385db3] disabled:opacity-40 cursor-pointer"
+                  >
+                    {buildSaving ? (
                       <Loader2 className="size-4 animate-spin text-inherit" />
                     ) : (
                       <CheckCircle2 className="size-4 text-inherit" />

@@ -24,6 +24,8 @@
  */
 import { spawn } from "node:child_process"
 
+import { formatDuration, timeoutExceededMessage } from "@/lib/build-timeout"
+import { getBuildTimeoutMs } from "@/lib/build-timeout-setting"
 import { siteCommandEnv } from "@/lib/command-env"
 import { GitError, gitPullOrClone, isGitPullSupported } from "@/lib/git"
 import { prisma } from "@/lib/prisma"
@@ -43,7 +45,8 @@ import {
 import { resolveGitWorkdir, resolveSiteWorkdir } from "@/lib/site-paths"
 import { PublishError, publishStaticSite } from "@/lib/static-publish"
 
-const DEPLOY_COMMAND_TIMEOUT_MS = 15 * 60_000
+// Deploy komutunun üst sınırı sabit değil: Ayarlar → Derleme (varsayılan
+// sınırsız), her deploy'da okunur (bkz. src/lib/build-timeout.ts).
 const OUTPUT_KEEP_BYTES = 16 * 1024
 
 export type DeployTrigger = "manual" | "pull" | "auto-pull" | "hook" | "webhook" | "connect"
@@ -97,9 +100,16 @@ export function toDeployable<T extends Omit<DeployableSite, "githubInstallationI
   return { ...site, githubInstallationId: site.githubInstallation?.installationId ?? null }
 }
 
-function runDeployCommand(command: string, cwd: string, env: NodeJS.ProcessEnv): Promise<{ ok: boolean; output: string; code: number | null }> {
+/** @param timeoutMs 0 = sınırsız: öldürme zamanlayıcısı hiç kurulmaz. */
+function runDeployCommand(
+  command: string,
+  cwd: string,
+  env: NodeJS.ProcessEnv,
+  timeoutMs: number
+): Promise<{ ok: boolean; output: string; code: number | null; timedOut: boolean }> {
   return new Promise((resolve) => {
     let output = ""
+    let timedOut = false
     const append = (chunk: Buffer) => {
       output += chunk.toString()
       if (output.length > OUTPUT_KEEP_BYTES * 4) output = tail(output, OUTPUT_KEEP_BYTES * 2)
@@ -107,17 +117,21 @@ function runDeployCommand(command: string, cwd: string, env: NodeJS.ProcessEnv):
     const child = spawn("/bin/bash", ["-lc", command], { cwd, env, stdio: ["ignore", "pipe", "pipe"] })
     child.stdout.on("data", append)
     child.stderr.on("data", append)
-    const timer = setTimeout(() => {
-      output += `\n[panel] deploy komutu ${DEPLOY_COMMAND_TIMEOUT_MS / 60000} dakikayı aştı, sonlandırılıyor.`
-      child.kill("SIGKILL")
-    }, DEPLOY_COMMAND_TIMEOUT_MS)
+    const timer =
+      timeoutMs > 0
+        ? setTimeout(() => {
+            timedOut = true
+            output += `\n[panel] ${timeoutExceededMessage("deploy komutu", timeoutMs)}`
+            child.kill("SIGKILL")
+          }, timeoutMs)
+        : null
     child.on("error", (err) => {
-      clearTimeout(timer)
-      resolve({ ok: false, output: `${output}\n[panel] komut başlatılamadı: ${err.message}`, code: null })
+      if (timer) clearTimeout(timer)
+      resolve({ ok: false, output: `${output}\n[panel] komut başlatılamadı: ${err.message}`, code: null, timedOut })
     })
     child.on("close", (code) => {
-      clearTimeout(timer)
-      resolve({ ok: code === 0, output, code })
+      if (timer) clearTimeout(timer)
+      resolve({ ok: code === 0 && !timedOut, output, code, timedOut })
     })
   })
 }
@@ -232,8 +246,11 @@ async function buildAndRestart(site: DeployableSite, opts: DeployOptions, ctx: B
     if (cfg.port !== undefined && cfg.port !== null) env.PORT = String(cfg.port)
     if (commit) env.GIT_COMMIT = commit
     lines.push(`$ ${command}`)
-    const result = await runDeployCommand(command, workdir, env)
+    const timeoutMs = await getBuildTimeoutMs()
+    const commandStartedAt = Date.now()
+    const result = await runDeployCommand(command, workdir, env, timeoutMs)
     lines.push(result.output.trim())
+    lines.push(`[panel] deploy komutu ${formatDuration(Date.now() - commandStartedAt)} sürdü.`)
     if (!result.ok) {
       if (rollbackPoint) {
         // Konteynerler yeniden başlatılmadı (eski imajla çalışıyor); deploy komutu
@@ -241,7 +258,9 @@ async function buildAndRestart(site: DeployableSite, opts: DeployOptions, ctx: B
         await restoreRollbackTags(rollbackPoint).catch(() => {})
       }
       const output = tail(lines.join("\n"), OUTPUT_KEEP_BYTES)
-      const message = `Deploy komutu başarısız oldu (çıkış kodu ${result.code ?? "?"}).`
+      const message = result.timedOut
+        ? `Deploy komutu ${Math.round(timeoutMs / 60_000)} dakikalık derleme zaman aşımını aştı (Ayarlar → Derleme).`
+        : `Deploy komutu başarısız oldu (çıkış kodu ${result.code ?? "?"}).`
       await prisma.site
         .update({
           where: { id: site.id },
@@ -284,6 +303,7 @@ async function buildAndRestart(site: DeployableSite, opts: DeployOptions, ctx: B
   // 3) Yeniden başlatma (DOCKER_COMPOSE'da rebuild)
   let restartError: string | null = null
   let restarted = false
+  const restartStartedAt = Date.now()
   try {
     await restartSite(site, { deploy: true })
     restarted = site.processManager !== "NONE"
@@ -291,6 +311,10 @@ async function buildAndRestart(site: DeployableSite, opts: DeployOptions, ctx: B
   } catch (error) {
     restartError = error instanceof RestartError ? error.message : "Yeniden başlatma başarısız oldu."
     lines.push(`[panel] yeniden başlatma başarısız: ${restartError}`)
+  }
+  if (site.processManager !== "NONE") {
+    const label = site.processManager === "DOCKER_COMPOSE" ? "derleme (docker compose up -d --build)" : "yeniden başlatma"
+    lines.push(`[panel] ${label} ${formatDuration(Date.now() - restartStartedAt)} sürdü.`)
   }
 
   // 4) Sağlık kontrolü + geri dönüş (deploy güvenliği açık Uygulama siteleri)
