@@ -27,7 +27,9 @@ gelir ve düz bir Ubuntu/Debian sunucusuna tek bir script ile kendini kurar.
   köküne aynalanır; `.git`, kaynak kod ve nokta dosyaları yayına çıkmaz) zincirini
   çalıştırır. Elle, periyodik kontrolle, site
   başına **deploy hook URL'i** (herhangi bir CI'dan tek `POST`) ya da GitHub App'in
-  **push webhook'u** ile anında tetiklenir.
+  **push webhook'u** ile anında tetiklenir. Derlemenin varsayılan olarak süre sınırı
+  yoktur (yalnız kendi hatasıyla başarısız sayılır); isteğe bağlı üst sınır Ayarlar →
+  Derleme'den verilir.
 - **Gerçek süreç durumu** — `docker compose ps` / pm2 durumu, bellek
   kullanımı ve proxy hedefinde gerçekten bir şeyin dinleyip dinlemediği (ziyaretçi
   502 görürken "Aktif" yazmaz). Compose siteleri up/down/restart/rebuild/pull

@@ -242,6 +242,12 @@ model AuditLog {
 // heartbeat ile (her zaman aktif) çözülüyor; buradaki alan yalnızca isteğe
 // bağlı, kullanıcı girdisine dayalı bir GÜVENLİK önlemi (ör. denetimsiz
 // bırakılan bir root kabuğunu otomatik kapatmak).
+// `buildTimeoutMinutes` (2026-11): Uygulama deploy'unda derleme/çekme
+// adımlarının (`compose up -d --build`, `compose pull`, `up`, özel betik) ve
+// sitenin deploy komutunun isteğe bağlı üst sınırı, dakika. NULL/0 = SINIRSIZ
+// (varsayılan) — komut yalnız kendi hatasıyla (çıkış kodu ≠ 0) başarısız
+// sayılır. Geçerli aralık 5–240 (bkz. src/lib/build-timeout.ts); her deploy'da
+// yeniden okunur.
 model PanelSettings {
   id                          String   @id @default("panel")
   domain                      String?
@@ -250,6 +256,7 @@ model PanelSettings {
   sslStatus                   String   @default("none")
   lastError                   String?
   terminalIdleTimeoutSeconds  Int?
+  buildTimeoutMinutes         Int?
   updatedAt                   DateTime @updatedAt
 }
 

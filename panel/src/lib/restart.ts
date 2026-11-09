@@ -14,6 +14,8 @@ import { access, constants as fsConstants } from "node:fs/promises"
 import { join } from "node:path"
 import { promisify } from "node:util"
 
+import { timeoutExceededMessage } from "@/lib/build-timeout"
+import { getBuildTimeoutMs } from "@/lib/build-timeout-setting"
 import { siteCommandEnv } from "@/lib/command-env"
 import {
   domainToSlug,
@@ -25,7 +27,9 @@ import { resolveSiteWorkdir, type SiteLike } from "@/lib/site-paths"
 
 const execFileAsync = promisify(execFile)
 const RESTART_TIMEOUT_MS = 120_000
-const BUILD_TIMEOUT_MS = 15 * 60_000 // `compose up --build` / `compose pull` image çekebilir
+// Derleme/çekme adımlarının (`compose up --build` / `compose pull` / `up`,
+// özel betik) üst sınırı sabit değil: Ayarlar → Derleme (varsayılan sınırsız),
+// her çağrıda `getBuildTimeoutMs()` ile okunur (bkz. src/lib/build-timeout.ts).
 const MAX_OUTPUT_BYTES = 64 * 1024
 
 export class RestartError extends Error {
@@ -35,9 +39,13 @@ export class RestartError extends Error {
   }
 }
 
-function extractDetail(error: unknown): string {
+function extractDetail(error: unknown, timeoutMs = 0): string {
   const err = error as NodeJS.ErrnoException & { stderr?: string; stdout?: string; killed?: boolean }
-  if (err.killed) return "İşlem zaman aşımına uğradı."
+  if (err.killed) {
+    // timeoutMs > 0 yalnız derleme adımlarında: Ayarlar'daki üst sınır aşıldı.
+    if (timeoutMs > 0) return `${timeoutExceededMessage("Derleme", timeoutMs)} (Ayarlar → Derleme)`
+    return "İşlem zaman aşımına uğradı."
+  }
   const detail = err.stderr?.toString().trim() || err.stdout?.toString().trim() || err.message
   return tail(detail || "Bilinmeyen hata.")
 }
@@ -170,10 +178,11 @@ export async function restartSite(site: RestartableSite, opts: { deploy?: boolea
       } catch {
         throw new RestartError(`Betik çalıştırılabilir değil veya bulunamadı: ${cmd}`)
       }
+      const timeout = await getBuildTimeoutMs()
       try {
-        await execFileAsync(cmd, [], { cwd: workdir, env: siteCommandEnv(), timeout: BUILD_TIMEOUT_MS, maxBuffer: 8 * 1024 * 1024 })
+        await execFileAsync(cmd, [], { cwd: workdir, env: siteCommandEnv(), timeout, maxBuffer: 8 * 1024 * 1024 })
       } catch (error) {
-        throw new RestartError(extractDetail(error))
+        throw new RestartError(extractDetail(error, timeout))
       }
       return
     }
@@ -204,7 +213,9 @@ export async function dockerComposeControl(site: SiteLike, action: DockerCompose
         : action === "pull"
           ? [...base, "pull"]
           : [...base, action]
-  const timeout = action === "rebuild" || action === "pull" || action === "up" ? BUILD_TIMEOUT_MS : RESTART_TIMEOUT_MS
+  const isBuild = action === "rebuild" || action === "pull" || action === "up"
+  // 0 = sınırsız (execFile'da zaman aşımı yok).
+  const timeout = isBuild ? await getBuildTimeoutMs() : RESTART_TIMEOUT_MS
   try {
     const { stdout, stderr } = await execFileAsync("docker", args, {
       cwd: workdir,
@@ -214,7 +225,7 @@ export async function dockerComposeControl(site: SiteLike, action: DockerCompose
     })
     return tail(`${stdout}${stderr}`.trim())
   } catch (error) {
-    throw new RestartError(extractDetail(error))
+    throw new RestartError(extractDetail(error, isBuild ? timeout : 0))
   }
 }
 

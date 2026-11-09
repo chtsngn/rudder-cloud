@@ -1283,3 +1283,24 @@ tarama yalnız öneri ve ön doldurma üretir.
 - Uygulama kodunda değişiklik yok; yalnız bağımlılık yükseltmesi. `next`'in geçişli
   bağımlılığı `sharp` da 0.35.5'e çıktı.
 - Doğrulama: `npm audit --omit=dev` artık `next` için bulgu vermiyor.
+
+### 2026-11-09 güncellemesi: derleme zaman aşımı ayarlanabilir, varsayılan sınırsız
+
+- Sorun: Uygulama deploy'unda derleme/çekme adımları (`restart.ts` → `compose up -d
+  --build`, `compose pull`, `up`, özel betik) ve sitenin deploy komutu (`deploy.ts`)
+  sabit 15 dakikayla sınırlıydı. Soğuk önbellekli büyük bir Next.js derlemesi bunu
+  aşınca öldürülüyor, deploy güvenliği geri dönüyordu; başarılı olacak deploy boşa
+  gidiyordu.
+- Artık varsayılan SINIRSIZ: komut yalnız kendi hatasıyla (çıkış kodu ≠ 0) başarısız
+  sayılır; hata olunca geri dönüş davranışı aynıdır.
+- İsteğe bağlı üst sınır: Ayarlar → Derleme (yalnız süper admin),
+  `PanelSettings.buildTimeoutMinutes` (NULL/0 = sınırsız, geçerli aralık 5–240 dk).
+  API: `GET/PATCH /api/settings/build` (`{ buildTimeoutMinutes }`), değişiklik
+  denetim kaydına `panel.build_timeout.updated` olarak düşer. Değer her deploy'da
+  veritabanından okunur (önbellek yok), panel yeniden başlatılmadan geçerli olur.
+  Sınır aşılınca deploy çıktısına "… dakikayı aştı, sonlandırılıyor." satırı yazılır.
+  Kurallar `src/lib/build-timeout.ts`'te, test `scripts/build-timeout.test.mjs`.
+- Deploy çıktısı artık süreleri yazar: `[panel] deploy komutu 7 dk 12 sn sürdü.` ve
+  compose sitelerinde `[panel] derleme (docker compose up -d --build) … sürdü.`
+- Değişmeyenler: düz restart (120 sn), git, döküm ve sağlık kontrolü süreleri.
+- Yeni migration: `20261109000000_build_timeout` (yalnız kolon ekleme).
