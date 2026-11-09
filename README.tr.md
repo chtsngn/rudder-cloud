@@ -29,7 +29,12 @@ gelir ve düz bir Ubuntu/Debian sunucusuna tek bir script ile kendini kurar.
   başına **deploy hook URL'i** (herhangi bir CI'dan tek `POST`) ya da GitHub App'in
   **push webhook'u** ile anında tetiklenir. Derlemenin varsayılan olarak süre sınırı
   yoktur (yalnız kendi hatasıyla başarısız sayılır); isteğe bağlı üst sınır Ayarlar →
-  Derleme'den verilir.
+  Derleme'den verilir. Deploy, pull, compose rebuild/pull/up, yedek ve özel betikle
+  yeniden başlatma canlı çıktılı **arka plan işi** olarak çalışır: istek hemen `202` ve
+  `jobId` döner, uzun derlemeler proxy zaman aşımına (ör. Cloudflare'in ~100 sn'si)
+  takılmaz. Deploy hook `202 { jobId, statusUrl }` döner (`statusUrl` mutlak adres) — CI'da `statusUrl`'i
+  yoklayın; `?wait=1` sonucu yine bekler ama Cloudflare arkasında ~100 sn'yi aşan
+  deploy'da `524` alır. Site meşgulken gelen push ya da hook düşmez, kuyruğa girer.
 - **Gerçek süreç durumu** — `docker compose ps` / pm2 durumu, bellek
   kullanımı ve proxy hedefinde gerçekten bir şeyin dinleyip dinlemediği (ziyaretçi
   502 görürken "Aktif" yazmaz). Compose siteleri up/down/restart/rebuild/pull

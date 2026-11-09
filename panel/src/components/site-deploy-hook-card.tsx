@@ -166,11 +166,34 @@ export function SiteDeployHookCard({ siteId, githubConnected }: { siteId: string
                   {lang === "en" ? "Example (GitHub Actions step, URL stored as a secret):" : "Örnek (GitHub Actions adımı, URL bir secret olarak saklanır):"}
                 </p>
                 <pre className="overflow-x-auto rounded-lg bg-muted/40 p-3 text-[11px]">{`- name: Deploy
-  run: curl -fsS -X POST "\${{ secrets.RUDDER_DEPLOY_HOOK }}?wait=1"`}</pre>
+  env:
+    HOOK: \${{ secrets.RUDDER_DEPLOY_HOOK }}
+  run: |
+    STATUS_URL=$(curl -fsS -X POST "$HOOK" | jq -r .statusUrl) || STATUS_URL=""
+    if [ -z "$STATUS_URL" ] || [ "$STATUS_URL" = "null" ]; then
+      echo "Deploy hook failed"; exit 1
+    fi
+    case "$STATUS_URL" in /*) STATUS_URL="\${HOOK%%/api/hooks/*}$STATUS_URL" ;; esac
+    for i in $(seq 1 360); do
+      S=$(curl -fsS "$STATUS_URL" | jq -r .job.status) || S=""
+      case "$S" in
+        succeeded) echo "Deploy OK"; exit 0 ;;
+        failed|interrupted)
+          curl -fsS "$STATUS_URL" | jq -r '.job.error // "", .job.output' | tail -n 50
+          exit 1 ;;
+      esac
+      sleep 5
+    done
+    echo "Deploy timed out"; exit 1`}</pre>
                 <p className="text-[11px] text-muted-foreground">
                   {lang === "en"
-                    ? "`?wait=1` waits for the deploy and fails the step if it fails; without it the panel answers 202 immediately and deploys in the background."
-                    : "`?wait=1` deploy bitene kadar bekler ve başarısızsa adımı düşürür; onsuz panel hemen 202 döner ve arka planda deploy eder."}
+                    ? "The hook answers 202 with a statusUrl right away; the loop polls it until the job is succeeded, failed or interrupted (max. 30 min) and fails the step on failure."
+                    : "Hook hemen 202 ve statusUrl döner; döngü iş succeeded, failed ya da interrupted olana kadar (en çok 30 dk) onu yoklar ve başarısızsa adımı düşürür."}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {lang === "en"
+                    ? "`?wait=1` still works, but behind Cloudflare a build longer than 100 s can end with a 524 even though the deploy keeps running."
+                    : "`?wait=1` hâlâ çalışır, ama Cloudflare arkasında 100 sn'yi aşan derlemede deploy sürse bile 524 alınabilir."}
                 </p>
               </div>
             )}

@@ -16,6 +16,8 @@ import {
 
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "@/components/language-provider"
+import { SiteJobStatus, useJobButton } from "@/components/site-job-status"
+import { useSiteJob, useSiteJobFinished } from "@/hooks/use-site-job"
 import { PROCESS_MANAGER_LABELS, type ApiSite } from "@/lib/site-adapter"
 import { cn } from "@/lib/utils"
 
@@ -52,9 +54,8 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
 }
 
-async function parseError(res: Response): Promise<string> {
-  const data = (await res.json().catch(() => null)) as { error?: string } | null
-  return data?.error ?? `İstek başarısız oldu (${res.status}).`
+function errorOf(res: Response, data: Record<string, unknown> | null): string {
+  return typeof data?.error === "string" ? data.error : `İstek başarısız oldu (${res.status}).`
 }
 
 const STATE_STYLES: Record<ProcessStatusResponse["process"]["state"], { tr: string; en: string; cls: string }> = {
@@ -85,7 +86,7 @@ export function SiteProcessCard({
   const { lang } = useTranslation()
   const [status, setStatus] = useState<ProcessStatusResponse | null>(null)
   const [loading, setLoading] = useState(false)
-  const [pending, setPending] = useState<string | null>(null)
+  const { startJob } = useSiteJob()
   const [message, setMessage] = useState<{ ok: boolean; text: string; output?: string } | null>(null)
 
   const isCompose = site.processManager === "DOCKER_COMPOSE"
@@ -103,6 +104,11 @@ export function SiteProcessCard({
     }
   }, [site.id])
 
+  // Arka plan işi bitince gerçek süreç durumunu tazele.
+  useSiteJobFinished(() => {
+    void load()
+  })
+
   useEffect(() => {
     const timer = setTimeout(load, 0)
     const interval = setInterval(load, 20_000)
@@ -113,39 +119,59 @@ export function SiteProcessCard({
   }, [load])
 
   async function runServiceAction(action: ServiceAction) {
-    setPending(action)
     setMessage(null)
     try {
-      const res = await fetch(`/api/sites/${site.id}/action`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      })
-      if (!res.ok) {
-        setMessage({ ok: false, text: await parseError(res) })
+      // CUSTOM_SCRIPT: 202 + jobId (arka plan işi); diğerleri senkron ApiSite.
+      const started = await startJob(
+        `service:${action}`,
+        `/api/sites/${site.id}/action`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        },
+        { kind: "restart", action }
+      )
+      if (started.kind === "job") return
+      if (started.kind === "network-error") {
+        setMessage({ ok: false, text: lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı." })
         return
       }
-      const data = (await res.json()) as ApiSite
+      const { res, data: raw } = started
+      if (!res.ok || !raw) {
+        setMessage({ ok: false, text: errorOf(res, raw) })
+        return
+      }
+      const data = raw as unknown as ApiSite
       onSiteUpdate(data)
       setMessage({ ok: true, text: lang === "en" ? `${action} completed.` : `${action} tamamlandı.` })
       await load()
     } catch {
       setMessage({ ok: false, text: lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı." })
-    } finally {
-      setPending(null)
     }
   }
 
   async function runCompose(action: ComposeAction) {
-    setPending(action)
     setMessage(null)
     try {
-      const res = await fetch(`/api/sites/${site.id}/docker-compose`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      })
-      const data = (await res.json().catch(() => null)) as (ApiSite & { output?: string; process?: ProcessStatusResponse["process"]; error?: string }) | null
+      // rebuild/pull/up: 202 + jobId; down/restart: senkron yanıt (eski davranış).
+      const started = await startJob(
+        `compose:${action}`,
+        `/api/sites/${site.id}/docker-compose`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        },
+        { kind: "compose", action }
+      )
+      if (started.kind === "job") return
+      if (started.kind === "network-error") {
+        setMessage({ ok: false, text: lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı." })
+        return
+      }
+      const { res } = started
+      const data = started.data as unknown as (ApiSite & { output?: string; process?: ProcessStatusResponse["process"]; error?: string }) | null
       if (!res.ok || !data) {
         setMessage({ ok: false, text: data?.error ?? `İstek başarısız oldu (${res.status}).` })
         return
@@ -155,17 +181,20 @@ export function SiteProcessCard({
       await load()
     } catch {
       setMessage({ ok: false, text: lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı." })
-    } finally {
-      setPending(null)
     }
   }
 
   async function runDeploy() {
-    setPending("deploy")
     setMessage(null)
     try {
-      const res = await fetch(`/api/sites/${site.id}/deploy`, { method: "POST" })
-      const data = (await res.json().catch(() => null)) as
+      const started = await startJob("deploy", `/api/sites/${site.id}/deploy`, { method: "POST" }, { kind: "deploy", action: "deploy" })
+      if (started.kind === "job") return
+      if (started.kind === "network-error") {
+        setMessage({ ok: false, text: lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı." })
+        return
+      }
+      const { res } = started
+      const data = started.data as unknown as
         | (Partial<ApiSite> & { error?: string; restartError?: string | null; deployOutput?: string; pullChanged?: boolean; site?: ApiSite })
         | null
       if (!data) {
@@ -188,10 +217,18 @@ export function SiteProcessCard({
       await load()
     } catch {
       setMessage({ ok: false, text: lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı." })
-    } finally {
-      setPending(null)
     }
   }
+
+  const composeBtn = {
+    up: useJobButton("compose:up", (j) => j.kind === "compose" && j.action === "up"),
+    down: useJobButton("compose:down", (j) => j.kind === "compose" && j.action === "down"),
+    restart: useJobButton("compose:restart", (j) => j.kind === "compose" && j.action === "restart"),
+    rebuild: useJobButton("compose:rebuild", (j) => j.kind === "compose" && j.action === "rebuild"),
+    pull: useJobButton("compose:pull", (j) => j.kind === "compose" && j.action === "pull"),
+  }
+  const serviceRestartBtn = useJobButton("service:restart", (j) => j.kind === "restart")
+  const deployBtn = useJobButton("deploy", (j) => j.kind === "deploy")
 
   const state = status?.process.state ?? "unknown"
   const stateStyle = STATE_STYLES[state]
@@ -273,43 +310,43 @@ export function SiteProcessCard({
       <div className="flex flex-wrap items-center gap-2 pt-1">
         {isCompose && (
           <>
-            <Button variant="outline" size="sm" disabled={pending !== null} onClick={() => runCompose("up")} className={cn(btnBase, "text-emerald-700 dark:text-emerald-400")}>
-              {pending === "up" ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Play className="size-3.5 mr-1" />}
-              up
+            <Button variant="outline" size="sm" disabled={composeBtn.up.busy} onClick={() => runCompose("up")} className={cn(btnBase, "text-emerald-700 dark:text-emerald-400")}>
+              {composeBtn.up.spinning ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Play className="size-3.5 mr-1" />}
+              {composeBtn.up.label ?? "up"}
             </Button>
-            <Button variant="outline" size="sm" disabled={pending !== null} onClick={() => runCompose("down")} className={btnBase}>
-              {pending === "down" ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Square className="size-3.5 mr-1" />}
-              down
+            <Button variant="outline" size="sm" disabled={composeBtn.down.busy} onClick={() => runCompose("down")} className={btnBase}>
+              {composeBtn.down.spinning ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Square className="size-3.5 mr-1" />}
+              {composeBtn.down.label ?? "down"}
             </Button>
-            <Button variant="outline" size="sm" disabled={pending !== null} onClick={() => runCompose("restart")} className={btnBase}>
-              {pending === "restart" ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <RotateCw className="size-3.5 mr-1" />}
-              restart
+            <Button variant="outline" size="sm" disabled={composeBtn.restart.busy} onClick={() => runCompose("restart")} className={btnBase}>
+              {composeBtn.restart.spinning ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <RotateCw className="size-3.5 mr-1" />}
+              {composeBtn.restart.label ?? "restart"}
             </Button>
-            <Button variant="outline" size="sm" disabled={pending !== null} onClick={() => runCompose("rebuild")} className={cn(btnBase, "text-[#580619] dark:text-blue-300")} title="docker compose up -d --build --remove-orphans">
-              {pending === "rebuild" ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Hammer className="size-3.5 mr-1" />}
-              {lang === "en" ? "Rebuild (up --build)" : "Yeniden derle (up --build)"}
+            <Button variant="outline" size="sm" disabled={composeBtn.rebuild.busy} onClick={() => runCompose("rebuild")} className={cn(btnBase, "text-[#580619] dark:text-blue-300")} title="docker compose up -d --build --remove-orphans">
+              {composeBtn.rebuild.spinning ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Hammer className="size-3.5 mr-1" />}
+              {composeBtn.rebuild.label ?? (lang === "en" ? "Rebuild (up --build)" : "Yeniden derle (up --build)")}
             </Button>
-            <Button variant="outline" size="sm" disabled={pending !== null} onClick={() => runCompose("pull")} className={btnBase} title="docker compose pull">
-              {pending === "pull" ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Download className="size-3.5 mr-1" />}
-              pull
+            <Button variant="outline" size="sm" disabled={composeBtn.pull.busy} onClick={() => runCompose("pull")} className={btnBase} title="docker compose pull">
+              {composeBtn.pull.spinning ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Download className="size-3.5 mr-1" />}
+              {composeBtn.pull.label ?? "pull"}
             </Button>
           </>
         )}
         {!isCompose && !isNone && (
-          <Button variant="outline" size="sm" disabled={pending !== null} onClick={() => runServiceAction("restart")} className={btnBase}>
-            {pending === "restart" ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <RotateCw className="size-3.5 mr-1" />}
-            {lang === "en" ? "Restart" : "Yeniden Başlat"}
+          <Button variant="outline" size="sm" disabled={serviceRestartBtn.busy} onClick={() => runServiceAction("restart")} className={btnBase}>
+            {serviceRestartBtn.spinning ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <RotateCw className="size-3.5 mr-1" />}
+            {serviceRestartBtn.label ?? (lang === "en" ? "Restart" : "Yeniden Başlat")}
           </Button>
         )}
         <Button
           size="sm"
-          disabled={pending !== null}
+          disabled={deployBtn.busy}
           onClick={runDeploy}
           className="h-9 px-4 rounded-xl bg-[#580619] dark:bg-[#162752] hover:bg-[#720a22] dark:hover:bg-[#1e346b] text-white text-xs font-semibold cursor-pointer border border-[#c8a87c]/40 dark:border-[#2a4687]/60"
           title={lang === "en" ? "pull → deploy command → restart (forced)" : "pull → deploy komutu → yeniden başlatma (zorla)"}
         >
-          {pending === "deploy" ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Rocket className="size-3.5 mr-1" />}
-          {lang === "en" ? "Deploy" : "Deploy Et"}
+          {deployBtn.spinning ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Rocket className="size-3.5 mr-1" />}
+          {deployBtn.label ?? (lang === "en" ? "Deploy" : "Deploy Et")}
         </Button>
       </div>
 
@@ -320,6 +357,8 @@ export function SiteProcessCard({
             : "Süreç yöneticisi \"Yok\": panel bu site için hiçbir şeyi başlatmaz/yeniden başlatmaz. Git & Dağıtım sekmesinden Docker Compose / PM2 / özel betik seçerseniz kontroller ve pull sonrası otomatik yeniden başlatma açılır."}
         </p>
       )}
+
+      <SiteJobStatus kinds={["deploy", "compose", "restart"]} />
 
       {message && (
         <div

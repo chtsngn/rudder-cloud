@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import { isSuperAdmin } from "@/lib/permissions"
 import { logAudit } from "@/lib/audit"
+import { prisma } from "@/lib/prisma"
+import { listActiveJobs } from "@/lib/site-jobs"
 import { APP_VERSION, compareSemver } from "@/lib/version"
 import {
   DEFAULT_SOURCE_DIR,
@@ -21,6 +23,9 @@ import {
  *        bağımsız geçici bir systemd unit'inde çalışır; çünkü install.sh
  *        sonunda paneli yeniden başlatır ve panelin çocuğu olan bir süreç
  *        o anda onunla birlikte ölürdü. Bkz. scripts/self-update.sh.
+ *        2026-11: herhangi bir sitede arka plan işi (deploy, yedek, …) sürüyor
+ *        ya da bekliyorsa 409 `{ error, activeJobs }` — panel yeniden
+ *        başlayınca iş yarıda kalırdı. Gövdede `force: true` ile yine de başlar.
  * GET  — status.json + log kuyruğunu döndürür; arayüz bunu 2-3 sn'de bir
  *        sorgulayarak canlı ilerleme gösterir (panel yeniden başlarken
  *        birkaç istek başarısız olur, arayüz bunu tolere eder).
@@ -60,7 +65,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Bu işlem için yetkiniz yok (Süper Yönetici gerekli)." }, { status: 403 })
   }
 
-  let body: { targetVersion?: unknown } = {}
+  let body: { targetVersion?: unknown; force?: unknown } = {}
   try {
     body = await request.json()
   } catch {}
@@ -80,6 +85,29 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { ok: false, error: `${target} mevcut sürümden (${APP_VERSION}) daha yeni değil — güncelleme başlatılmadı.` },
         { status: 400 }
+      )
+    }
+  }
+
+  if (body.force !== true) {
+    const active = listActiveJobs()
+    if (active.length > 0) {
+      const sites = await prisma.site
+        .findMany({ where: { id: { in: active.map((job) => job.siteId) } }, select: { id: true, domain: true } })
+        .catch(() => [] as Array<{ id: string; domain: string }>)
+      const names = new Map(sites.map((site) => [site.id, site.domain]))
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Bazı sitelerde süren işler var; güncelleme paneli yeniden başlatır ve bu işler yarıda kalır.",
+          activeJobs: active.map((job) => ({
+            siteId: job.siteId,
+            siteName: names.get(job.siteId),
+            kind: job.kind,
+            startedAt: job.startedAt,
+          })),
+        },
+        { status: 409 }
       )
     }
   }

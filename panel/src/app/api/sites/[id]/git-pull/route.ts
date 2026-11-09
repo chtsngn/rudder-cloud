@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 
 import { getSession } from "@/lib/auth"
-import { DeployError, deploySite, toDeployable } from "@/lib/deploy"
 import { GIT_PULL_UNSUPPORTED_MESSAGE, isGitPullSupported } from "@/lib/git"
 import { canManageSite } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
+import { busyMessage, jobActor, startDeployJob, JOB_START_FAILED_MESSAGE, jobStartFailed } from "@/lib/site-jobs"
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -14,6 +14,9 @@ interface RouteParams {
  * `POST /api/sites/[id]/git-pull` — "Şimdi Pull Et": deploy hattını ZORLAMADAN
  * çalıştırır (HEAD değiştiyse deployCommand + yeniden başlatma; değişmediyse
  * hiçbir şey). Zorlamak için bkz. `/deploy`.
+ *
+ * 2026-11: arka plan işi — 202 `{ jobId, job }` / 409 `{ error, activeJob }`.
+ * Değişiklik yoksa iş `succeeded` biter, `result.deployed = false`.
  */
 export async function POST(_request: Request, { params }: RouteParams) {
   const session = await getSession()
@@ -22,7 +25,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
   }
 
   const { id } = await params
-  const site = await prisma.site.findUnique({ where: { id }, include: { githubInstallation: true } })
+  const site = await prisma.site.findUnique({ where: { id } })
   if (!site) {
     return NextResponse.json({ error: "Site bulunamadı." }, { status: 404 })
   }
@@ -36,24 +39,20 @@ export async function POST(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Bu site için repo adresi tanımlı değil." }, { status: 400 })
   }
 
-  try {
-    const result = await deploySite(toDeployable(site), { trigger: "pull" })
-    const updated = await prisma.site.findUnique({ where: { id } })
-    return NextResponse.json({
-      ...updated,
-      pullChanged: result.changed,
-      pullCommit: result.commit,
-      deployed: result.deployed,
-      restartError: result.restartError,
-      deployOutput: result.output,
-    })
-  } catch (error) {
-    const message = error instanceof DeployError ? error.message : "git pull başarısız oldu."
-    const status = error instanceof DeployError && error.stage === "busy" ? 409 : 500
-    const updated = await prisma.site.findUnique({ where: { id } })
-    return NextResponse.json(
-      { error: message, site: updated, deployOutput: error instanceof DeployError ? error.output : "" },
-      { status }
-    )
+  const outcome = await startDeployJob({
+    siteId: id,
+    domain: site.domain,
+    trigger: "manual",
+    action: "pull",
+    force: false,
+    actorId: session.userId,
+    actor: await jobActor(session.userId, "manual"),
+  }).catch(jobStartFailed)
+  if (!outcome) {
+    return NextResponse.json({ error: JOB_START_FAILED_MESSAGE }, { status: 500 })
   }
+  if (outcome.status === "rejected" || outcome.status === "skipped") {
+    return NextResponse.json({ error: busyMessage(outcome.activeJob), activeJob: outcome.activeJob }, { status: 409 })
+  }
+  return NextResponse.json({ jobId: outcome.job.id, job: outcome.job }, { status: 202 })
 }

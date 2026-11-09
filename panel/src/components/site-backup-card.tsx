@@ -18,6 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { SiteJobStatus, useJobButton } from "@/components/site-job-status"
+import { useSiteJob, useSiteJobFinished } from "@/hooks/use-site-job"
 import { CustomSelect } from "@/components/ui/custom-select"
 import { useTranslation } from "@/components/language-provider"
 import { S3ConfigDialog, type S3ConfigView } from "@/components/s3-config-dialog"
@@ -117,7 +119,9 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveOk, setSaveOk] = useState(false)
 
-  const [running, setRunning] = useState(false)
+  const { startJob } = useSiteJob()
+  const backupBtn = useJobButton("backup", (j) => j.kind === "backup")
+  // Yalnızca iş üretmeyen (eski, senkron) yanıtların sonucu; iş durumu SiteJobStatus'ta.
   const [runError, setRunError] = useState<string | null>(null)
   const [runMessage, setRunMessage] = useState<string | null>(null)
 
@@ -244,12 +248,17 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
   }
 
   async function handleRunNow() {
-    setRunning(true)
     setRunError(null)
     setRunMessage(null)
     try {
-      const res = await fetch(`/api/sites/${siteId}/backup/run`, { method: "POST" })
-      const resData = (await res.json().catch(() => null)) as
+      const started = await startJob("backup", `/api/sites/${siteId}/backup/run`, { method: "POST" }, { kind: "backup" })
+      if (started.kind === "job") return
+      if (started.kind === "network-error") {
+        setRunError("Sunucuya bağlanılamadı.")
+        return
+      }
+      const { res } = started
+      const resData = started.data as unknown as
         | { fileName?: string; uploadedToS3?: boolean; s3Error?: string | null; error?: string }
         | null
       if (!res.ok) {
@@ -272,10 +281,13 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
       await load()
     } catch {
       setRunError("Sunucuya bağlanılamadı.")
-    } finally {
-      setRunning(false)
     }
   }
+
+  // Yedek işi (bu ya da başka sekmeden / zamanlayıcıdan) bitince listeyi tazele.
+  useSiteJobFinished((job) => {
+    if (job.kind === "backup") void load()
+  })
 
   async function handleDeleteBackup(fileName: string) {
     if (!window.confirm(`"${fileName}" silinsin mi?`)) return
@@ -565,12 +577,14 @@ export function SiteBackupCard({ siteId }: { siteId: string }) {
                 {saving && <Loader2 className="size-4 animate-spin" />}
                 {t("common.save")}
               </Button>
-              <Button variant="outline" onClick={handleRunNow} disabled={running}>
-                {running && <Loader2 className="size-4 animate-spin" />}
-                {lang === "en" ? "Backup Now" : "Şimdi Yedekle"}
+              <Button variant="outline" onClick={handleRunNow} disabled={backupBtn.busy}>
+                {backupBtn.spinning && <Loader2 className="size-4 animate-spin" />}
+                {backupBtn.label ?? (lang === "en" ? "Backup Now" : "Şimdi Yedekle")}
               </Button>
               {saveOk && <span className="text-xs text-success">{lang === "en" ? "Saved." : "Kaydedildi."}</span>}
             </div>
+
+            <SiteJobStatus kinds={["backup"]} />
 
             {(runMessage || runError) && (
               <p className={`text-sm ${runError ? "text-destructive" : "text-success"}`}>

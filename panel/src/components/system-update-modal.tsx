@@ -34,6 +34,38 @@ interface UpdateStatus {
 
 type Phase = "idle" | "starting" | "running" | "completed" | "failed"
 
+/** POST /api/system/update 409 yanıtındaki süren site işleri. */
+interface ActiveSiteJob {
+  siteId: string
+  siteName?: string
+  kind: string
+  startedAt: string | null
+}
+
+const JOB_KIND_LABELS: Record<string, string> = {
+  deploy: "deploy",
+  compose: "docker compose",
+  backup: "yedek",
+  restart: "yeniden başlatma",
+}
+
+function parseActiveJobs(v: unknown): ActiveSiteJob[] {
+  if (!Array.isArray(v)) return []
+  return v.flatMap((item): ActiveSiteJob[] => {
+    if (!item || typeof item !== "object") return []
+    const o = item as Record<string, unknown>
+    if (typeof o.siteId !== "string") return []
+    return [
+      {
+        siteId: o.siteId,
+        siteName: typeof o.siteName === "string" && o.siteName ? o.siteName : undefined,
+        kind: typeof o.kind === "string" ? o.kind : "?",
+        startedAt: typeof o.startedAt === "string" ? o.startedAt : null,
+      },
+    ]
+  })
+}
+
 const POLL_INTERVAL_MS = 2500
 /**
  * install.sh sonunda panel yeniden başlar; o sırada sorgular birkaç saniye
@@ -166,12 +198,32 @@ export function SystemUpdateModal({
     setStatusMessage("Güncelleme başlatılıyor...")
 
     try {
-      const res = await fetch("/api/system/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetVersion: data.latestVersion }),
-      })
-      const result = await res.json().catch(() => ({}))
+      const post = (force: boolean) =>
+        fetch("/api/system/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(force ? { targetVersion: data.latestVersion, force: true } : { targetVersion: data.latestVersion }),
+        })
+      let res = await post(false)
+      let result = await res.json().catch(() => ({}))
+
+      // Sitelerde süren arka plan işleri varsa güncelleme onları yarıda bırakır: onay iste.
+      const activeJobs = res.status === 409 ? parseActiveJobs(result?.activeJobs) : []
+      if (activeJobs.length > 0) {
+        const list = activeJobs
+          .map((j) => `${j.siteName ?? j.siteId} (${JOB_KIND_LABELS[j.kind] ?? j.kind})`)
+          .join(", ")
+        const ok = window.confirm(
+          `Şu sitelerde iş sürüyor: ${list}; güncelleme paneli yeniden başlatır ve bu işler yarıda kalır. Yine de devam?`
+        )
+        if (!ok) {
+          setStatusMessage(null)
+          setPhase("idle")
+          return
+        }
+        res = await post(true)
+        result = await res.json().catch(() => ({}))
+      }
 
       if (res.status === 409 && result?.alreadyRunning) {
         setStatusMessage("Zaten süren bir güncellemeye bağlanıldı.")

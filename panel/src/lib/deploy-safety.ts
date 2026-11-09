@@ -4,7 +4,7 @@
  * 1. Derleme kuyruğu: sunucuda aynı anda TEK ağır iş (deployCommand +
  *    compose rebuild/pull). Küçük sunucularda iki derleme aynı anda çalışınca
  *    RAM swap'a düşüp bütün siteler zaman aşımına uğruyordu. Kuyruk süreç
- *    içidir (tek panel süreci); git pull kuyruğa girmez.
+ *    içidir (tek panel süreci, `globalThis`'te); git pull kuyruğa girmez.
  * 2. Deploy öncesi veritabanı dökümü: sitenin `.env`'inden algılanan
  *    veritabanı yedek klasörüne dökülür (yedek kartıyla aynı yer ve saklama
  *    sayısı). Döküm alınamazsa deploy DURUR; veritabanı algılanamazsa atlanır.
@@ -42,12 +42,23 @@ const HEALTH_PATH_RE = /^\/[A-Za-z0-9._~!$&'()*+,;=:@%/?-]{0,199}$/
 // 1) Derleme kuyruğu
 // ---------------------------------------------------------------------------
 
-let chain: Promise<unknown> = Promise.resolve()
-let waiting = 0
+// Kuyruk süreç genelinde `globalThis`'te durur: Next.js derlemesi bu modülü
+// birden fazla parçaya (instrumentation/zamanlayıcılar ve route'lar) ayrı
+// kopyalar olarak koyabiliyor; modül değişkeni olsaydı her kopya kendi
+// kuyruğunu tutar, iki derleme aynı anda çalışırdı (2026-11).
+interface BuildQueueState {
+  chain: Promise<unknown>
+  waiting: number
+}
+const BUILD_QUEUE_KEY = Symbol.for("rudder.buildQueue")
+const queueState: BuildQueueState = ((globalThis as unknown as Record<symbol, unknown>)[BUILD_QUEUE_KEY] as
+  | BuildQueueState
+  | undefined) ?? { chain: Promise.resolve(), waiting: 0 }
+;(globalThis as unknown as Record<symbol, unknown>)[BUILD_QUEUE_KEY] = queueState
 
 /** Kuyrukta bekleyen (henüz başlamamış) iş sayısı. */
 export function buildQueueWaiting(): number {
-  return waiting
+  return queueState.waiting
 }
 
 /**
@@ -57,12 +68,12 @@ export function buildQueueWaiting(): number {
  */
 export function withBuildSlot<T>(fn: (waitedMs: number) => Promise<T>): Promise<T> {
   const queuedAt = Date.now()
-  waiting += 1
-  const run = chain.then(() => {
-    waiting -= 1
+  queueState.waiting += 1
+  const run = queueState.chain.then(() => {
+    queueState.waiting -= 1
     return fn(Date.now() - queuedAt)
   })
-  chain = run.catch(() => undefined)
+  queueState.chain = run.catch(() => undefined)
   return run
 }
 

@@ -38,6 +38,7 @@ import { apiSiteToUiSite, GIT_CAPABLE_DB_TYPES, type ApiSite } from "@/lib/site-
 import { useTranslation } from "@/components/language-provider"
 import { useTerminalDock } from "@/components/terminal-dock-context"
 import { useCurrentUser } from "@/hooks/use-current-user"
+import { SiteJobProvider } from "@/hooks/use-site-job"
 import { cn } from "@/lib/utils"
 
 const STATUS_CONFIG: Record<Site["status"], { label: string; dot: string; badge: string }> = {
@@ -157,6 +158,17 @@ export default function SiteDetailPage() {
     const cfg = (data.config ?? {}) as Record<string, unknown>
     setUpstreamUrl(typeof cfg.upstreamUrl === "string" ? cfg.upstreamUrl : "")
   }, [])
+
+  // Arka plan işi (deploy, compose, yedek…) bitince siteyi tazele (lastDeploy*, durum).
+  const reloadSite = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/sites/${params.id}`, { cache: "no-store" })
+      if (!res.ok) return
+      applySite((await res.json()) as ApiSite)
+    } catch {
+      // sessizce — bir sonraki yenilemede gelir
+    }
+  }, [params.id, applySite])
 
   useEffect(() => {
     let cancelled = false
@@ -395,6 +407,7 @@ export default function SiteDetailPage() {
   ]
 
   return (
+    <SiteJobProvider siteId={api.id} onJobFinished={reloadSite}>
     <div className="max-w-7xl mx-auto space-y-7 pb-12">
       {/* ═══ 1. BAŞLIK ═══ */}
       <div className="space-y-4 pb-5 border-b border-border">
@@ -718,5 +731,6 @@ export default function SiteDetailPage() {
           document.body
         )}
     </div>
+    </SiteJobProvider>
   )
 }

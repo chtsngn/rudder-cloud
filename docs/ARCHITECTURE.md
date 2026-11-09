@@ -1304,3 +1304,89 @@ tarama yalnız öneri ve ön doldurma üretir.
   compose sitelerinde `[panel] derleme (docker compose up -d --build) … sürdü.`
 - Değişmeyenler: düz restart (120 sn), git, döküm ve sağlık kontrolü süreleri.
 - Yeni migration: `20261109000000_build_timeout` (yalnız kolon ekleme).
+
+### 2026-11-10 güncellemesi: Site işleri — uzun işler arka planda (`SiteJob`)
+
+- Sorun: Panel Cloudflare Tunnel + Access arkasında; Cloudflare ilk yanıtı ~100 sn
+  bekleyip isteği kesiyor. `POST /api/sites/[id]/deploy` deploy bitene kadar açık
+  kalıyordu (ERP: 5 dk 47 sn) → arayüz "Sunucuya bağlanılamadı" diyor, deploy ise
+  arka planda sürüp bitiyordu. Aynı risk compose rebuild/pull/up, "Şimdi yedekle" ve
+  özel betikle restart'ta da vardı.
+- Çözüm: uzun işler HTTP isteğinden çıkarıldı. İstek işi başlatıp hemen döner
+  (202 + `jobId`), arayüz işi yoklar; çıktı canlı akar.
+- İş modeli: `SiteJob` tablosu (`kind`: deploy | compose | backup | restart;
+  `trigger`: manual | hook | webhook | auto-pull | schedule; `action`: deploy'da
+  deploy | pull | connect, compose'da rebuild | pull | up, restart'ta restart | start).
+  Durumlar: `queued → running → succeeded | failed | interrupted` (başka geçiş
+  reddedilir). `phase` serbest metin (deploy: pull, queue, dump, build, publish,
+  restart, health, rollback; compose: queue, compose; yedek: backup; restart: restart).
+  `output` son 64 KB (satır başından kesilir, çok baytlı karakter bölünmez);
+  veritabanına içerik değiştiyse en çok 2 sn'de bir, faz geçişinde ve bitişte hemen
+  yazılır. Bitişte site başına son 20 iş kalır; denetim kaydı (`SITE_DEPLOY`,
+  `SITE_DOCKER_COMPOSE_<EYLEM>`, `SITE_BACKUP`, `SITE_RESTART`/`SITE_START`, hata
+  durumunda `_FAILED` eki) iş bitince yazılır. Değişiklik bulmayan pull denetime
+  yazılmaz.
+- Kod: saf kurallar `panel/src/lib/site-job-core.ts` (bağımlılıksız, test:
+  `panel/scripts/site-jobs.test.mjs`), Prisma deposu + kayıt + iş türleri
+  `panel/src/lib/site-jobs.ts`. Deploy hattı (`deploy.ts`) çıktıyı/fazı işe akıtır;
+  `restart.ts` compose ve özel betiği `execFile` yerine akışlı `spawn` ile çalıştırır
+  (zaman aşımı, hata metinleri ve `extractDetail` aynı; tek fark: 8 MB'ı aşan çıktı
+  süreci öldürmez, yalnız son kısmı tutulur).
+- Kilit ve kuyruk süreç geneli: kayıt `globalThis[Symbol.for("rudder.siteJobs")]`,
+  derleme kuyruğu `globalThis[Symbol.for("rudder.buildQueue")]`. Eski derlemede
+  `deploy.ts` instrumentation parçasında ve route parçasında iki ayrı modül kopyası
+  olarak çıkıyordu; modül değişkenli `inFlight` ve kuyruk paylaşılmıyordu.
+- Çakışma (sitede iş sürerken yeni iş): elle → 409; hook / GitHub webhook /
+  zamanlanmış yedek → takip işi olarak kuyruğa (site başına her türden en çok bir
+  bekleyen iş; aynı türden bekleyen varsa ona katılır, hook zorlamalıysa bekleyen iş
+  de zorlamalı olur); otomatik pull → atlanır. Böylece deploy sürerken gelen push
+  artık düşmez, zamanlanmış yedek atlanmaz. Site kilidi senkron kalan compose
+  down/restart ve PM2 restart'ı da kapsar (iş sürerken 409).
+- Otomatik pull her turda GEÇİCİ iş açar (yalnız bellekte, kilidi tutar); gerçekten
+  deploy edecekse (yeni commit) kalıcılaşır. Değişiklik olmayan turlar iş geçmişini
+  doldurmaz.
+- Endpoint'ler:
+  - `POST /api/sites/[id]/deploy`, `/git-pull`, `/backup/run` → 202 `{ jobId, job }`;
+    sitede iş sürüyorsa 409 `{ error, activeJob }`. Pull değişiklik bulmazsa iş
+    `succeeded`, `result.deployed = false`. Bitmiş deploy işinin `result`'ı:
+    `pulled, changed, commit, deployed, restarted, restartError, rolledBack`
+    (`rolledBack`: önceki imajlara dönüldüyse true). İş kaydı veritabanına
+    yazılamazsa 500 `{ error }`.
+  - `POST /api/sites/[id]/github-connect` → bağlama senkron; yanıt güncel site +
+    `jobId`, `job` (ilk deploy iş olarak başlar). İş sürüyorsa depo değiştirilmez, 409.
+  - `POST /api/sites/[id]/docker-compose` → rebuild/pull/up 202 `{ jobId, job }`;
+    down/restart eski senkron yanıt; iş sürerken hepsi 409.
+  - `POST /api/sites/[id]/action` (`restart` | `start`) → CUSTOM_SCRIPT'te 202
+    `{ jobId, job }`, diğer yöneticilerde eski senkron yanıt; iş sürerken 409.
+  - `GET /api/sites/[id]/jobs` → `{ active, recent (≤5, çalışan dahil, yeniden
+    eskiye), serverNow }`; `GET /api/sites/[id]/jobs/[jobId]` → `{ job, serverNow }`
+    (önce bellek, yoksa veritabanı; site VIEW yetkisi).
+  - Deploy hook `POST /api/hooks/deploy/<token>` → 202 `{ ok: true, jobId,
+    statusUrl }`; `statusUrl` mutlak adres: hook URL'i gibi istek başlıklarından
+    (`X-Forwarded-Host`/`Host`) kurulur, `<origin>/api/hooks/deploy/<token>/jobs/<jobId>`;
+    origin çözülemezse yalnız yol döner. Token ile doğrulanır, `{ job, serverNow }` döner. Site meşgulse takip işi kuyruğa girer ve
+    onun `jobId`'si döner (hata artık yutulmuyor).
+  - `POST /api/system/update` → herhangi bir sitede iş sürüyor/bekliyorsa 409
+    `{ error, activeJobs: [{ siteId, siteName, kind, startedAt }] }`; gövdede
+    `force: true` ile yine de başlar.
+- Yarıda kalma: tek panel süreci varsayılır, işler süreç içinde çalışır. Panel
+  yeniden başlarsa açılışta (instrumentation, zamanlayıcılardan önce)
+  `markInterruptedJobs()` queued/running işleri `interrupted` yapar; deploy işlerinde
+  `Site.lastDeployOk = false`, hata "Panel yeniden başladı, deploy yarıda kaldı; site
+  durumunu kontrol edin." (yalnız başlamış deploy'larda; kuyrukta kalmış olan siteye
+  dokunmamıştır). Bu otomatik geri dönüş DEĞİLDİR. Okumada da güvenlik ağı
+  var: veritabanında running görünüp bellekte olmayan iş interrupted gösterilir.
+- Geri uyumluluk:
+  - `POST /api/sites/[id]/deploy` (ve git-pull, backup/run, compose rebuild/pull/up,
+    CUSTOM_SCRIPT restart) artık sonucu değil 202 + `jobId` döner; sonuç işin
+    `result`/`output`/`error` alanlarında.
+  - `Site.lastDeployAt/lastDeployOk/lastDeployError/lastDeployOutput` ve
+    `Site.lastBackup*` özetleri eskisi gibi yazılır.
+  - Deploy hook'ta `?wait=1` korunur (işi bekler; başarı 200, deploy tamamlanıp
+    yeniden başlatma/sağlık kontrolü başarısızsa 200 + `ok:false`, hat yarıda koptuysa
+    500). Ancak Cloudflare arkasında 100 sn'yi aşan derlemede proxy 524 döner (deploy
+    yine sürer); CI'da `statusUrl` yoklaması önerilir.
+  - Deploy komutuna giden `DEPLOY_TRIGGER` değerleri değişmedi.
+- Kapsam dışı (takip işi): site oluşturma (create-vhost + SSL) hâlâ senkron; yavaş
+  certbot'ta aynı 100 sn sınırına takılabilir, ayrıca işe dönüştürülmeli.
+- Yeni migration: `20261110000000_site_jobs` (yalnız yeni tablo).

@@ -168,6 +168,41 @@ model Site {
 
   // Kullanıcı/rol/izin yönetimi (Aşama G) — bu siteye erişimi olan MEMBER'lar.
   userAccess UserSiteAccess[]
+
+  // Arka plan işleri (2026-11) — bkz. SiteJob.
+  jobs SiteJob[]
+}
+
+// Site işleri (2026-11): uzun işler (deploy, pull, compose rebuild/pull/up,
+// yedek, özel betikle restart) HTTP isteğinden çıkarılıp arka planda çalışır;
+// istek 202 + jobId döner, arayüz işi yoklar (bkz. src/lib/site-jobs.ts ve
+// docs/ARCHITECTURE.md → "Site işleri"). Değerler bilerek düz String (enum
+// değil; saf çekirdek src/lib/site-job-core.ts ile aynı sözlük):
+// kind: deploy | compose | backup | restart
+// trigger: manual | hook | webhook | auto-pull | schedule
+// status: queued | running | succeeded | failed | interrupted
+// `output` sondaki 64 KB'tır. Bitişte site başına son 20 iş kalır. Site
+// özeti (`Site.lastDeploy*`) eskisi gibi ayrıca yazılır.
+model SiteJob {
+  id         String    @id @default(cuid())
+  siteId     String
+  site       Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  kind       String
+  action     String?
+  trigger    String
+  status     String
+  phase      String?
+  actorId    String?
+  actor      String?
+  output     String    @default("") @db.Text
+  error      String?
+  result     Json?
+  createdAt  DateTime  @default(now())
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  @@index([siteId, createdAt])
+  @@index([status])
 }
 
 // AWS S3 (ya da S3-uyumlu — MinIO, DigitalOcean Spaces vb.) bağlantı bilgileri.
