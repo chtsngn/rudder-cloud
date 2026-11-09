@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import {
@@ -16,16 +16,55 @@ import {
   CheckCircle2,
   AlertCircle,
   PauseCircle,
+  LayoutGrid,
+  List,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SiteCard } from "@/components/site-card"
+import { SiteList } from "@/components/site-list"
 import type { Site, SiteType } from "@/lib/mock-data"
 import { apiSiteToUiSite, type ApiSite } from "@/lib/site-adapter"
 import { CustomSelect } from "@/components/ui/custom-select"
 import { useTranslation } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
+
+type SitesView = "grid" | "list"
+const VIEW_STORAGE_KEY = "rudder:sites-view"
+
+// Görünüm tercihi localStorage'da tutulur; erişilemezse bellek içi değer kullanılır.
+let memoryView: SitesView = "grid"
+const viewListeners = new Set<() => void>()
+
+function readView(): SitesView {
+  try {
+    const saved = localStorage.getItem(VIEW_STORAGE_KEY)
+    if (saved === "list" || saved === "grid") return saved
+  } catch {
+    // yok say
+  }
+  return memoryView
+}
+
+function subscribeView(cb: () => void) {
+  viewListeners.add(cb)
+  window.addEventListener("storage", cb)
+  return () => {
+    viewListeners.delete(cb)
+    window.removeEventListener("storage", cb)
+  }
+}
+
+function writeView(next: SitesView) {
+  memoryView = next
+  try {
+    localStorage.setItem(VIEW_STORAGE_KEY, next)
+  } catch {
+    // yok say
+  }
+  viewListeners.forEach((cb) => cb())
+}
 
 export default function SitesListPage() {
   const { t } = useTranslation()
@@ -34,6 +73,7 @@ export default function SitesListPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [refreshing, setRefreshing] = useState(false)
+  const view = useSyncExternalStore(subscribeView, readView, () => "grid" as SitesView)
 
   const loadSites = async () => {
     try {
@@ -197,6 +237,35 @@ export default function SitesListPage() {
             ]}
             className="min-w-[130px]"
           />
+
+          {/* Görünüm Geçişi */}
+          <div
+            role="group"
+            aria-label={`${t("sites.viewGrid")} / ${t("sites.viewList")}`}
+            className="flex items-center gap-0.5 p-0.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 shrink-0"
+          >
+            {([
+              { value: "grid", icon: LayoutGrid, label: t("sites.viewGrid") },
+              { value: "list", icon: List, label: t("sites.viewList") },
+            ] as const).map(({ value, icon: Icon, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => writeView(value)}
+                title={label}
+                aria-label={label}
+                aria-pressed={view === value}
+                className={cn(
+                  "size-8 rounded-lg flex items-center justify-center transition-all cursor-pointer",
+                  view === value
+                    ? "bg-white dark:bg-[#162752] text-[#580619] dark:text-blue-200 shadow-sm border border-[#c8a87c]/40 dark:border-[#2a4687]/60"
+                    : "text-slate-400 hover:text-[#580619] dark:hover:text-blue-300 border border-transparent"
+                )}
+              >
+                <Icon className="size-4" />
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -244,6 +313,8 @@ export default function SitesListPage() {
           <div className="rounded-2xl border border-slate-200 dark:border-[#16223f] bg-white dark:bg-[#090e1f] p-10 text-center text-xs text-slate-500 dark:text-slate-400">
             Arama veya filtre kriterlerinize uygun site bulunamadı.
           </div>
+        ) : view === "list" ? (
+          <SiteList sites={filteredSites} />
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filteredSites.map((site) => (
