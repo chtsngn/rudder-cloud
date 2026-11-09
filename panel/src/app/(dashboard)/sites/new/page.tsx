@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -30,6 +30,15 @@ import { useTranslation } from "@/components/language-provider"
 import type { ApiSite } from "@/lib/site-adapter"
 import type { RepoScan, ScanCardId, ScanHint } from "@/lib/repo-scan"
 import { cn } from "@/lib/utils"
+import {
+  computeServerOffset,
+  formatDuration,
+  isTerminalStatus,
+  jobElapsedMs,
+  jobOutcome,
+  jobRunningLabel,
+  type SiteJobView,
+} from "@/hooks/site-job-utils"
 
 /** `GET /api/settings/github/repos` — GitHub App kurulumlarının izin verdiği depolar. */
 interface InstalledRepoOption {
@@ -52,6 +61,22 @@ interface Settings {
   envEnabled: boolean
   envText: string
 }
+
+/** İlk deploy arka plan işi: yoklanan iş + sunucu saat farkı. */
+interface FirstDeployWatch {
+  siteId: string
+  job: SiteJobView | null
+  offset: number
+  networkWarning: boolean
+}
+
+function isJobLike(v: unknown): v is SiteJobView {
+  if (!v || typeof v !== "object") return false
+  const o = v as Record<string, unknown>
+  return typeof o.id === "string" && typeof o.status === "string" && typeof o.kind === "string"
+}
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 type CreateResult =
   | { ok: true; site: ApiSite; warnings: string[]; deployOutput: string | null; note: string | null }
@@ -212,6 +237,60 @@ export default function NewSitePage() {
   const [submitting, setSubmitting] = useState(false)
   const [progress, setProgress] = useState<string[]>([])
   const [result, setResult] = useState<CreateResult | null>(null)
+  const [firstDeploy, setFirstDeploy] = useState<FirstDeployWatch | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
+  // İlk deploy sürerken geçen süre sayacı.
+  const firstDeployRunning = !!firstDeploy && (!firstDeploy.job || !isTerminalStatus(firstDeploy.job.status))
+  useEffect(() => {
+    if (!firstDeployRunning) return
+    const interval = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(interval)
+  }, [firstDeployRunning])
+
+  /**
+   * İlk deploy işini terminal duruma kadar yokla (1,5 sn; gizli sekmede 5 sn).
+   * Ağ hatası işi başarısız saymaz. Sayfadan çıkılırsa null, iş kaydı yoksa
+   * (404: budandı ya da site silindi) "missing" döner.
+   */
+  async function watchFirstDeploy(
+    siteId: string,
+    jobId: string,
+    initial: SiteJobView | null,
+    serverNow: string | null
+  ): Promise<SiteJobView | "missing" | null> {
+    let job = initial
+    let offset = computeServerOffset(serverNow, Date.now())
+    setFirstDeploy({ siteId, job, offset, networkWarning: false })
+    while (mountedRef.current && !(job && isTerminalStatus(job.status))) {
+      await sleep(document.visibilityState === "hidden" ? 5000 : 1500)
+      if (!mountedRef.current) return null
+      try {
+        const res = await fetch(`/api/sites/${siteId}/jobs/${jobId}`, { cache: "no-store" })
+        if (res.status === 404) {
+          setFirstDeploy(null)
+          return "missing"
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = (await res.json().catch(() => null)) as { job?: unknown; serverNow?: unknown } | null
+        if (!data || !isJobLike(data.job)) throw new Error("bad response")
+        job = data.job
+        if (typeof data.serverNow === "string") offset = computeServerOffset(data.serverNow, Date.now())
+        setFirstDeploy({ siteId, job, offset, networkWarning: false })
+      } catch {
+        setFirstDeploy((w) => (w ? { ...w, networkWarning: true } : w))
+      }
+    }
+    return mountedRef.current ? job : null
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -336,6 +415,7 @@ export default function NewSitePage() {
     setSubmitting(true)
     setResult(null)
     setProgress([])
+    setFirstDeploy(null)
     const log = (line: string) => setProgress((p) => [...p, line])
 
     const isApp = siteType === "REVERSE_PROXY"
@@ -432,7 +512,46 @@ export default function NewSitePage() {
         }
         deployRes = await fetch(`/api/sites/${data.id}/deploy`, { method: "POST" })
       }
-      const deployData = (await deployRes.json().catch(() => null)) as { error?: string; deployOutput?: string; restartError?: string | null } | null
+      const deployData = (await deployRes.json().catch(() => null)) as
+        | { error?: string; deployOutput?: string; restartError?: string | null; jobId?: unknown; job?: unknown; activeJob?: unknown; serverNow?: unknown }
+        | null
+      // Arka plan işi (202 + jobId, ya da 409 + activeJob): bitene kadar yokla.
+      const watchJobId =
+        deployRes.ok && typeof deployData?.jobId === "string"
+          ? deployData.jobId
+          : deployRes.status === 409 && isJobLike(deployData?.activeJob)
+            ? deployData.activeJob.id
+            : null
+      if (watchJobId) {
+        const initialJob =
+          isJobLike(deployData?.job) && deployData.job.id === watchJobId
+            ? deployData.job
+            : isJobLike(deployData?.activeJob)
+              ? deployData.activeJob
+              : null
+        const finished = await watchFirstDeploy(
+          data.id,
+          watchJobId,
+          initialJob,
+          typeof deployData?.serverNow === "string" ? deployData.serverNow : null
+        )
+        if (!finished) return
+        if (finished === "missing") {
+          warnings.push(
+            en
+              ? "The deploy job record was not found; check the status on the site page."
+              : "İş kaydı bulunamadı; site sayfasından durumu kontrol edin."
+          )
+          setResult({ ok: true, site: data, warnings, deployOutput: null, note: null })
+          return
+        }
+        if (finished.status !== "succeeded") {
+          const outcome = jobOutcome(finished, en ? "en" : "tr")
+          warnings.push(`${en ? "Site created, but the first deploy failed" : "Site oluşturuldu ama ilk deploy başarısız"}: ${outcome.text}`)
+        }
+        setResult({ ok: true, site: data, warnings, deployOutput: finished.output || null, note: null })
+        return
+      }
       if (!deployRes.ok) {
         warnings.push(`${en ? "Site created, but the first deploy failed" : "Site oluşturuldu ama ilk deploy başarısız"}: ${deployData?.error ?? deployRes.status}`)
       } else if (deployData?.restartError) {
@@ -848,6 +967,36 @@ export default function NewSitePage() {
                   {line}
                 </div>
               ))}
+            </div>
+          )}
+
+          {firstDeploy && firstDeployRunning && (
+            <div className="space-y-2 rounded-xl border border-slate-200 dark:border-[#16223f] bg-slate-50/50 dark:bg-[#060a17] p-3 text-xs">
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200">
+                  <Loader2 className="size-3.5 animate-spin text-[#580619] dark:text-blue-300" />
+                  {firstDeploy.job?.status === "queued"
+                    ? jobRunningLabel(firstDeploy.job, en ? "en" : "tr")
+                    : en
+                      ? "First deploy running…"
+                      : "İlk deploy sürüyor…"}{" "}
+                  ({formatDuration(firstDeploy.job ? jobElapsedMs(firstDeploy.job, now, firstDeploy.offset) : 0, en ? "en" : "tr")})
+                  {firstDeploy.job?.phase ? <span className="font-mono font-normal text-slate-500 dark:text-slate-400">· {firstDeploy.job.phase}</span> : null}
+                </span>
+                <Link href={`/sites/${firstDeploy.siteId}`} className="shrink-0 font-semibold text-[#580619] dark:text-blue-300 hover:underline">
+                  {en ? "Open site page" : "Site sayfasına git"}
+                </Link>
+              </div>
+              {firstDeploy.networkWarning && (
+                <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                  {en ? "Cannot reach the server right now, retrying… The deploy keeps running on the server." : "Sunucuya şu an ulaşılamıyor, yeniden deneniyor… Deploy sunucuda sürmeye devam eder."}
+                </p>
+              )}
+              {firstDeploy.job?.output && (
+                <pre className="max-h-64 overflow-auto rounded-lg bg-slate-900 dark:bg-[#030610] p-3 font-mono text-[11px] text-slate-100 whitespace-pre-wrap break-words flex flex-col-reverse">
+                  <span>{firstDeploy.job.output}</span>
+                </pre>
+              )}
             </div>
           )}
 

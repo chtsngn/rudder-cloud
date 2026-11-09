@@ -9,7 +9,7 @@
  * build edilen image'larda yeni kod HİÇ yayına girmiyordu. Elle "restart"
  * ayrıca duruyor. `NONE` yöneticisi hiçbir şey yapmaz.
  */
-import { execFile } from "node:child_process"
+import { execFile, spawn } from "node:child_process"
 import { access, constants as fsConstants } from "node:fs/promises"
 import { join } from "node:path"
 import { promisify } from "node:util"
@@ -52,6 +52,69 @@ function extractDetail(error: unknown, timeoutMs = 0): string {
 
 export function tail(text: string, max = MAX_OUTPUT_BYTES): string {
   return text.length > max ? `…\n${text.slice(text.length - max)}` : text
+}
+
+/** Çıktı parçası dinleyicisi (site işinin canlı çıktısı, bkz. src/lib/site-jobs.ts). */
+export type OutputChunkListener = (chunk: string) => void
+
+/**
+ * `execFile` yerine geçen akışlı çalıştırıcı (2026-11, site işleri): stdout ve
+ * stderr parça parça `onChunk`'a akar. Hata nesnesi `execFile`'ınkiyle aynı
+ * biçimdedir (`killed`, `code`, `signal`, `stdout`, `stderr`, "Command
+ * failed: …" iletisi) — `extractDetail` davranışı değişmesin diye. Zaman
+ * aşımında `execFile` gibi SIGTERM gönderilir; 0 = sınırsız. Tek fark:
+ * `maxBuffer` aşılınca süreç öldürülmez, yalnız son `maxBuffer` karakter
+ * tutulur.
+ */
+function runStreaming(
+  file: string,
+  args: string[],
+  opts: { cwd?: string; env?: NodeJS.ProcessEnv; timeout?: number; maxBuffer?: number; onChunk?: OutputChunkListener }
+): Promise<{ stdout: string; stderr: string }> {
+  const maxBuffer = opts.maxBuffer ?? 8 * 1024 * 1024
+  return new Promise((resolve, reject) => {
+    let stdout = ""
+    let stderr = ""
+    let killed = false
+    let settled = false
+    const child = spawn(file, args, { cwd: opts.cwd, env: opts.env, stdio: ["ignore", "pipe", "pipe"] })
+    child.stdout.setEncoding("utf8")
+    child.stderr.setEncoding("utf8")
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk
+      if (stdout.length > maxBuffer) stdout = stdout.slice(stdout.length - maxBuffer)
+      opts.onChunk?.(chunk)
+    })
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk
+      if (stderr.length > maxBuffer) stderr = stderr.slice(stderr.length - maxBuffer)
+      opts.onChunk?.(chunk)
+    })
+    const timer =
+      opts.timeout && opts.timeout > 0
+        ? setTimeout(() => {
+            killed = true
+            child.kill("SIGTERM")
+          }, opts.timeout)
+        : null
+    child.on("error", (error: NodeJS.ErrnoException) => {
+      if (timer) clearTimeout(timer)
+      if (settled) return
+      settled = true
+      reject(Object.assign(error, { killed, stdout, stderr }))
+    })
+    child.on("close", (code: number | null, signal: NodeJS.Signals | null) => {
+      if (timer) clearTimeout(timer)
+      if (settled) return
+      settled = true
+      if (code === 0 && !killed) {
+        resolve({ stdout, stderr })
+        return
+      }
+      const error = new Error(`Command failed: ${[file, ...args].join(" ")}\n${stderr}`)
+      reject(Object.assign(error, { code, signal, killed, stdout, stderr }))
+    })
+  })
 }
 
 export type RestartableSite = SiteLike & {
@@ -143,13 +206,16 @@ export async function resolveComposeTarget(site: SiteLike): Promise<ComposeTarge
  * @param opts.deploy true ise DOCKER_COMPOSE için `rebuild` (up -d --build)
  * kullanılır — pull sonrası yeni kod/compose/image değişikliği yayına girsin diye.
  */
-export async function restartSite(site: RestartableSite, opts: { deploy?: boolean } = {}): Promise<void> {
+export async function restartSite(
+  site: RestartableSite,
+  opts: { deploy?: boolean; onChunk?: OutputChunkListener } = {}
+): Promise<void> {
   switch (site.processManager) {
     case "NONE":
       return
 
     case "DOCKER_COMPOSE": {
-      await dockerComposeControl(site, opts.deploy ? "rebuild" : "restart")
+      await dockerComposeControl(site, opts.deploy ? "rebuild" : "restart", { onChunk: opts.onChunk })
       return
     }
 
@@ -180,7 +246,13 @@ export async function restartSite(site: RestartableSite, opts: { deploy?: boolea
       }
       const timeout = await getBuildTimeoutMs()
       try {
-        await execFileAsync(cmd, [], { cwd: workdir, env: siteCommandEnv(), timeout, maxBuffer: 8 * 1024 * 1024 })
+        await runStreaming(cmd, [], {
+          cwd: workdir,
+          env: siteCommandEnv(),
+          timeout,
+          maxBuffer: 8 * 1024 * 1024,
+          onChunk: opts.onChunk,
+        })
       } catch (error) {
         throw new RestartError(extractDetail(error, timeout))
       }
@@ -201,9 +273,14 @@ export const DOCKER_COMPOSE_ACTIONS: DockerComposeControlAction[] = ["up", "down
  * grubunda olmalı). `up`: konteynerleri (yoksa) oluşturup başlatır; `rebuild`:
  * `up -d --build --remove-orphans` (kod/compose/image değişikliğini uygular);
  * `pull`: image'ları çeker; `down`: durdurup kaldırır; `restart`: mevcut
- * konteynerleri yeniden başlatır. Çıktının kuyruğunu döner.
+ * konteynerleri yeniden başlatır. Çıktının kuyruğunu döner; `onChunk` verilirse
+ * çıktı ayrıca canlı akar (site işi).
  */
-export async function dockerComposeControl(site: SiteLike, action: DockerComposeControlAction): Promise<string> {
+export async function dockerComposeControl(
+  site: SiteLike,
+  action: DockerComposeControlAction,
+  opts: { onChunk?: OutputChunkListener } = {}
+): Promise<string> {
   const { workdir, args: base } = await resolveComposeTarget(site)
   const args =
     action === "up"
@@ -217,11 +294,12 @@ export async function dockerComposeControl(site: SiteLike, action: DockerCompose
   // 0 = sınırsız (execFile'da zaman aşımı yok).
   const timeout = isBuild ? await getBuildTimeoutMs() : RESTART_TIMEOUT_MS
   try {
-    const { stdout, stderr } = await execFileAsync("docker", args, {
+    const { stdout, stderr } = await runStreaming("docker", args, {
       cwd: workdir,
       env: siteCommandEnv(),
       timeout,
       maxBuffer: 8 * 1024 * 1024,
+      onChunk: opts.onChunk,
     })
     return tail(`${stdout}${stderr}`.trim())
   } catch (error) {

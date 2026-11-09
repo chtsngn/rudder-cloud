@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { SiteDeployKeyCard } from "@/components/site-deploy-key-card"
+import { SiteJobStatus, useJobButton } from "@/components/site-job-status"
+import { useSiteJob } from "@/hooks/use-site-job"
 import { useTranslation } from "@/components/language-provider"
 import { PROCESS_MANAGER_LABELS, type ApiSite, type DbProcessManager } from "@/lib/site-adapter"
 import { cn } from "@/lib/utils"
@@ -35,6 +37,15 @@ interface DeployResponse extends Partial<ApiSite> {
 const DEPLOY_COMMAND_PLACEHOLDER: Record<string, string> = {
   STATIC: "düz HTML için boş — örn. npm ci && npm run build",
   REVERSE_PROXY: "Docker Compose'da genelde boş (image'ı compose derler)",
+}
+
+/** github-connect yanıtındaki site: `{ site }` ya da doğrudan ApiSite alanları. */
+function siteFromResponse(data: Record<string, unknown> | null): ApiSite | null {
+  if (!data) return null
+  const nested = data.site
+  if (nested && typeof nested === "object" && typeof (nested as Record<string, unknown>).id === "string") return nested as ApiSite
+  if (typeof data.id === "string" && typeof data.domain === "string") return data as unknown as ApiSite
+  return null
 }
 
 function isSshUrl(url: string): boolean {
@@ -78,7 +89,6 @@ export function SiteGitCard({
   const [installedRepos, setInstalledRepos] = useState<InstalledRepoOption[]>([])
   const [installedReposLoaded, setInstalledReposLoaded] = useState(false)
   const [selectedRepoFullName, setSelectedRepoFullName] = useState(site.githubRepoFullName ?? "")
-  const [connectingRepo, setConnectingRepo] = useState(false)
   const [disconnectingRepo, setDisconnectingRepo] = useState(false)
   const [connectRepoError, setConnectRepoError] = useState<string | null>(null)
 
@@ -100,7 +110,11 @@ export function SiteGitCard({
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveOk, setSaveOk] = useState(false)
 
-  const [running, setRunning] = useState<"pull" | "deploy" | null>(null)
+  const { startJob } = useSiteJob()
+  const pullBtn = useJobButton("pull", (j) => j.kind === "deploy" && j.action === "pull")
+  const deployBtn = useJobButton("deploy", (j) => j.kind === "deploy" && j.action !== "pull")
+  const connectBtn = useJobButton("connect", (j) => j.kind === "deploy" && j.action === "connect")
+  // Yalnızca iş üretmeyen (eski, senkron) yanıtların sonucu; iş durumu SiteJobStatus'ta.
   const [result, setResult] = useState<{ ok: boolean; text: string; output?: string } | null>(null)
 
   useEffect(() => {
@@ -151,16 +165,39 @@ export function SiteGitCard({
           : `@${site.githubRepoFullName} yerine @${repo.fullName} bağlansın mı? Sitenin mevcut dosyaları SİLİNİP yeni reponun taze bir klonuyla değiştirilecek.`
       if (!window.confirm(msg)) return
     }
-    setConnectingRepo(true)
     setConnectRepoError(null)
     setResult(null)
     try {
-      const res = await fetch(`/api/sites/${site.id}/github-connect`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ installationId: repo.installationId, repoFullName: repo.fullName, branch: repo.defaultBranch }),
-      })
-      const data = (await res.json().catch(() => null)) as DeployResponse | null
+      const started = await startJob(
+        "connect",
+        `/api/sites/${site.id}/github-connect`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ installationId: repo.installationId, repoFullName: repo.fullName, branch: repo.defaultBranch }),
+        },
+        { kind: "deploy", action: "connect" }
+      )
+      if (started.kind === "network-error") {
+        setConnectRepoError(lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı.")
+        return
+      }
+      if (started.kind === "job") {
+        const siteData = siteFromResponse(started.data)
+        if (siteData) onSiteUpdate(siteData)
+        // 409: deploy başlatılmadı, süren işe bağlanıldı; depo yine de güncellenmiş
+        // olabilir (yanıtta `site` varsa yukarıda uygulandı).
+        if (started.alreadyRunning) {
+          if (siteData?.githubRepoFullName === repo.fullName) {
+            setForm((f) => ({ ...f, repoUrl: `https://github.com/${repo.fullName}.git`, gitBranch: siteData.gitBranch || repo.defaultBranch }))
+          }
+          return
+        }
+        setForm((f) => ({ ...f, repoUrl: `https://github.com/${repo.fullName}.git`, gitBranch: repo.defaultBranch }))
+        return
+      }
+      const { res } = started
+      const data = started.data as unknown as DeployResponse | null
       if (!res.ok) {
         if (data?.site) onSiteUpdate(data.site)
         setConnectRepoError(data?.error ?? "Depo bağlanamadı.")
@@ -177,8 +214,6 @@ export function SiteGitCard({
       )
     } catch {
       setConnectRepoError(lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı.")
-    } finally {
-      setConnectingRepo(false)
     }
   }
 
@@ -262,11 +297,16 @@ export function SiteGitCard({
   }
 
   async function handlePull() {
-    setRunning("pull")
     setResult(null)
     try {
-      const res = await fetch(`/api/sites/${site.id}/git-pull`, { method: "POST" })
-      const data = (await res.json().catch(() => null)) as DeployResponse | null
+      const started = await startJob("pull", `/api/sites/${site.id}/git-pull`, { method: "POST" }, { kind: "deploy", action: "pull" })
+      if (started.kind === "job") return
+      if (started.kind === "network-error") {
+        setResult({ ok: false, text: lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı." })
+        return
+      }
+      const { res } = started
+      const data = started.data as unknown as DeployResponse | null
       applyDeployResponse(
         res,
         data,
@@ -276,17 +316,20 @@ export function SiteGitCard({
       )
     } catch {
       setResult({ ok: false, text: lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı." })
-    } finally {
-      setRunning(null)
     }
   }
 
   async function handleDeploy() {
-    setRunning("deploy")
     setResult(null)
     try {
-      const res = await fetch(`/api/sites/${site.id}/deploy`, { method: "POST" })
-      const data = (await res.json().catch(() => null)) as DeployResponse | null
+      const started = await startJob("deploy", `/api/sites/${site.id}/deploy`, { method: "POST" }, { kind: "deploy", action: "deploy" })
+      if (started.kind === "job") return
+      if (started.kind === "network-error") {
+        setResult({ ok: false, text: lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı." })
+        return
+      }
+      const { res } = started
+      const data = started.data as unknown as DeployResponse | null
       applyDeployResponse(
         res,
         data,
@@ -294,8 +337,6 @@ export function SiteGitCard({
       )
     } catch {
       setResult({ ok: false, text: lang === "en" ? "Could not reach the server." : "Sunucuya bağlanılamadı." })
-    } finally {
-      setRunning(null)
     }
   }
 
@@ -344,11 +385,12 @@ export function SiteGitCard({
               />
               <Button
                 onClick={handleConnectRepo}
-                disabled={!selectedRepoFullName || connectingRepo || selectedRepoFullName === site.githubRepoFullName}
+                disabled={!selectedRepoFullName || connectBtn.busy || selectedRepoFullName === site.githubRepoFullName}
                 className="h-10 px-5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-semibold cursor-pointer shrink-0"
               >
-                {connectingRepo && <Loader2 className="size-3.5 animate-spin mr-1" />}
-                {site.githubRepoFullName ? (lang === "en" ? "Switch Repository" : "Depoyu Değiştir") : (lang === "en" ? "Connect & Deploy" : "Bağla ve Deploy Et")}
+                {connectBtn.spinning && <Loader2 className="size-3.5 animate-spin mr-1" />}
+                {connectBtn.label ??
+                  (site.githubRepoFullName ? (lang === "en" ? "Switch Repository" : "Depoyu Değiştir") : (lang === "en" ? "Connect & Deploy" : "Bağla ve Deploy Et"))}
               </Button>
             </div>
             {site.githubRepoFullName && (
@@ -574,11 +616,11 @@ export function SiteGitCard({
             {saving ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Save className="size-3.5 mr-1" />}
             {t("sites.detail.saveGitSettings")}
           </Button>
-          <Button variant="outline" onClick={handlePull} disabled={running !== null || !site.repoUrl} className="h-10 px-4 rounded-xl border border-border bg-card text-xs font-semibold cursor-pointer">
-            {running === "pull" ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <RotateCw className="size-3.5 mr-1" />}
-            {t("sites.detail.pullNow")}
+          <Button variant="outline" onClick={handlePull} disabled={pullBtn.busy || !site.repoUrl} className="h-10 px-4 rounded-xl border border-border bg-card text-xs font-semibold cursor-pointer">
+            {pullBtn.spinning ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <RotateCw className="size-3.5 mr-1" />}
+            {pullBtn.label ?? t("sites.detail.pullNow")}
           </Button>
-          <Button variant="outline" onClick={handleDeploy} disabled={running !== null} className="h-10 px-4 rounded-xl border border-border bg-card text-xs font-semibold cursor-pointer text-[#580619] dark:text-[#38bdf8]" title={
+          <Button variant="outline" onClick={handleDeploy} disabled={deployBtn.busy} className="h-10 px-4 rounded-xl border border-border bg-card text-xs font-semibold cursor-pointer text-[#580619] dark:text-[#38bdf8]" title={
               isStatic
                 ? en
                   ? "pull → build → publish, even without new commits"
@@ -587,11 +629,13 @@ export function SiteGitCard({
                   ? "pull → deploy command → restart, even without new commits"
                   : "pull → deploy komutu → yeniden başlatma, yeni commit olmasa bile"
             }>
-            {running === "deploy" ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Rocket className="size-3.5 mr-1" />}
-            {lang === "en" ? "Deploy Now" : "Şimdi Deploy Et"}
+            {deployBtn.spinning ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Rocket className="size-3.5 mr-1" />}
+            {deployBtn.label ?? (lang === "en" ? "Deploy Now" : "Şimdi Deploy Et")}
           </Button>
           {saveOk && <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">{t("sites.detail.gitSettingsSaved")}</span>}
         </div>
+
+        <SiteJobStatus kinds={["deploy"]} />
 
         {result && (
           <div className={cn("p-3 rounded-xl text-xs font-mono space-y-2", result.ok ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900" : "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900")}>

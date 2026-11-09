@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 
 import { logAudit } from "@/lib/audit"
-import { deploySite, toDeployable } from "@/lib/deploy"
 import { getWebhookSecret } from "@/lib/github-app"
 import { parsePushPayload, pushMatchesSite, verifyGithubSignature } from "@/lib/github-webhook"
 import { prisma } from "@/lib/prisma"
+import { startDeployJob } from "@/lib/site-jobs"
 
 // Oturumsuz, PUBLIC uç nokta — kimlik doğrulama GitHub'ın HMAC imzası
 // (X-Hub-Signature-256). middleware matcher'ında bilinçli olarak YOK.
@@ -13,6 +13,9 @@ export const runtime = "nodejs"
 /**
  * `POST /api/hooks/github` — GitHub App webhook alıcısı. `push` olayında,
  * o depoya + branch'e bağlı her site için deploy hattı arka planda başlatılır.
+ *
+ * 2026-11: site işi (trigger `webhook`). Sitede iş sürüyorsa push düşmez:
+ * takip işi olarak kuyruğa girer (bekleyen deploy varsa ona katılır).
  */
 export async function POST(request: Request) {
   const rawBody = await request.text()
@@ -42,7 +45,6 @@ export async function POST(request: Request) {
 
   const candidates = await prisma.site.findMany({
     where: { githubRepoFullName: { not: null }, repoUrl: { not: null } },
-    include: { githubInstallation: true },
   })
   const matched = candidates.filter((site) => pushMatchesSite(payload, site))
 
@@ -55,9 +57,11 @@ export async function POST(request: Request) {
       targetId: site.id,
       detail: `${site.domain} <- ${payload.repository?.full_name} ${payload.ref} ${payload.after?.slice(0, 7) ?? ""}`,
     })
-    void deploySite(toDeployable(site), { trigger: "webhook" }).catch((error) => {
-      console.error(`[github-webhook] ${site.domain}: ${error instanceof Error ? error.message : String(error)}`)
-    })
+    void startDeployJob({ siteId: site.id, domain: site.domain, trigger: "webhook", action: "pull", force: false }).catch(
+      (error) => {
+        console.error(`[github-webhook] ${site.domain}: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    )
   }
 
   return NextResponse.json({ ok: true, triggered: matched.map((s) => s.domain) }, { status: 202 })

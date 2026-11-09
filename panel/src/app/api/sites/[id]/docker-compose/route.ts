@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 
 import { logAudit } from "@/lib/audit"
-import { withBuildSlot } from "@/lib/deploy-safety"
 import { getSession } from "@/lib/auth"
 import { canManageSite } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
@@ -12,6 +11,7 @@ import {
   RestartError,
   type DockerComposeControlAction,
 } from "@/lib/restart"
+import { busyJob, busyMessage, COMPOSE_JOB_ACTIONS, jobActor, startComposeJob, type ComposeJobAction, JOB_START_FAILED_MESSAGE, jobStartFailed } from "@/lib/site-jobs"
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -21,8 +21,12 @@ interface RouteParams {
  * `POST /api/sites/[id]/docker-compose` — body: { action: "up" | "down" |
  * "restart" | "rebuild" | "pull" }. Yalnızca `processManager: DOCKER_COMPOSE`.
  * `rebuild` = `up -d --build --remove-orphans` (kod/compose/image değişikliği
- * için); `restart` mevcut konteynerleri yeniden başlatır. Yanıt: güncel site +
- * komut çıktısı + gerçek konteyner durumu.
+ * için); `restart` mevcut konteynerleri yeniden başlatır.
+ *
+ * 2026-11: `rebuild`/`pull`/`up` (derleme/imaj çekme, süresi sınırsız olabilir)
+ * arka plan işi olarak başlar → 202 `{ jobId, job }`. `down`/`restart` senkron
+ * kalır; yanıt: güncel site + komut çıktısı + gerçek konteyner durumu. Sitede
+ * iş sürerken hepsi 409 `{ error, activeJob }`.
  */
 export async function POST(request: Request, { params }: RouteParams) {
   const session = await getSession()
@@ -56,14 +60,31 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Geçerli bir eylem gereklidir (up, down, restart, rebuild, pull)." }, { status: 400 })
   }
 
+  if ((COMPOSE_JOB_ACTIONS as readonly string[]).includes(action)) {
+    const outcome = await startComposeJob({
+      siteId: id,
+      domain: site.domain,
+      action: action as ComposeJobAction,
+      actorId: session.userId,
+      actor: await jobActor(session.userId, "manual"),
+    }).catch(jobStartFailed)
+    if (!outcome) {
+      return NextResponse.json({ error: JOB_START_FAILED_MESSAGE }, { status: 500 })
+    }
+    if (outcome.status === "rejected" || outcome.status === "skipped") {
+      return NextResponse.json({ error: busyMessage(outcome.activeJob), activeJob: outcome.activeJob }, { status: 409 })
+    }
+    return NextResponse.json({ jobId: outcome.job.id, job: outcome.job }, { status: 202 })
+  }
+
+  const busy = busyJob(id)
+  if (busy) {
+    return NextResponse.json({ error: busyMessage(busy), activeJob: busy }, { status: 409 })
+  }
+
   let output = ""
   try {
-    const composeAction = action as DockerComposeControlAction
-    // Derleme/imaj çekme yapabilen eylemler sunucu genelindeki derleme kuyruğuna girer.
-    output =
-      composeAction === "rebuild" || composeAction === "pull" || composeAction === "up"
-        ? await withBuildSlot(() => dockerComposeControl(site, composeAction))
-        : await dockerComposeControl(site, composeAction)
+    output = await dockerComposeControl(site, action as DockerComposeControlAction)
   } catch (error) {
     const message = error instanceof RestartError ? error.message : "Docker Compose eylemi başarısız oldu."
     return NextResponse.json({ error: message }, { status: 500 })

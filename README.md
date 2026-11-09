@@ -28,6 +28,13 @@ and installs itself onto a plain Ubuntu/Debian box with a single script.
   **deploy hook URL** (one `POST` from any CI) or instantly by the GitHub App's
   **push webhook**. Builds have no time limit by default (a build fails only when it
   exits with an error); an optional cap can be set under Settings → Build.
+  Deploys, pulls, compose rebuild/pull/up, backups and custom-script restarts run as
+  **background jobs** with live output: the request returns `202` with a `jobId`
+  right away, so long builds no longer hit proxy timeouts (e.g. Cloudflare's ~100 s).
+  The deploy hook answers `202 { jobId, statusUrl }` (`statusUrl` is an absolute URL) — poll it from CI;
+  `?wait=1` still waits for the result but gets a `524` behind Cloudflare when the
+  deploy takes longer than ~100 s. A push or hook that arrives while the site is busy
+  is queued, not dropped.
 - **Real process status** — `docker compose ps` / pm2 state, memory usage,
   and whether anything is actually listening on the proxy target (no more "Active"
   while visitors get a 502). Compose sites get up/down/restart/rebuild/pull controls

@@ -2,10 +2,10 @@ import { NextResponse } from "next/server"
 
 import { logAudit } from "@/lib/audit"
 import { getSession } from "@/lib/auth"
-import { DeployError, deploySite, toDeployable } from "@/lib/deploy"
 import { GIT_PULL_UNSUPPORTED_MESSAGE, isGitPullSupported, isValidGitBranch } from "@/lib/git"
 import { canManageSite } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
+import { busyJob, busyMessage, jobActor, startDeployJob, JOB_START_FAILED_MESSAGE, jobStartFailed } from "@/lib/site-jobs"
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -18,6 +18,10 @@ const REPO_FULL_NAME_RE = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/
  * depoya bağlar VE hemen deploy hattını çalıştırır (klon → deployCommand →
  * yeniden başlatma; bkz. src/lib/deploy.ts). Body: { installationId,
  * repoFullName, branch? }.
+ *
+ * 2026-11: bağlama senkron; ilk deploy arka plan işi olarak başlar — yanıt
+ * güncel site + `jobId` (ve `job`). Sitede iş sürüyorsa depo DEĞİŞTİRİLMEZ,
+ * 409 `{ error, activeJob }` (süren deploy eski depoyla çalışıyor olabilir).
  */
 export async function POST(request: Request, { params }: RouteParams) {
   const session = await getSession()
@@ -63,6 +67,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "GitHub kurulumu bulunamadı." }, { status: 404 })
   }
 
+  const busy = busyJob(id)
+  if (busy) {
+    return NextResponse.json({ error: busyMessage(busy), activeJob: busy }, { status: 409 })
+  }
+
   const repoUrl = `https://github.com/${repoFullName}.git`
 
   const updated = await prisma.site.update({
@@ -73,7 +82,6 @@ export async function POST(request: Request, { params }: RouteParams) {
       githubInstallationId: installation.id,
       githubRepoFullName: repoFullName,
     },
-    include: { githubInstallation: true },
   })
 
   await logAudit({
@@ -84,26 +92,27 @@ export async function POST(request: Request, { params }: RouteParams) {
     detail: `${site.domain} -> @${repoFullName} (${branch})`,
   })
 
-  try {
-    const result = await deploySite(toDeployable(updated), { force: true, trigger: "connect" })
-    const after = await prisma.site.findUnique({ where: { id } })
-    return NextResponse.json({
-      ...after,
-      pullChanged: result.changed,
-      pullCommit: result.commit,
-      restartError: result.restartError,
-      deployOutput: result.output,
-    })
-  } catch (error) {
-    // Bağlantı KALICI kalır — yalnızca ilk deploy başarısız oldu; kullanıcı
-    // "Deploy Et" ile tekrar deneyebilir.
-    const message = error instanceof DeployError ? error.message : "İlk kurulum (git clone) başarısız oldu."
-    const after = await prisma.site.findUnique({ where: { id } })
+  // Bağlantı KALICI kalır — ilk deploy başarısız olsa da (ya da bu arada başka
+  // bir iş başladıysa) kullanıcı "Deploy Et" ile tekrar deneyebilir.
+  const outcome = await startDeployJob({
+    siteId: id,
+    domain: site.domain,
+    trigger: "manual",
+    action: "connect",
+    force: true,
+    actorId: session.userId,
+    actor: await jobActor(session.userId, "manual"),
+  }).catch(jobStartFailed)
+  if (!outcome) {
+    return NextResponse.json({ error: JOB_START_FAILED_MESSAGE }, { status: 500 })
+  }
+  if (outcome.status === "rejected" || outcome.status === "skipped") {
     return NextResponse.json(
-      { error: message, site: after, deployOutput: error instanceof DeployError ? error.output : "" },
-      { status: 500 }
+      { error: busyMessage(outcome.activeJob), activeJob: outcome.activeJob, site: updated },
+      { status: 409 }
     )
   }
+  return NextResponse.json({ ...updated, jobId: outcome.job.id, job: outcome.job })
 }
 
 /**

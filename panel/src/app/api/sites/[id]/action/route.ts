@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth"
 import { canManageSite } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { getProcessStatus, restartSite, RestartError } from "@/lib/restart"
+import { busyJob, busyMessage, jobActor, startRestartJob, JOB_START_FAILED_MESSAGE, jobStartFailed } from "@/lib/site-jobs"
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -16,6 +17,11 @@ interface RouteParams {
  * DOCKER_COMPOSE → compose restart). Compose'da başlat/durdur
  * `/api/sites/[id]/docker-compose` üzerinden. (v1.4.0: systemd'li
  * Node.js/Python türleriyle birlikte start/stop kaldırıldı.)
+ *
+ * 2026-11: `start` de kabul edilir (`restart` ile aynı işlem — yeniden başlatma
+ * durmuş süreci de başlatır). CUSTOM_SCRIPT'te betik süresi sınırsız olabilir:
+ * arka plan işi (kind `restart`) → 202 `{ jobId, job }`. Diğer yöneticilerde
+ * yanıt eskisi gibi senkron. Sitede iş sürerken 409 `{ error, activeJob }`.
  */
 export async function POST(request: Request, { params }: RouteParams) {
   const session = await getSession()
@@ -39,7 +45,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 })
   }
   const { action } = (body ?? {}) as { action?: unknown }
-  if (action !== "restart") {
+  if (action !== "restart" && action !== "start") {
     return NextResponse.json(
       { error: "Yalnızca restart desteklenir — Docker Compose'da başlat/durdur için compose kontrollerini kullanın." },
       { status: 400 }
@@ -50,6 +56,28 @@ export async function POST(request: Request, { params }: RouteParams) {
       { error: "Bu sitenin süreç yöneticisi 'Yok' — Git & Dağıtım sekmesinden bir yöntem seçin (Docker Compose, PM2, özel betik)." },
       { status: 400 }
     )
+  }
+
+  if (site.processManager === "CUSTOM_SCRIPT") {
+    const outcome = await startRestartJob({
+      siteId: id,
+      domain: site.domain,
+      action,
+      actorId: session.userId,
+      actor: await jobActor(session.userId, "manual"),
+    }).catch(jobStartFailed)
+    if (!outcome) {
+      return NextResponse.json({ error: JOB_START_FAILED_MESSAGE }, { status: 500 })
+    }
+    if (outcome.status === "rejected" || outcome.status === "skipped") {
+      return NextResponse.json({ error: busyMessage(outcome.activeJob), activeJob: outcome.activeJob }, { status: 409 })
+    }
+    return NextResponse.json({ jobId: outcome.job.id, job: outcome.job }, { status: 202 })
+  }
+
+  const busy = busyJob(id)
+  if (busy) {
+    return NextResponse.json({ error: busyMessage(busy), activeJob: busy }, { status: 409 })
   }
 
   try {

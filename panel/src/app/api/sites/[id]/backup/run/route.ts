@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server"
 
 import { getSession } from "@/lib/auth"
-import { BackupError } from "@/lib/backup"
 import { canManageSite } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
-import { runBackupForSite } from "@/lib/run-backup"
+import { busyMessage, jobActor, startBackupJob, JOB_START_FAILED_MESSAGE, jobStartFailed } from "@/lib/site-jobs"
 
 interface RouteParams {
   params: Promise<{ id: string }>
 }
 
-/** `POST /api/sites/[id]/backup/run` — manuel "şimdi yedekle" tetikleyicisi. */
+/**
+ * `POST /api/sites/[id]/backup/run` — manuel "şimdi yedekle" tetikleyicisi.
+ *
+ * 2026-11: döküm + bulut yüklemesi dakikalar sürebildiği için arka plan işi
+ * (kind `backup`): 202 `{ jobId, job }`; sitede iş sürüyorsa 409
+ * `{ error, activeJob }`. Sonuç (`fileName`, `sizeBytes`, `uploadedToS3`,
+ * `s3Error`) işin `result`'ında; `Site.lastBackup*` eskisi gibi yazılır.
+ */
 export async function POST(_request: Request, { params }: RouteParams) {
   const session = await getSession()
   if (!session) {
@@ -26,28 +32,18 @@ export async function POST(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Bu işlem için yetkiniz yok." }, { status: 403 })
   }
 
-  try {
-    const result = await runBackupForSite(site)
-    const updated = await prisma.site.update({
-      where: { id },
-      data: {
-        lastBackupAt: new Date(),
-        lastBackupOk: true,
-        lastBackupError: result.s3Error
-          ? result.s3Error.includes("yükleme") || result.s3Error.includes("yapılandırma")
-            ? result.s3Error
-            : `Bulut depolamaya yükleme başarısız: ${result.s3Error}`
-          : null,
-      },
-    })
-    return NextResponse.json({ ...result, site: updated })
-  } catch (error) {
-    const message = error instanceof BackupError ? error.message : "Yedekleme başarısız oldu."
-    const status = error instanceof BackupError ? error.status : 500
-    const updated = await prisma.site.update({
-      where: { id },
-      data: { lastBackupAt: new Date(), lastBackupOk: false, lastBackupError: message },
-    })
-    return NextResponse.json({ error: message, site: updated }, { status })
+  const outcome = await startBackupJob({
+    siteId: id,
+    domain: site.domain,
+    trigger: "manual",
+    actorId: session.userId,
+    actor: await jobActor(session.userId, "manual"),
+  }).catch(jobStartFailed)
+  if (!outcome) {
+    return NextResponse.json({ error: JOB_START_FAILED_MESSAGE }, { status: 500 })
   }
+  if (outcome.status === "rejected" || outcome.status === "skipped") {
+    return NextResponse.json({ error: busyMessage(outcome.activeJob), activeJob: outcome.activeJob }, { status: 409 })
+  }
+  return NextResponse.json({ jobId: outcome.job.id, job: outcome.job }, { status: 202 })
 }
