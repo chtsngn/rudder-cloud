@@ -63,12 +63,13 @@ export function SiteList({ sites }: { sites: Site[] }) {
                   </td>
 
                   {/* Domain */}
-                  <td className="px-4 py-2.5 max-w-[280px]">
+                  <td className="px-4 py-2.5">
                     <Link
                       href={`/sites/${site.id}`}
+                      title={site.domain}
                       className="group/link flex items-center gap-1.5 text-sm font-bold font-mono text-slate-900 dark:text-slate-100 hover:text-[#580619] dark:hover:text-blue-300 transition-colors"
                     >
-                      <span className="truncate">{site.domain}</span>
+                      <span className="block max-w-[280px] truncate">{site.domain}</span>
                       <ArrowUpRight className="size-3.5 text-slate-400 group-hover/link:text-[#580619] dark:group-hover/link:text-blue-300 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-all shrink-0" />
                     </Link>
                   </td>
